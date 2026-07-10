@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  email         String        @unique
+  passwordHash  String
+  phone         String?       
+  role          Role          @default(CUSTOMER)
+  createdAt     DateTime      @default(now())
+  
+  riderProfile  RiderProfile?
+  orders        Order[]
+}
+
+model RiderProfile {
+  id            String        @id @default(uuid())
+  userId        String        @unique
+  user          User          @relation(fields: [userId], references: [id])
+  
+  vehicleType   VehicleType   @default(MOTORCYCLE)
+  maxLoadKg     Float         @default(15.0) 
+  plateNumber   String?       
+  
+  status        RiderStatus   @default(OFFLINE)
+  rating        Float         @default(5.0)
+  
+  deliveries    Delivery[]
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  price       Float       
+  weightKg    Float       
+  stock       Int         @default(0)
+  imageUrl    String?
+  isActive    Boolean     @default(true)
+  
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  customerId      String
+  customer        User        @relation(fields: [customerId], references: [id])
+  
+  status          OrderStatus @default(PENDING)
+  totalAmount     Float       
+  deliveryFee     Float       
+  riderPayout     Float       
+  
+  requiredLoadKg  Float       
+  deliveryAddress String
+  contactNumber   String      
+  
+  createdAt       DateTime    @default(now())
+  
+  items           OrderItem[]
+  delivery        Delivery?
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  
+  quantity  Int
+  price     Float   
+}
+
+model Delivery {
+  id          String   @id @default(uuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  
+  riderId     String?  
+  rider       RiderProfile? @relation(fields: [riderId], references: [id])
+  
+  acceptedAt  DateTime?
+  completedAt DateTime?
+  status      DeliveryStatus @default(UNASSIGNED)
+}
+
+enum Role {
+  CUSTOMER
+  RIDER
+  ADMIN
+}
+
+enum VehicleType {
+  MOTORCYCLE
+  TRICYCLE
+  VAN
+}
+
+enum RiderStatus {
+  OFFLINE
+  ONLINE
+  ON_DELIVERY
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PICKING_UP
+  OUT_FOR_DELIVERY
+  COMPLETED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  UNASSIGNED
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+}
