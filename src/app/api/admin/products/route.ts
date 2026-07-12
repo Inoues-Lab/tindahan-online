@@ -15,18 +15,17 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, description, price, stock, weightKg, image } = body
+    const { name, description, price, stock, weightKg } = body
 
-    const product = await prisma.product.create({
-      data: {
-        name,
-        description,
-        price,
-        stock,
-        weightKg: weightKg || 1.0,
-        image: image || null
-      }
-    })
+    const data: any = {
+      name,
+      description,
+      price,
+      stock,
+      weightKg: weightKg || 1.0
+    }
+
+    const product = await prisma.product.create({ data })
 
     return NextResponse.json({ success: true, product })
   } catch (error) {
@@ -45,18 +44,19 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { name, description, price, stock, weightKg, image } = body
+    const { name, description, price, stock, weightKg } = body
+
+    const data: any = {
+      name,
+      description,
+      price,
+      stock,
+      weightKg: weightKg || 1.0
+    }
 
     const product = await prisma.product.update({
       where: { id },
-      data: {
-        name,
-        description,
-        price,
-        stock,
-        weightKg: weightKg || 1.0,
-        image: image || null
-      }
+      data
     })
 
     return NextResponse.json({ success: true, product })
