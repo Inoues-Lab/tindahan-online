@@ -1,75 +1,33 @@
 // src/app/api/orders/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { items, totalAmount, deliveryFee, totalWeight, customerName, contactNumber, deliveryAddress, paymentMethod } = body
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
 
-    console.log('Creating order with data:', {
-      items,
-      totalAmount,
-      deliveryFee,
-      totalWeight,
-      customerName,
-      contactNumber,
-      deliveryAddress
-    })
-
-    // First, create or find a customer
-    let customerId = ''
-    
-    try {
-      // Try to find existing walk-in customer
-      let customer = await prisma.user.findFirst({
-        where: {
-          email: 'walkin@customer.local'
-        }
-      })
-
-      if (!customer) {
-        // Create a new walk-in customer with only passwordHash
-        customer = await prisma.user.create({
-          data: {
-            name: customerName || 'Walk-in Customer',
-            email: 'walkin@customer.local',
-            role: 'CUSTOMER',
-            passwordHash: '$2b$10$dummyhashforwalkincustomer12345678901234567890'
-          }
-        })
-        console.log('Created customer:', customer.id)
-      }
-
-      customerId = customer.id
-    } catch (customerError: any) {
-      console.error('Error creating/finding customer:', customerError.message)
-      // If we can't create customer, try with a different approach
-      // Create customer with unique email each time
-      const uniqueEmail = `customer_${Date.now()}@tindahan.local`
-      const customer = await prisma.user.create({
-        data: {
-          name: customerName || 'Customer',
-          email: uniqueEmail,
-          role: 'CUSTOMER',
-          passwordHash: '$2b$10$dummyhashforwalkincustomer12345678901234567890'
-        }
-      })
-      customerId = customer.id
-      console.log('Created customer with unique email:', customerId)
+    if (!userId) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    // Now create the order
+    const body = await request.json()
+    const { items, subtotal, deliveryFee, total, address, contactNumber, paymentMethod } = body
+
+    console.log('Creating order for user:', userId)
+
     const order = await prisma.order.create({
       data: {
-        customerId: customerId,
-        totalAmount: totalAmount,
-        deliveryFee: deliveryFee,
-        riderPayout: deliveryFee * 0.8,
-        requiredLoadKg: totalWeight,
-        deliveryAddress: deliveryAddress,
-        contactNumber: contactNumber,
+        customerId: userId,
         status: 'PENDING',
+        totalAmount: total,
+        deliveryFee: deliveryFee || 60,
+        riderPayout: 0,
+        requiredLoadKg: 0,
+        deliveryAddress: address,
+        contactNumber: contactNumber,
+        paymentMethod: paymentMethod || 'COD',
         items: {
           create: items.map((item: any) => ({
             productId: item.id,
@@ -79,25 +37,85 @@ export async function POST(request: Request) {
         }
       },
       include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
+        items: true
       }
     })
 
-    console.log('✅ Order created successfully:', order.id)
+    console.log('Order created:', order.id)
 
-    return NextResponse.json({ success: true, orderId: order.id })
-  } catch (error: any) {
-    console.error('❌ Error creating order:', error)
-    console.error('Error code:', error.code)
-    console.error('Error message:', error.message)
-    
-    return NextResponse.json({ 
-      error: 'Failed to create order',
-      details: error.message 
-    }, { status: 500 })
+    return NextResponse.json({ success: true, order })
+  } catch (error) {
+    console.error('Error creating order:', error)
+    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+    const userRole = cookieStore.get('userRole')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    console.log('Fetching orders for user:', userId, 'role:', userRole)
+
+    let orders
+
+    if (userRole === 'RIDER') {
+      // Riders see all orders (or you can filter by assigned rider)
+      orders = await prisma.order.findMany({
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          },
+          customer: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      })
+    } else if (userRole === 'ADMIN') {
+      // Admin sees all orders
+      orders = await prisma.order.findMany({
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          },
+          customer: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      })
+    } else {
+      // Customers see only their orders
+      orders = await prisma.order.findMany({
+        where: {
+          customerId: userId
+        },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      })
+    }
+
+    return NextResponse.json({ orders })
+  } catch (error) {
+    console.error('Error fetching orders:', error)
+    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
   }
 }

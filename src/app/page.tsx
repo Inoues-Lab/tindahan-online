@@ -1,31 +1,103 @@
 // src/app/page.tsx
-import { prisma } from '../lib/prisma'
-import Header from '../components/Header'
-import { CartButton } from '../components/CartButton'
+'use client'
 
-export default async function Home() {
-  const products = await prisma.product.findMany()
+import { useState, useEffect } from 'react'
+import { prisma } from '@/lib/prisma'
+import Header from '@/components/Header'
+import CartButton from '@/components/CartButton'
+
+interface Product {
+  id: string
+  name: string
+  description: string
+  price: number
+  stock: number
+  weightKg: number
+  image: string
+}
+
+export default function HomePage() {
+  const [query, setQuery] = useState('')
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Fetch all products initially
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        setProducts(data.products || [])
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error('Error fetching products:', err)
+        setLoading(false)
+      })
+  }, [])
+
+  // Filter products as user types
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(query.toLowerCase()) ||
+    product.description.toLowerCase().includes(query.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <Header />
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}>
+          <p>Loading...</p>
+        </div>
+      </main>
+    )
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
-      
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Fresh Groceries</h2>
-          <p className="text-gray-600">Delivered to your door within the day</p>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+        <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: 'black', marginBottom: '10px' }}>
+          Fresh Groceries
+        </h1>
+        <p style={{ fontSize: '18px', color: 'gray', marginBottom: '30px' }}>
+          Delivered to your door within the day
+        </p>
+
+        {/* Search Bar - Auto Filter */}
+        <div style={{ marginBottom: '30px' }}>
+          <input
+            type="text"
+            placeholder="Search products (type to filter)..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{
+              width: '100%',
+              maxWidth: '600px',
+              padding: '12px 20px',
+              borderRadius: '8px',
+              border: '2px solid black',
+              fontSize: '16px',
+              boxShadow: '3px 3px 0px black'
+            }}
+          />
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <div key={product.id} className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-              <div className="h-32 bg-gray-200 rounded-lg mb-4 flex items-center justify-center text-4xl">
+
+        {query && (
+          <p style={{ fontSize: '16px', color: 'gray', marginBottom: '20px' }}>
+            Found {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} for "{query}"
+          </p>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+          {filteredProducts.map((product) => (
+            <div key={product.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '2px solid black', boxShadow: '3px 3px 0px black' }}>
+              <div style={{ backgroundColor: '#f0f0f0', height: '150px', borderRadius: '8px', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>
                 🛍️
               </div>
-              <h3 className="text-xl font-semibold text-gray-800">{product.name}</h3>
-              <p className="text-gray-500 text-sm mt-1">{product.description}</p>
-              <div className="mt-4 flex justify-between items-center">
-                <span className="text-2xl font-bold text-green-600">₱{product.price.toFixed(2)}</span>
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'black', margin: '0 0 5px 0' }}>{product.name}</h3>
+              <p style={{ fontSize: '14px', color: 'gray', margin: '0 0 15px 0' }}>{product.description}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{product.price.toFixed(2)}</span>
                 <CartButton product={{
                   id: product.id,
                   name: product.name,
@@ -36,6 +108,14 @@ export default async function Home() {
             </div>
           ))}
         </div>
+
+        {filteredProducts.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'white', borderRadius: '12px', border: '3px solid black' }}>
+            <p style={{ fontSize: '18px', color: 'gray' }}>
+              {query ? `No products found for "${query}"` : 'No products available'}
+            </p>
+          </div>
+        )}
       </div>
     </main>
   )

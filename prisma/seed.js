@@ -1,13 +1,11 @@
-// prisma/seed.ts
-import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
+const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
 
 const prisma = new PrismaClient()
 
 async function main() {
   console.log('🌱 Seeding database...')
 
-  // Create test products
   const products = await Promise.all([
     prisma.product.create({
       data: {
@@ -15,8 +13,7 @@ async function main() {
         description: 'Premium Jasmine Rice',
         price: 350,
         stock: 100,
-        image: '/images/rice.jpg',
-        weightKg: 5.0
+        image: '/images/rice.jpg'
       }
     }),
     prisma.product.create({
@@ -25,8 +22,7 @@ async function main() {
         description: 'Delicious corned beef',
         price: 45,
         stock: 50,
-        image: '/images/cornedbeef.jpg',
-        weightKg: 0.15
+        image: '/images/cornedbeef.jpg'
       }
     }),
     prisma.product.create({
@@ -35,8 +31,7 @@ async function main() {
         description: 'Farm fresh eggs',
         price: 220,
         stock: 30,
-        image: '/images/eggs.jpg',
-        weightKg: 0.5
+        image: '/images/eggs.jpg'
       }
     }),
     prisma.product.create({
@@ -45,8 +40,7 @@ async function main() {
         description: 'Refreshing soda',
         price: 95,
         stock: 40,
-        image: '/images/coke.jpg',
-        weightKg: 1.5
+        image: '/images/coke.jpg'
       }
     }),
     prisma.product.create({
@@ -55,8 +49,7 @@ async function main() {
         description: 'Quick and easy meal',
         price: 65,
         stock: 100,
-        image: '/images/noodles.jpg',
-        weightKg: 0.4
+        image: '/images/noodles.jpg'
       }
     }),
     prisma.product.create({
@@ -65,13 +58,11 @@ async function main() {
         description: 'test',
         price: 100,
         stock: 10,
-        image: '/images/test.jpg',
-        weightKg: 1.0
+        image: '/images/test.jpg'
       }
     })
   ])
 
-  // Create test users
   const hashedPassword = await bcrypt.hash('123456', 10)
 
   await prisma.user.create({
@@ -106,10 +97,6 @@ async function main() {
 
   console.log('✅ Seeding completed!')
   console.log(`Created ${products.length} products`)
-  console.log('Created 3 test users:')
-  console.log('  - admin@tindahan.com / 123456')
-  console.log('  - rider@mark.com / 123456')
-  console.log('  - customer@juan.com / 123456')
 }
 
 main()

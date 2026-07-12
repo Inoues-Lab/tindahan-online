@@ -1,120 +1,96 @@
-// src/app/cart/page.tsx
 'use client'
 
 import { useCart } from '@/context/CartContext'
-import Link from 'next/link'
-import Header from '@/components/Header'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQuantity, getTotalPrice, clearCart } = useCart()
+  const { cart, removeFromCart, updateQuantity, cartTotal } = useCart()
+  const router = useRouter()
+
+  useEffect(() => {
+    console.log('Cart page - current cart:', cart)
+  }, [cart])
 
   if (cart.length === 0) {
     return (
-      <main className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="max-w-6xl mx-auto px-4 py-16 text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">Your Cart is Empty</h1>
-          <p className="text-gray-600 mb-8">Add some items to get started!</p>
-          <Link 
-            href="/" 
-            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
-          >
-            Continue Shopping
-          </Link>
+      <main style={{ minHeight: '100vh', backgroundColor: 'white' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+          <h1 style={{ fontSize: '36px', fontWeight: 'bold', marginBottom: '30px' }}>Shopping Cart 🛒</h1>
+          <div style={{ backgroundColor: 'white', padding: '60px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
+            <p style={{ fontSize: '18px', color: 'gray', marginBottom: '20px' }}>Your cart is empty</p>
+            <button
+              onClick={() => router.push('/')}
+              style={{ backgroundColor: 'blue', color: 'white', padding: '12px 30px', borderRadius: '8px', border: '2px solid black', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              Continue Shopping
+            </button>
+          </div>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Shopping Cart</h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-4">
-            {cart.map((item) => (
-              <div key={item.id} className="bg-white p-6 rounded-xl shadow-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
-                    <p className="text-green-600 font-bold mt-1">₱{item.price.toFixed(2)}</p>
-                  </div>
-                  
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="w-8 h-8 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
-                      >
-                        -
-                      </button>
-                      <span className="font-semibold w-8 text-center">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-8 h-8 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
-                      >
-                        +
-                      </button>
-                    </div>
-                    
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
+    <main style={{ minHeight: '100vh', backgroundColor: 'white' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+        <h1 style={{ fontSize: '36px', fontWeight: 'bold', marginBottom: '30px' }}>Shopping Cart 🛒</h1>
+
+        <div style={{ display: 'grid', gap: '15px', marginBottom: '30px' }}>
+          {cart.map((item) => (
+            <div key={item.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '2px solid black', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 5px 0' }}>{item.name}</h3>
+                <p style={{ fontSize: '16px', color: 'green', fontWeight: 'bold', margin: 0 }}>₱{item.price.toFixed(2)}</p>
               </div>
-            ))}
-            
-            <button
-              onClick={clearCart}
-              className="text-gray-500 hover:text-gray-700 text-sm mt-4"
-            >
-              Clear Cart
-            </button>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    style={{ width: '30px', height: '30px', borderRadius: '5px', border: '2px solid black', backgroundColor: 'white', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    -
+                  </button>
+                  <span style={{ fontSize: '16px', fontWeight: 'bold', minWidth: '30px', textAlign: 'center' }}>{item.quantity}</span>
+                  <button
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    style={{ width: '30px', height: '30px', borderRadius: '5px', border: '2px solid black', backgroundColor: 'white', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    +
+                  </button>
+                </div>
+                
+                <button
+                  onClick={() => removeFromCart(item.id)}
+                  style={{ backgroundColor: 'red', color: 'white', padding: '8px 15px', borderRadius: '8px', border: '2px solid black', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>Total:</h2>
+            <p style={{ fontSize: '36px', fontWeight: 'bold', color: 'green', margin: 0 }}>₱{cartTotal.toFixed(2)}</p>
           </div>
           
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white p-6 rounded-xl shadow-md sticky top-24">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Order Summary</h2>
-              
-              <div className="space-y-2 mb-6">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span>
-                  <span>₱{getTotalPrice().toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Delivery Fee</span>
-                  <span>₱50.00</span>
-                </div>
-                <div className="border-t pt-2 flex justify-between text-lg font-bold">
-                  <span>Total</span>
-                  <span className="text-green-600">₱{(getTotalPrice() + 50).toFixed(2)}</span>
-                </div>
-              </div>
-              
-              <Link
-                href="/checkout"
-                className="block w-full bg-green-600 text-white text-center py-3 rounded-lg hover:bg-green-700 transition font-semibold"
-              >
-                Proceed to Checkout
-              </Link>
-              
-              <Link
-                href="/"
-                className="block text-center text-gray-600 hover:text-gray-800 mt-4 text-sm"
-              >
-                Continue Shopping
-              </Link>
-            </div>
-          </div>
+          <button
+            onClick={() => router.push('/checkout')}
+            style={{ width: '100%', backgroundColor: 'green', color: 'white', padding: '15px', borderRadius: '8px', border: '2px solid black', fontWeight: 'bold', fontSize: '18px', cursor: 'pointer' }}
+          >
+            Proceed to Checkout
+          </button>
+          
+          <button
+            onClick={() => router.push('/')}
+            style={{ width: '100%', backgroundColor: 'white', color: 'black', padding: '12px', borderRadius: '8px', border: '2px solid black', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', marginTop: '10px' }}
+          >
+            Continue Shopping
+          </button>
         </div>
       </div>
     </main>
