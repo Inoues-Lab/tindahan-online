@@ -23,28 +23,24 @@ export async function GET() {
       }
     })
 
-    // Get all riders with their cash on hand
+    // Get all riders - fetch all fields to avoid type issues
     const riders = await prisma.user.findMany({
-      where: { role: 'RIDER' },
-      select: {
-        id: true,
-        name: true,
-        cashOnHand: true,
-        remittanceLimit: true
-      }
+      where: { role: 'RIDER' }
     })
 
     // Calculate totals
     const totalRevenue = completedOrders.reduce((sum, order) => sum + order.totalAmount, 0)
     const totalDeliveryFees = completedOrders.reduce((sum, order) => sum + order.deliveryFee, 0)
     const totalRiderPayouts = completedOrders.reduce((sum, order) => sum + (order.riderPayout || 0), 0)
-    const totalRiderCashOnHand = riders.reduce((sum, rider) => sum + (rider.cashOnHand || 0), 0)
+    
+    // Calculate total rider cash on hand
+    const totalRiderCashOnHand = riders.reduce((sum, rider: any) => sum + (rider.cashOnHand || 0), 0)
 
-    // Calculate pending remittances (riders' cash on hand)
+    // Calculate pending remittances
     const pendingRemittances = totalRiderCashOnHand
 
-    // Calculate platform income (delivery fees + product margins)
-    const platformIncome = totalDeliveryFees // You can add product margins if needed
+    // Platform income from delivery fees
+    const platformIncome = totalDeliveryFees
 
     // Get orders by status
     const pendingOrders = await prisma.order.count({ where: { status: 'PENDING' } })
@@ -52,13 +48,23 @@ export async function GET() {
     const outForDeliveryOrders = await prisma.order.count({ where: { status: 'OUT_FOR_DELIVERY' } })
     const completedOrdersCount = await prisma.order.count({ where: { status: 'COMPLETED' } })
 
+    // Map riders with only needed fields
+    const ridersData = riders.map((rider: any) => ({
+      id: rider.id,
+      name: rider.name,
+      email: rider.email,
+      phone: rider.phone,
+      cashOnHand: rider.cashOnHand || 0,
+      remittanceLimit: rider.remittanceLimit || 2000
+    }))
+
     return NextResponse.json({
       totalRevenue,
       totalDeliveryFees,
       totalRiderPayouts,
       pendingRemittances,
       platformIncome,
-      riders,
+      riders: ridersData,
       ordersStats: {
         pending: pendingOrders,
         accepted: acceptedOrders,
