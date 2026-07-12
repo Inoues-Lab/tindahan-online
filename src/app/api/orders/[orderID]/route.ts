@@ -1,11 +1,11 @@
-// src/app/api/orders/[orderId]/route.ts
+// src/app/api/orders/[orderID]/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
 export async function GET(
   request: Request,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -15,8 +15,11 @@ export async function GET(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    // Await params in Next.js 15
+    const { orderId } = await params
+
     const order = await prisma.order.findUnique({
-      where: { id: params.orderId },
+      where: { id: orderId },
       include: {
         items: {
           include: {
