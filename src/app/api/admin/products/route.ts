@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, description, price, stock, weightKg, image } = body
+    const { name, description, price, stock, weightKg } = body
 
     const product = await prisma.product.create({
       data: {
@@ -23,8 +23,7 @@ export async function POST(request: Request) {
         description,
         price,
         stock,
-        weightKg: weightKg || 1.0,
-        image
+        weightKg: weightKg || 1.0
       }
     })
 
@@ -45,7 +44,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { name, description, price, stock, weightKg, image } = body
+    const { name, description, price, stock, weightKg } = body
 
     const product = await prisma.product.update({
       where: { id },
@@ -54,8 +53,7 @@ export async function PUT(request: Request) {
         description,
         price,
         stock,
-        weightKg: weightKg || 1.0,
-        image
+        weightKg: weightKg || 1.0
       }
     })
 
