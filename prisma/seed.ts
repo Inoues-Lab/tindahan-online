@@ -5,111 +5,114 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Seeding database...')
-
-  // Create test products
-  const products = await Promise.all([
-    prisma.product.create({
-      data: {
-        name: 'Jasmine Rice (5kg)',
-        description: 'Premium Jasmine Rice',
-        price: 350,
-        stock: 100,
-        image: '/images/rice.jpg',
-        weightKg: 5.0
-      }
-    }),
-    prisma.product.create({
-      data: {
-        name: 'Canned Corned Beef (150g)',
-        description: 'Delicious corned beef',
-        price: 45,
-        stock: 50,
-        image: '/images/cornedbeef.jpg',
-        weightKg: 0.15
-      }
-    }),
-    prisma.product.create({
-      data: {
-        name: 'Fresh Eggs (1 tray)',
-        description: 'Farm fresh eggs',
-        price: 220,
-        stock: 30,
-        image: '/images/eggs.jpg',
-        weightKg: 0.5
-      }
-    }),
-    prisma.product.create({
-      data: {
-        name: 'Coca Cola 1.5L',
-        description: 'Refreshing soda',
-        price: 95,
-        stock: 40,
-        image: '/images/coke.jpg',
-        weightKg: 1.5
-      }
-    }),
-    prisma.product.create({
-      data: {
-        name: 'Instant Noodles (Pack of 5)',
-        description: 'Quick and easy meal',
-        price: 65,
-        stock: 100,
-        image: '/images/noodles.jpg',
-        weightKg: 0.4
-      }
-    }),
-    prisma.product.create({
-      data: {
-        name: 'test',
-        description: 'test',
-        price: 100,
-        stock: 10,
-        image: '/images/test.jpg',
-        weightKg: 1.0
-      }
-    })
-  ])
-
-  // Create test users
-  const hashedPassword = await bcrypt.hash('123456', 10)
-
-  await prisma.user.create({
-    data: {
-      name: 'Admin User',
+  // Create admin user
+  const adminPassword = await bcrypt.hash('Niekoh1128*', 10)
+  await prisma.user.upsert({
+    where: { email: 'admin@tindahan.com' },
+    update: {},
+    create: {
       email: 'admin@tindahan.com',
-      passwordHash: hashedPassword,
+      name: 'Admin',
+      passwordHash: adminPassword,
       role: 'ADMIN',
-      phone: '09123456789'
-    }
+      phone: '09551652430',
+    },
   })
 
-  await prisma.user.create({
-    data: {
-      name: 'Rider Mark',
+  // Create rider user
+  const riderPassword = await bcrypt.hash('123456', 10)
+  await prisma.user.upsert({
+    where: { email: 'rider@mark.com' },
+    update: {},
+    create: {
       email: 'rider@mark.com',
-      passwordHash: hashedPassword,
+      name: 'rider1',
+      passwordHash: riderPassword,
       role: 'RIDER',
-      phone: '09987654321'
-    }
+    },
   })
 
-  await prisma.user.create({
-    data: {
-      name: 'Customer Juan',
-      email: 'customer@juan.com',
-      passwordHash: hashedPassword,
+  // Create customer user
+  const customerPassword = await bcrypt.hash('123456', 10)
+  await prisma.user.upsert({
+    where: { email: 'marky@gmail.com' },
+    update: {},
+    create: {
+      email: 'marky@gmail.com',
+      name: 'marky',
+      passwordHash: customerPassword,
       role: 'CUSTOMER',
-      phone: '09111222333'
-    }
+      phone: '09551652430',
+    },
   })
 
-  console.log('✅ Seeding completed!')
-  console.log(`Created ${products.length} products`)
-  console.log('Created 3 test users:')
-  console.log('  - admin@tindahan.com / 123456')
-  console.log('  - rider@mark.com / 123456')
-  console.log('  - customer@juan.com / 123456')
+  // Create products (without image field to avoid type errors)
+  await prisma.product.upsert({
+    where: { id: 'prod-1' },
+    update: {},
+    create: {
+      id: 'prod-1',
+      name: 'Jasmine Rice (5kg)',
+      description: 'Premium Jasmine Rice',
+      price: 350,
+      stock: 100,
+      weightKg: 5.0,
+    },
+  })
+
+  await prisma.product.upsert({
+    where: { id: 'prod-2' },
+    update: {},
+    create: {
+      id: 'prod-2',
+      name: 'Canned Corned Beef (150g)',
+      description: 'Delicious corned beef',
+      price: 45,
+      stock: 200,
+      weightKg: 0.15,
+    },
+  })
+
+  await prisma.product.upsert({
+    where: { id: 'prod-3' },
+    update: {},
+    create: {
+      id: 'prod-3',
+      name: 'Fresh Eggs (1 tray)',
+      description: 'Farm fresh eggs',
+      price: 220,
+      stock: 30,
+      weightKg: 0.5,
+    },
+  })
+
+  await prisma.product.upsert({
+    where: { id: 'prod-4' },
+    update: {},
+    create: {
+      id: 'prod-4',
+      name: 'Coca Cola 1.5L',
+      description: 'Refreshing soda',
+      price: 95,
+      stock: 40,
+      weightKg: 1.5,
+    },
+  })
+
+  await prisma.product.upsert({
+    where: { id: 'prod-5' },
+    update: {},
+    create: {
+      id: 'prod-5',
+      name: 'Instant Noodles (Pack of 5)',
+      description: 'Quick and easy meal',
+      price: 65,
+      stock: 100,
+      weightKg: 0.4,
+    },
+  })
+
+  console.log('Seed completed!')
 }
 
 main()
