@@ -1,14 +1,10 @@
 // src/app/api/admin/products/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { cookies } from 'next/headers'
 
-// GET - Fetch all products
 export async function GET() {
   try {
-    const products = await prisma.product.findMany({
-      orderBy: { createdAt: 'asc' }
-    })
+    const products = await prisma.product.findMany()
     return NextResponse.json({ products })
   } catch (error) {
     console.error('Error fetching products:', error)
@@ -16,7 +12,6 @@ export async function GET() {
   }
 }
 
-// POST - Create product
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -40,7 +35,6 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT - Update product
 export async function PUT(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -72,7 +66,6 @@ export async function PUT(request: Request) {
   }
 }
 
-// DELETE - Delete product
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
