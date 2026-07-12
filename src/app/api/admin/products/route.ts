@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, description, price, stock, weightKg } = body
+    const { name, description, price, stock, weightKg, image } = body
 
     const product = await prisma.product.create({
       data: {
@@ -23,7 +23,8 @@ export async function POST(request: Request) {
         description,
         price,
         stock,
-        weightKg: weightKg || 1.0
+        weightKg: weightKg || 1.0,
+        image: image || null
       }
     })
 
@@ -38,13 +39,13 @@ export async function PUT(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    
+
     if (!id) {
       return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
     }
 
     const body = await request.json()
-    const { name, description, price, stock, weightKg } = body
+    const { name, description, price, stock, weightKg, image } = body
 
     const product = await prisma.product.update({
       where: { id },
@@ -53,7 +54,8 @@ export async function PUT(request: Request) {
         description,
         price,
         stock,
-        weightKg: weightKg || 1.0
+        weightKg: weightKg || 1.0,
+        image: image || null
       }
     })
 
@@ -68,7 +70,7 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    
+
     if (!id) {
       return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
     }
