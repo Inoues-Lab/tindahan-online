@@ -18,7 +18,8 @@ export async function POST(request: Request) {
 
     console.log('Processing remittance:', { riderId, amount })
 
-    const rider = await prisma.user.findUnique({
+    // Get rider with all fields
+    const rider: any = await prisma.user.findUnique({
       where: { id: riderId }
     })
 
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient cash on hand' }, { status: 400 })
     }
 
+    // Create remittance record
     const remittance = await prisma.remittance.create({
       data: {
         riderId,
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
       }
     })
 
+    // Update rider's cash on hand
     const newCashOnHand = rider.cashOnHand - amount
 
     await prisma.user.update({
