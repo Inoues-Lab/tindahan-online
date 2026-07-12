@@ -12,7 +12,7 @@ interface Product {
   price: number
   stock: number
   weightKg: number
-  image: string
+  image: string | null
 }
 
 export default function AdminProductsPage() {
@@ -22,13 +22,14 @@ export default function AdminProductsPage() {
   const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     stock: '',
     weightKg: '',
-    image: '/images/product.jpg'
+    image: ''
   })
 
   useEffect(() => {
@@ -63,6 +64,36 @@ export default function AdminProductsPage() {
       setError('Failed to fetch products')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setFormData(prev => ({ ...prev, image: data.url }))
+        alert('Image uploaded successfully!')
+      } else {
+        alert(data.error || 'Upload failed')
+      }
+    } catch (error) {
+      alert('Upload error')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -108,11 +139,11 @@ export default function AdminProductsPage() {
     setEditingProduct(product)
     setFormData({
       name: product.name,
-      description: product.description,
+      description: product.description || '',
       price: product.price.toString(),
       stock: product.stock.toString(),
       weightKg: product.weightKg.toString(),
-      image: product.image
+      image: product.image || ''
     })
     setShowForm(true)
   }
@@ -143,7 +174,7 @@ export default function AdminProductsPage() {
       price: '',
       stock: '',
       weightKg: '',
-      image: '/images/product.jpg'
+      image: ''
     })
   }
 
@@ -229,7 +260,7 @@ export default function AdminProductsPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Price ()</label>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Price (₱)</label>
                   <input
                     type="number"
                     required
@@ -265,30 +296,37 @@ export default function AdminProductsPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Image Path</label>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Image</label>
                 <input
-                  type="text"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  placeholder="/images/product.jpg"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
                 />
+                {uploading && <p style={{ color: 'blue', marginTop: '5px' }}>Uploading to Cloudinary...</p>}
+                {formData.image && (
+                  <div style={{ marginTop: '10px' }}>
+                    <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Preview:</p>
+                    <img src={formData.image} alt="Preview" style={{ maxWidth: '200px', borderRadius: '8px', border: '2px solid black' }} />
+                  </div>
+                )}
               </div>
 
               <button
                 type="submit"
+                disabled={uploading}
                 style={{
-                  backgroundColor: 'blue',
+                  backgroundColor: uploading ? 'gray' : 'blue',
                   color: 'white',
                   padding: '15px',
                   borderRadius: '8px',
                   border: '2px solid black',
                   fontWeight: 'bold',
                   fontSize: '18px',
-                  cursor: 'pointer'
+                  cursor: uploading ? 'not-allowed' : 'pointer'
                 }}
               >
-                {editingProduct ? 'Update Product' : 'Add Product'}
+                {uploading ? 'Uploading...' : (editingProduct ? 'Update Product' : 'Add Product')}
               </button>
             </form>
           </div>
@@ -305,13 +343,18 @@ export default function AdminProductsPage() {
             <div style={{ display: 'grid', gap: '15px' }}>
               {products.map((product) => (
                 <div key={product.id} style={{ padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px solid black', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{product.name}</h3>
-                    <p style={{ color: 'gray', marginBottom: '5px' }}>{product.description}</p>
-                    <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
-                      <span style={{ color: 'green', fontWeight: 'bold' }}>₱{product.price.toFixed(2)}</span>
-                      <span style={{ color: 'gray' }}>Stock: {product.stock}</span>
-                      <span style={{ color: 'gray' }}>Weight: {product.weightKg}kg</span>
+                  <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flex: 1 }}>
+                    {product.image && (
+                      <img src={product.image} alt={product.name} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '2px solid black' }} />
+                    )}
+                    <div>
+                      <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{product.name}</h3>
+                      <p style={{ color: 'gray', marginBottom: '5px' }}>{product.description}</p>
+                      <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                        <span style={{ color: 'green', fontWeight: 'bold' }}>₱{product.price.toFixed(2)}</span>
+                        <span style={{ color: 'gray' }}>Stock: {product.stock}</span>
+                        <span style={{ color: 'gray' }}>Weight: {product.weightKg}kg</span>
+                      </div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
