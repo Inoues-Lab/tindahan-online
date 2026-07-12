@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ orderId: string }> }
+  { params }: { params: Promise<{ orderID: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -15,11 +15,11 @@ export async function GET(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    // Await params in Next.js 15
-    const { orderId } = await params
+    // Await params in Next.js 15 - use orderID (capital ID to match folder name)
+    const { orderID } = await params
 
     const order = await prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id: orderID },
       include: {
         items: {
           include: {
