@@ -106,4 +106,29 @@ export default function CheckoutPage() {
       </div>
     </main>
   )
-}
+}useEffect(() => {
+  // Check if user is logged in
+  fetch('/api/auth/me')
+    .then(res => res.json())
+    .then(data => {
+      if (data.user) {
+        setUser(data.user)
+        setPhone(data.user.phone || '')
+        
+        // Load cart from localStorage
+        const savedCart = localStorage.getItem('cart')
+        if (savedCart) {
+          try {
+            const parsedCart = JSON.parse(savedCart)
+            setCart(parsedCart)
+          } catch (e) {
+            console.error('Error parsing cart:', e)
+            setCart([])
+          }
+        }
+      } else {
+        router.push('/login')
+      }
+    })
+    .catch(() => router.push('/login'))
+}, [router])

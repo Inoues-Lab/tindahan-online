@@ -302,3 +302,69 @@ export default function RiderDashboard() {
     </main>
   )
 }
+// Add this state
+const [todayEarnings, setTodayEarnings] = useState(0)
+
+// Add this to your useEffect where you fetch rider data
+useEffect(() => {
+  checkAuth()
+  fetchRiderData()
+}, [router])
+
+const fetchRiderData = async () => {
+  try {
+    const [ordersRes, profileRes] = await Promise.all([
+      fetch('/api/rider/orders'),
+      fetch('/api/rider/profile')
+    ])
+    
+    const ordersData = await ordersRes.json()
+    const profileData = await profileRes.json()
+    
+    if (ordersRes.ok) {
+      setOrders(ordersData.orders || [])
+      
+      // Calculate today's earnings from completed deliveries
+      const today = new Date().toISOString().split('T')[0]
+      const todaysCompletedOrders = (ordersData.orders || []).filter((order: any) => {
+        const orderDate = order.createdAt ? order.createdAt.split('T')[0] : ''
+        return orderDate === today && order.status === 'DELIVERED'
+      })
+      
+      const todaysIncome = todaysCompletedOrders.reduce((sum: number, order: any) => {
+        return sum + (order.riderPayout || 0)
+      }, 0)
+      
+      setTodayEarnings(todaysIncome)
+    }
+    
+    if (profileRes.ok) {
+      setCashOnHand(profileData.cashOnHand || 0)
+    }
+  } catch (error) {
+    console.error('Error fetching rider data:', error)
+  } finally {
+    setLoading(false)
+  }
+}
+
+// Update the earnings section JSX to include Today's Income
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+  <div style={{ padding: '20px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
+    <p style={{ fontSize: '14px', color: 'gray', marginBottom: '5px' }}>Today's Income</p>
+    <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>₱{todayEarnings.toFixed(2)}</p>
+    <p style={{ fontSize: '12px', color: 'gray' }}>From completed deliveries</p>
+  </div>
+  
+  <div style={{ padding: '20px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '2px solid blue' }}>
+    <p style={{ fontSize: '14px', color: 'gray', marginBottom: '5px' }}>Cash on Hand</p>
+    <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'blue' }}>₱{cashOnHand.toFixed(2)}</p>
+    <p style={{ fontSize: '12px', color: 'gray' }}>To remit to admin</p>
+  </div>
+  
+  <div style={{ padding: '20px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
+    <p style={{ fontSize: '14px', color: 'gray', marginBottom: '5px' }}>Remittance Limit</p>
+    <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'orange' }}>₱2000.00</p>
+    <p style={{ fontSize: '12px', color: 'gray' }}>Max cash before remitting</p>
+  </div>
+</div>

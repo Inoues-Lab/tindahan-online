@@ -43,4 +43,24 @@ export default function CartButton({ product }: { product: Product }) {
       {added ? 'Added!' : 'Add to Cart'}
     </button>
   )
+}// When adding to cart
+const addToCart = () => {
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]')
+  const existingItem = cart.find((item: any) => item.id === product.id)
+  
+  if (existingItem) {
+    existingItem.quantity += 1
+  } else {
+    cart.push({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      weightKg: product.weightKg,
+      quantity: 1
+    })
+  }
+  
+  localStorage.setItem('cart', JSON.stringify(cart))
+  setCartCount(cart.reduce((sum: number, item: any) => sum + item.quantity, 0))
+  alert('Added to cart!')
 }
