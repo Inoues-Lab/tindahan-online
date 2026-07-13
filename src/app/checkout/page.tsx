@@ -1,4 +1,3 @@
-// src/app/checkout/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -14,14 +13,12 @@ export default function CheckoutPage() {
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    // Check if user is logged in
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => {
         if (data.user) {
           setUser(data.user)
           setPhone(data.user.phone || '')
-          // Load cart from localStorage
           const savedCart = localStorage.getItem('cart')
           if (savedCart) setCart(JSON.parse(savedCart))
         } else {
@@ -35,12 +32,8 @@ export default function CheckoutPage() {
       alert('Please fill in address and phone number')
       return
     }
-
     setLoading(true)
-
     try {
-      // Send ONLY items, address, and phone. 
-      // The server will calculate prices and verify user!
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,13 +46,11 @@ export default function CheckoutPage() {
           contactNumber: phone
         })
       })
-
       const data = await response.json()
-
       if (response.ok) {
         alert('Order placed successfully!')
-        localStorage.removeItem('cart') // Clear cart
-        router.push(`/orders/confirmation?orderId=${data.order.id}`)
+        localStorage.removeItem('cart')
+        router.push('/orders/my-orders')
       } else {
         alert(data.error || 'Checkout failed')
       }
@@ -70,8 +61,7 @@ export default function CheckoutPage() {
     }
   }
 
-  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-  const deliveryFee = 50 // Base fee, server will calculate exact based on weight
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   if (!user) return <div>Loading...</div>
 
@@ -80,7 +70,6 @@ export default function CheckoutPage() {
       <Header />
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
         <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '20px' }}>Checkout</h1>
-        
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '2px solid black', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>Order Summary</h2>
           {cart.length === 0 ? (
@@ -94,53 +83,23 @@ export default function CheckoutPage() {
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '20px', fontSize: '18px' }}>
-                <span>Total (approx):</span>
-                <span>₱{(total + deliveryFee).toFixed(2)}</span>
+                <span>Total:</span>
+                <span>₱{total.toFixed(2)}</span>
               </div>
-              <p style={{ fontSize: '12px', color: 'gray' }}>Final price calculated on server based on weight.</p>
             </div>
           )}
         </div>
-
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '2px solid black' }}>
           <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>Delivery Details</h2>
-          
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Delivery Address</label>
-            <textarea
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid black', minHeight: '80px' }}
-              placeholder="Enter your full address"
-            />
+            <textarea value={address} onChange={(e) => setAddress(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box' }} placeholder="Enter your full address" />
           </div>
-
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Contact Number</label>
-            <input
-              type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid black' }}
-              placeholder="09xxxxxxxxx"
-            />
+            <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box' }} placeholder="09xxxxxxxxx" />
           </div>
-
-          <button
-            onClick={handleCheckout}
-            disabled={loading || cart.length === 0}
-            style={{
-              width: '100%',
-              padding: '15px',
-              backgroundColor: cart.length === 0 ? 'gray' : 'green',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              cursor: cart.length === 0 ? 'not-allowed' : 'pointer'
-            }}
-          >
+          <button onClick={handleCheckout} disabled={loading || cart.length === 0} style={{ width: '100%', padding: '15px', backgroundColor: cart.length === 0 ? 'gray' : 'green', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: cart.length === 0 ? 'not-allowed' : 'pointer' }}>
             {loading ? 'Processing...' : 'Place Order (COD)'}
           </button>
         </div>
