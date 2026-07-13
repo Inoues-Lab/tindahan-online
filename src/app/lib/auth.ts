@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
-// 1. Get the currently logged-in user securely
+// Get the currently logged-in user securely
 export async function getAuthenticatedUser() {
   const cookieStore = await cookies()
   const userId = cookieStore.get('userId')?.value
@@ -13,7 +13,7 @@ export async function getAuthenticatedUser() {
     return null
   }
 
-  // Verify the user actually exists in the database (prevents fake cookies)
+  // Verify the user actually exists in the database
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, name: true, email: true, role: true, phone: true }
@@ -27,7 +27,7 @@ export async function getAuthenticatedUser() {
   return user
 }
 
-// 2. Helper to protect API routes based on roles
+// Helper to protect API routes based on roles
 export async function requireAuth(allowedRoles: string[]) {
   const user = await getAuthenticatedUser()
   
