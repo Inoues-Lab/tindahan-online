@@ -2,7 +2,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { prisma } from '@/lib/prisma'
 import Header from '@/components/Header'
 import CartButton from '@/components/CartButton'
 
@@ -13,7 +12,7 @@ interface Product {
   price: number
   stock: number
   weightKg: number
-  image: string
+  image: string | null
 }
 
 export default function HomePage() {
@@ -22,7 +21,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Fetch all products initially
     fetch('/api/products')
       .then(res => res.json())
       .then(data => {
@@ -35,7 +33,6 @@ export default function HomePage() {
       })
   }, [])
 
-  // Filter products as user types
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(query.toLowerCase()) ||
     product.description.toLowerCase().includes(query.toLowerCase())
@@ -63,7 +60,6 @@ export default function HomePage() {
           Delivered to your door within the day
         </p>
 
-        {/* Search Bar - Auto Filter */}
         <div style={{ marginBottom: '30px' }}>
           <input
             type="text"
@@ -91,9 +87,25 @@ export default function HomePage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
           {filteredProducts.map((product) => (
             <div key={product.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '2px solid black', boxShadow: '3px 3px 0px black' }}>
-              <div style={{ backgroundColor: '#f0f0f0', height: '150px', borderRadius: '8px', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>
-                🛍️
-              </div>
+              {/* Show image if exists, otherwise show emoji */}
+              {product.image ? (
+                <img 
+                  src={product.image} 
+                  alt={product.name}
+                  style={{ 
+                    width: '100%', 
+                    height: '150px', 
+                    objectFit: 'cover',
+                    borderRadius: '8px',
+                    marginBottom: '15px'
+                  }} 
+                />
+              ) : (
+                <div style={{ backgroundColor: '#f0f0f0', height: '150px', borderRadius: '8px', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>
+                  🛍️
+                </div>
+              )}
+              
               <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'black', margin: '0 0 5px 0' }}>{product.name}</h3>
               <p style={{ fontSize: '14px', color: 'gray', margin: '0 0 15px 0' }}>{product.description}</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
