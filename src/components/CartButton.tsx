@@ -1,7 +1,7 @@
+// src/components/CartButton.tsx
 'use client'
 
-import { useState } from 'react'
-import { useCart } from '@/context/CartContext'
+import { useState, useEffect } from 'react'
 
 interface Product {
   id: string
@@ -10,27 +10,47 @@ interface Product {
   weightKg: number
 }
 
-export default function CartButton({ product }: { product: Product }) {
-  const { addToCart } = useCart()
-  const [added, setAdded] = useState(false)
+interface CartButtonProps {
+  product: Product
+}
 
-  const handleAddToCart = () => {
-    console.log('Adding product:', product)
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      weightKg: product.weightKg
-    })
-    setAdded(true)
-    setTimeout(() => setAdded(false), 1500)
+export default function CartButton({ product }: CartButtonProps) {
+  const [cartCount, setCartCount] = useState(0)
+
+  useEffect(() => {
+    // Load cart count on mount
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]')
+    const totalItems = cart.reduce((sum: number, item: any) => sum + item.quantity, 0)
+    setCartCount(totalItems)
+  }, [])
+
+  const addToCart = () => {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]')
+    const existingItem = cart.find((item: any) => item.id === product.id)
+
+    if (existingItem) {
+      existingItem.quantity += 1
+    } else {
+      cart.push({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        weightKg: product.weightKg,
+        quantity: 1
+      })
+    }
+
+    localStorage.setItem('cart', JSON.stringify(cart))
+    const newCount = cart.reduce((sum: number, item: any) => sum + item.quantity, 0)
+    setCartCount(newCount)
+    alert('Added to cart!')
   }
 
   return (
     <button
-      onClick={handleAddToCart}
+      onClick={addToCart}
       style={{
-        backgroundColor: added ? '#22c55e' : '#16a34a',
+        backgroundColor: 'green',
         color: 'white',
         padding: '10px 20px',
         borderRadius: '8px',
@@ -40,27 +60,7 @@ export default function CartButton({ product }: { product: Product }) {
         fontSize: '14px'
       }}
     >
-      {added ? 'Added!' : 'Add to Cart'}
+      Add to Cart
     </button>
   )
-}// When adding to cart
-const addToCart = () => {
-  const cart = JSON.parse(localStorage.getItem('cart') || '[]')
-  const existingItem = cart.find((item: any) => item.id === product.id)
-  
-  if (existingItem) {
-    existingItem.quantity += 1
-  } else {
-    cart.push({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      weightKg: product.weightKg,
-      quantity: 1
-    })
-  }
-  
-  localStorage.setItem('cart', JSON.stringify(cart))
-  setCartCount(cart.reduce((sum: number, item: any) => sum + item.quantity, 0))
-  alert('Added to cart!')
 }
