@@ -1,17 +1,59 @@
 // src/app/api/orders/route.ts
-// ... (keep your imports and GET function) ...
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
+
+// GET: Fetch orders for the logged-in user
+export async function GET() {
+  try {
+    const user = await requireAuth(['CUSTOMER', 'RIDER', 'ADMIN'])
+    if (user instanceof NextResponse) return user
+
+    let orders
+    if (user.role === 'ADMIN') {
+      orders = await prisma.order.findMany({ 
+        include: { 
+          items: { include: { product: true } }, 
+          customer: true 
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    } else if (user.role === 'RIDER') {
+      orders = await prisma.order.findMany({ 
+        where: { 
+          delivery: { 
+            rider: { userId: user.id } 
+          } 
+        },
+        include: { 
+          items: { include: { product: true } }, 
+          customer: true 
+        }
+      })
+    } else {
+      orders = await prisma.order.findMany({ 
+        where: { customerId: user.id },
+        include: { items: { include: { product: true } } },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    return NextResponse.json({ orders })
+  } catch (error) {
+    console.error('Error fetching orders:', error)
+    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
+  }
+}
 
 // POST: SECURE CHECKOUT
 export async function POST(request: Request) {
   try {
-    // 1. ONLY customers can checkout
     const customer = await requireAuth(['CUSTOMER'])
     if (customer instanceof NextResponse) return customer
 
     const body = await request.json()
     const { items, deliveryAddress, contactNumber } = body
 
-    // 2. Validate input
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
     }
@@ -19,11 +61,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing delivery details' }, { status: 400 })
     }
 
-    // 3. Fetch products from DB and calculate REAL prices
     let totalAmount = 0
     let totalWeight = 0
-    
-    // FIX: Added type annotation 'any[]' here
     const orderItemsData: any[] = []
 
     for (const item of items) {
@@ -51,7 +90,6 @@ export async function POST(request: Request) {
     const deliveryFee = 50 + (totalWeight * 10)
     const riderPayout = deliveryFee
 
-    // 5. Create Order and Update Stock
     const order = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
