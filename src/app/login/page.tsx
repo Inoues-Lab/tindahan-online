@@ -1,3 +1,40 @@
+// Add this inside the Login component, before the return
+const [checkingAuth, setCheckingAuth] = useState(true)
+
+useEffect(() => {
+  // Check if user is already logged in
+  const checkLoggedIn = async () => {
+    try {
+      const response = await fetch('/api/auth/me')
+      const data = await response.json()
+      
+      if (data.user) {
+        // Already logged in - redirect to appropriate dashboard
+        if (data.user.role === 'ADMIN') {
+          router.push('/admin')
+        } else if (data.user.role === 'RIDER') {
+          router.push('/rider')
+        } else {
+          router.push('/')
+        }
+      }
+    } catch (error) {
+      // Not logged in, show login form
+    } finally {
+      setCheckingAuth(false)
+    }
+  }
+  
+  checkLoggedIn()
+}, [router])
+
+if (checkingAuth) {
+  return (
+    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p>Loading...</p>
+    </main>
+  )
+}
 // src/app/login/page.tsx
 'use client'
 
