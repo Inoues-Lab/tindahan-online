@@ -1,3 +1,4 @@
+// src/app/checkout/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -13,18 +14,30 @@ export default function CheckoutPage() {
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
+    // Check if user is logged in
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => {
         if (data.user) {
           setUser(data.user)
           setPhone(data.user.phone || '')
+          
+          // Load cart from localStorage
           const savedCart = localStorage.getItem('cart')
-          if (savedCart) setCart(JSON.parse(savedCart))
+          if (savedCart) {
+            try {
+              const parsedCart = JSON.parse(savedCart)
+              setCart(parsedCart)
+            } catch (e) {
+              console.error('Error parsing cart:', e)
+              setCart([])
+            }
+          }
         } else {
           router.push('/login')
         }
       })
+      .catch(() => router.push('/login'))
   }, [router])
 
   const handleCheckout = async () => {
@@ -63,7 +76,16 @@ export default function CheckoutPage() {
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-  if (!user) return <div>Loading...</div>
+  if (!user) {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <Header />
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}>
+          <p>Loading...</p>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
@@ -84,7 +106,7 @@ export default function CheckoutPage() {
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '20px', fontSize: '18px' }}>
                 <span>Total:</span>
-                <span>₱{total.toFixed(2)}</span>
+                <span>{total.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -93,42 +115,42 @@ export default function CheckoutPage() {
           <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>Delivery Details</h2>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Delivery Address</label>
-            <textarea value={address} onChange={(e) => setAddress(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box' }} placeholder="Enter your full address" />
+            <textarea 
+              value={address} 
+              onChange={(e) => setAddress(e.target.value)} 
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box' }} 
+              placeholder="Enter your full address" 
+            />
           </div>
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Contact Number</label>
-            <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box' }} placeholder="09xxxxxxxxx" />
+            <input 
+              type="text" 
+              value={phone} 
+              onChange={(e) => setPhone(e.target.value)} 
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box' }} 
+              placeholder="09xxxxxxxxx" 
+            />
           </div>
-          <button onClick={handleCheckout} disabled={loading || cart.length === 0} style={{ width: '100%', padding: '15px', backgroundColor: cart.length === 0 ? 'gray' : 'green', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: cart.length === 0 ? 'not-allowed' : 'pointer' }}>
+          <button 
+            onClick={handleCheckout} 
+            disabled={loading || cart.length === 0} 
+            style={{ 
+              width: '100%', 
+              padding: '15px', 
+              backgroundColor: cart.length === 0 ? 'gray' : 'green', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '8px', 
+              fontSize: '18px', 
+              fontWeight: 'bold', 
+              cursor: cart.length === 0 ? 'not-allowed' : 'pointer' 
+            }}
+          >
             {loading ? 'Processing...' : 'Place Order (COD)'}
           </button>
         </div>
       </div>
     </main>
   )
-}useEffect(() => {
-  // Check if user is logged in
-  fetch('/api/auth/me')
-    .then(res => res.json())
-    .then(data => {
-      if (data.user) {
-        setUser(data.user)
-        setPhone(data.user.phone || '')
-        
-        // Load cart from localStorage
-        const savedCart = localStorage.getItem('cart')
-        if (savedCart) {
-          try {
-            const parsedCart = JSON.parse(savedCart)
-            setCart(parsedCart)
-          } catch (e) {
-            console.error('Error parsing cart:', e)
-            setCart([])
-          }
-        }
-      } else {
-        router.push('/login')
-      }
-    })
-    .catch(() => router.push('/login'))
-}, [router])
+}
