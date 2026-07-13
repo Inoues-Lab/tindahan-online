@@ -1,34 +1,5 @@
 // src/app/api/orders/route.ts
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
-
-// GET: Fetch orders for the logged-in user
-export async function GET() {
-  try {
-    const user = await requireAuth(['CUSTOMER', 'RIDER', 'ADMIN'])
-    if (user instanceof NextResponse) return user
-
-    let orders
-    if (user.role === 'ADMIN') {
-      orders = await prisma.order.findMany({ include: { items: { include: { product: true } }, customer: true } })
-    } else if (user.role === 'RIDER') {
-      orders = await prisma.order.findMany({ 
-        where: { delivery: { rider: { userId: user.id } } },
-        include: { items: { include: { product: true } }, customer: true }
-      })
-    } else {
-      orders = await prisma.order.findMany({ 
-        where: { customerId: user.id },
-        include: { items: { include: { product: true } } }
-      })
-    }
-
-    return NextResponse.json({ orders })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
-  }
-}
+// ... (keep your imports and GET function) ...
 
 // POST: SECURE CHECKOUT
 export async function POST(request: Request) {
@@ -48,10 +19,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing delivery details' }, { status: 400 })
     }
 
-    // 3. Fetch products from DB and calculate REAL prices (Prevents Price Tampering)
+    // 3. Fetch products from DB and calculate REAL prices
     let totalAmount = 0
     let totalWeight = 0
-    const orderItemsData = []
+    
+    // FIX: Added type annotation 'any[]' here
+    const orderItemsData: any[] = []
 
     for (const item of items) {
       const product = await prisma.product.findUnique({ where: { id: item.productId } })
@@ -64,7 +37,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Not enough stock for ${product.name}` }, { status: 400 })
       }
 
-      // Calculate on the SERVER, never trust the frontend
       const itemTotal = product.price * item.quantity
       totalAmount += itemTotal
       totalWeight += product.weightKg * item.quantity
@@ -72,20 +44,18 @@ export async function POST(request: Request) {
       orderItemsData.push({
         productId: product.id,
         quantity: item.quantity,
-        price: product.price // Use DB price!
+        price: product.price
       })
     }
 
-    // 4. Calculate Delivery Fee on Server (e.g., Base 50 + 10 per kg)
     const deliveryFee = 50 + (totalWeight * 10)
-    const riderPayout = deliveryFee // Rider keeps the delivery fee
+    const riderPayout = deliveryFee
 
-    // 5. Create Order and Update Stock in a TRANSACTION (Prevents race conditions)
+    // 5. Create Order and Update Stock
     const order = await prisma.$transaction(async (tx) => {
-      // Create the order
       const newOrder = await tx.order.create({
         data: {
-          customerId: customer.id, // Use ID from secure cookie, NOT frontend!
+          customerId: customer.id,
           totalAmount,
           deliveryFee,
           riderPayout,
@@ -99,7 +69,6 @@ export async function POST(request: Request) {
         }
       })
 
-      // Decrease stock for each product
       for (const item of items) {
         await tx.product.update({
           where: { id: item.productId },
