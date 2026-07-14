@@ -8,15 +8,15 @@ import Header from '@/components/Header'
 export default function CheckoutPage() {
   const router = useRouter()
   const [cart, setCart] = useState<any[]>([])
-  const [address, setAddress] = useState('')
-  const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
   
-  // Address popup states
-  const [showAddressPopup, setShowAddressPopup] = useState(false)
+  // Address states
+  const [showPopup, setShowPopup] = useState(false)
   const [useRegisteredAddress, setUseRegisteredAddress] = useState<boolean | null>(null)
+  const [registeredAddress, setRegisteredAddress] = useState('')
   const [customAddress, setCustomAddress] = useState('')
+  const [phone, setPhone] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -24,10 +24,10 @@ export default function CheckoutPage() {
       .then(data => {
         if (data.user) {
           setUser(data.user)
-          // AUTO-FILL phone from user data
-          if (data.user.phone) {
-            setPhone(data.user.phone)
-          }
+          // AUTO-FILL phone from user profile
+          setPhone(data.user.phone || '')
+          // Store registered address
+          setRegisteredAddress(data.user.address || '')
           
           // Load cart
           const savedCart = localStorage.getItem('cart')
@@ -37,10 +37,9 @@ export default function CheckoutPage() {
           
           // Show popup if user has a registered address
           if (data.user.address && data.user.address.trim() !== '') {
-            setAddress(data.user.address)
-            setShowAddressPopup(true)
+            setShowPopup(true)
           } else {
-            // No registered address - just show custom address field
+            // No registered address - show custom address field directly
             setUseRegisteredAddress(false)
           }
         } else {
@@ -52,14 +51,11 @@ export default function CheckoutPage() {
 
   const handleAddressChoice = (useRegistered: boolean) => {
     setUseRegisteredAddress(useRegistered)
-    if (useRegistered && user?.address) {
-      setAddress(user.address)
-    }
-    setShowAddressPopup(false)
+    setShowPopup(false)
   }
 
   const handleCheckout = async () => {
-    const finalAddress = useRegisteredAddress ? address : customAddress
+    const finalAddress = useRegisteredAddress ? registeredAddress : customAddress
     
     if (!finalAddress || !phone) {
       alert('Please provide delivery address and phone number')
@@ -98,9 +94,7 @@ export default function CheckoutPage() {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
         <Header />
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <p>Loading...</p>
-        </div>
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}><p>Loading...</p></div>
       </main>
     )
   }
@@ -109,8 +103,8 @@ export default function CheckoutPage() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       
-      {/* ADDRESS POPUP - Shows when user has registered address */}
-      {showAddressPopup && (
+      {/* POPUP - Shows when user has registered address */}
+      {showPopup && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -132,12 +126,12 @@ export default function CheckoutPage() {
             <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center', color: 'black' }}>
               📍 Delivery Address
             </h2>
-            <p style={{ fontSize: '16px', marginBottom: '20px', textAlign: 'center', color: 'black', fontWeight: 'bold' }}>
-              Do you want to use your registered address?
+            <p style={{ fontSize: '18px', marginBottom: '20px', textAlign: 'center', color: 'black', fontWeight: 'bold' }}>
+              Do you want to use your current address?
             </p>
             <div style={{ backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
-              <p style={{ fontWeight: 'bold', marginBottom: '5px', color: 'black' }}>Your registered address:</p>
-              <p style={{ color: 'black', fontSize: '14px' }}>{user.address}</p>
+              <p style={{ fontWeight: 'bold', marginBottom: '5px', color: 'black' }}>Your current address:</p>
+              <p style={{ color: 'black', fontSize: '14px' }}>{registeredAddress}</p>
             </div>
             <div style={{ display: 'flex', gap: '15px' }}>
               <button
@@ -155,7 +149,7 @@ export default function CheckoutPage() {
                   boxShadow: '3px 3px 0px black'
                 }}
               >
-                ✅ Yes, use it
+                ✅ Yes
               </button>
               <button
                 onClick={() => handleAddressChoice(false)}
@@ -172,7 +166,7 @@ export default function CheckoutPage() {
                   boxShadow: '3px 3px 0px black'
                 }}
               >
-                ❌ No, use different address
+                ❌ No
               </button>
             </div>
           </div>
@@ -196,7 +190,7 @@ export default function CheckoutPage() {
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '20px', fontSize: '18px' }}>
                 <span style={{ color: 'black' }}>Total:</span>
-                <span style={{ color: 'green', fontSize: '24px' }}>{total.toFixed(2)}</span>
+                <span style={{ color: 'green', fontSize: '24px' }}>₱{total.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -205,11 +199,11 @@ export default function CheckoutPage() {
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '3px 3px 0px black' }}>
           <h2 style={{ fontSize: '20px', marginBottom: '15px', color: 'black' }}>Delivery Details</h2>
           
-          {/* Show registered address if selected */}
+          {/* Show registered address if "Yes" was clicked */}
           {useRegisteredAddress === true && (
             <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
-              <p style={{ fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>📍 Using your registered address:</p>
-              <p style={{ color: 'black' }}>{address}</p>
+              <p style={{ fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>📍 Using your current address:</p>
+              <p style={{ color: 'black', fontWeight: 'bold' }}>{registeredAddress}</p>
             </div>
           )}
 
@@ -242,6 +236,7 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {/* Phone Number - AUTO-FILLED from profile */}
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>
               Contact Number
