@@ -15,16 +15,25 @@ interface CartButtonProps {
 }
 
 export default function CartButton({ product }: CartButtonProps) {
-  const [cartCount, setCartCount] = useState(0)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    // Load cart count on mount
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]')
-    const totalItems = cart.reduce((sum: number, item: any) => sum + item.quantity, 0)
-    setCartCount(totalItems)
+    // Check if user is logged in
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        setIsLoggedIn(!!data.user)
+      })
+      .catch(() => setIsLoggedIn(false))
   }, [])
 
   const addToCart = () => {
+    // Check login first
+    if (!isLoggedIn) {
+      alert('Please login first to add items to cart!')
+      return
+    }
+
     const cart = JSON.parse(localStorage.getItem('cart') || '[]')
     const existingItem = cart.find((item: any) => item.id === product.id)
 
@@ -41,8 +50,6 @@ export default function CartButton({ product }: CartButtonProps) {
     }
 
     localStorage.setItem('cart', JSON.stringify(cart))
-    const newCount = cart.reduce((sum: number, item: any) => sum + item.quantity, 0)
-    setCartCount(newCount)
     alert('Added to cart!')
   }
 

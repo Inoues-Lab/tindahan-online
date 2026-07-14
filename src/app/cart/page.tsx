@@ -17,17 +17,26 @@ export default function CartPage() {
   const router = useRouter()
   const [cart, setCart] = useState<CartItem[]>([])
 
+  // Load cart EVERY time page is visited
   useEffect(() => {
-    // Load cart from localStorage on mount
-    const savedCart = localStorage.getItem('cart')
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart))
-      } catch (e) {
-        console.error('Error parsing cart:', e)
+    const loadCart = () => {
+      const savedCart = localStorage.getItem('cart')
+      if (savedCart) {
+        try {
+          setCart(JSON.parse(savedCart))
+        } catch (e) {
+          setCart([])
+        }
+      } else {
         setCart([])
       }
     }
+    
+    loadCart()
+    
+    // Also listen for storage changes (when cart is updated elsewhere)
+    window.addEventListener('storage', loadCart)
+    return () => window.removeEventListener('storage', loadCart)
   }, [])
 
   const updateQuantity = (productId: string, newQuantity: number) => {
