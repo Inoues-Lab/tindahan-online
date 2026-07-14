@@ -16,28 +16,27 @@ interface CartItem {
 export default function CartPage() {
   const router = useRouter()
   const [cart, setCart] = useState<CartItem[]>([])
+  const [key, setKey] = useState(0) // Force re-render
 
-  // Load cart EVERY time page is visited
-  useEffect(() => {
-    const loadCart = () => {
-      const savedCart = localStorage.getItem('cart')
-      if (savedCart) {
-        try {
-          setCart(JSON.parse(savedCart))
-        } catch (e) {
-          setCart([])
-        }
-      } else {
+  // Load cart from localStorage
+  const loadCart = () => {
+    const savedCart = localStorage.getItem('cart')
+    if (savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart)
+        setCart(parsed)
+      } catch (e) {
+        console.error('Error parsing cart:', e)
         setCart([])
       }
+    } else {
+      setCart([])
     }
-    
+  }
+
+  useEffect(() => {
     loadCart()
-    
-    // Also listen for storage changes (when cart is updated elsewhere)
-    window.addEventListener('storage', loadCart)
-    return () => window.removeEventListener('storage', loadCart)
-  }, [])
+  }, [key]) // Re-run when key changes
 
   const updateQuantity = (productId: string, newQuantity: number) => {
     const updatedCart = cart.map(item =>
@@ -54,15 +53,35 @@ export default function CartPage() {
     localStorage.setItem('cart', JSON.stringify(updatedCart))
   }
 
+  const refreshCart = () => {
+    setKey(prev => prev + 1) // Force re-render
+  }
+
   const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '20px' }}>
-          Shopping Cart 🛒
-        </h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold' }}>
+            Shopping Cart 🛒
+          </h1>
+          <button
+            onClick={refreshCart}
+            style={{
+              backgroundColor: 'blue',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '2px solid black',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+             Refresh
+          </button>
+        </div>
 
         {cart.length === 0 ? (
           <div style={{ backgroundColor: 'white', padding: '60px 20px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
@@ -153,7 +172,7 @@ export default function CartPage() {
             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '20px', fontWeight: 'bold' }}>
                 <span>Total:</span>
-                <span style={{ color: 'green' }}>{total.toFixed(2)}</span>
+                <span style={{ color: 'green' }}>₱{total.toFixed(2)}</span>
               </div>
               <button
                 onClick={() => router.push('/checkout')}

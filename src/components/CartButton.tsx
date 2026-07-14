@@ -18,7 +18,6 @@ export default function CartButton({ product }: CartButtonProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    // Check if user is logged in
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => {
@@ -28,7 +27,6 @@ export default function CartButton({ product }: CartButtonProps) {
   }, [])
 
   const addToCart = () => {
-    // Check login first
     if (!isLoggedIn) {
       alert('Please login first to add items to cart!')
       return
@@ -50,6 +48,10 @@ export default function CartButton({ product }: CartButtonProps) {
     }
 
     localStorage.setItem('cart', JSON.stringify(cart))
+    
+    // Dispatch custom event to notify cart page
+    window.dispatchEvent(new Event('cartUpdated'))
+    
     alert('Added to cart!')
   }
 
