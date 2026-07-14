@@ -5,7 +5,6 @@ import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
-    // Get rider from cookie
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
     const userRole = cookieStore.get('userRole')?.value
@@ -14,13 +13,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get rider's RiderProfile (Delivery.riderId references RiderProfile, not User)
-    const riderProfile = await prisma.riderProfile.findUnique({
+    // Get or create rider profile
+    let riderProfile = await prisma.riderProfile.findUnique({
       where: { userId: userId }
     })
 
     if (!riderProfile) {
-      return NextResponse.json({ error: 'Rider profile not found' }, { status: 404 })
+      riderProfile = await prisma.riderProfile.create({
+        data: {
+          userId: userId,
+          vehicleType: 'MOTORCYCLE',
+          maxLoadKg: 15.0,
+          status: 'ON_DELIVERY'
+        }
+      })
     }
 
     const body = await request.json()
@@ -44,18 +50,16 @@ export async function POST(request: Request) {
     }
 
     await prisma.$transaction(async (tx) => {
-      // Update order status
       await tx.order.update({
         where: { id: orderId },
         data: { status: 'ACCEPTED' }
       })
 
-      // Update delivery with RiderProfile.id (not User.id)
       if (order.delivery) {
         await tx.delivery.update({
           where: { id: order.delivery.id },
           data: {
-            riderId: riderProfile.id,  // Use RiderProfile.id!
+            riderId: riderProfile!.id,
             status: 'ASSIGNED',
             acceptedAt: new Date()
           }
@@ -64,7 +68,7 @@ export async function POST(request: Request) {
         await tx.delivery.create({
           data: {
             orderId: orderId,
-            riderId: riderProfile.id,  // Use RiderProfile.id!
+            riderId: riderProfile!.id,
             status: 'ASSIGNED',
             acceptedAt: new Date()
           }

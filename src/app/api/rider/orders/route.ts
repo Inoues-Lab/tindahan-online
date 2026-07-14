@@ -13,13 +13,21 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get rider's RiderProfile
-    const riderProfile = await prisma.riderProfile.findUnique({
+    // Get or create rider profile
+    let riderProfile = await prisma.riderProfile.findUnique({
       where: { userId: userId }
     })
 
+    // Auto-create RiderProfile if it doesn't exist
     if (!riderProfile) {
-      return NextResponse.json({ error: 'Rider profile not found' }, { status: 404 })
+      riderProfile = await prisma.riderProfile.create({
+        data: {
+          userId: userId,
+          vehicleType: 'MOTORCYCLE',
+          maxLoadKg: 15.0,
+          status: 'ONLINE'
+        }
+      })
     }
 
     // Get all pending orders with unassigned deliveries
@@ -38,7 +46,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     })
 
-    // Get orders assigned to this rider (use RiderProfile.id)
+    // Get orders assigned to this rider
     const myOrders = await prisma.order.findMany({
       where: {
         delivery: {
