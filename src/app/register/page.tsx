@@ -17,6 +17,26 @@ export default function RegisterPage() {
   })
   const [loading, setLoading] = useState(false)
 
+  const inputStyle = {
+    width: '100%',
+    padding: '12px',
+    borderRadius: '8px',
+    border: '2px solid black',
+    fontSize: '16px',
+    boxSizing: 'border-box' as const,
+    backgroundColor: 'white',
+    color: 'black',
+    fontWeight: 'bold' as const
+  }
+
+  const labelStyle = {
+    display: 'block',
+    fontWeight: 'bold' as const,
+    marginBottom: '5px',
+    color: 'black',
+    fontSize: '16px'
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -44,78 +64,78 @@ export default function RegisterPage() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', width: '100%', maxWidth: '500px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', textAlign: 'center', marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', textAlign: 'center', marginBottom: '30px', color: 'black' }}>
           Register
         </h1>
 
         <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '15px' }}>
           <div>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Full Name</label>
+            <label style={labelStyle}>Full Name</label>
             <input
               type="text"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              style={inputStyle}
               placeholder="Juan Dela Cruz"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Email</label>
+            <label style={labelStyle}>Email</label>
             <input
               type="email"
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              style={inputStyle}
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Password</label>
+            <label style={labelStyle}>Password</label>
             <input
               type="password"
               required
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              style={inputStyle}
               placeholder="••••••••"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Phone Number</label>
+            <label style={labelStyle}>Phone Number</label>
             <input
               type="text"
               required
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              style={inputStyle}
               placeholder="09xxxxxxxxx"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Address</label>
+            <label style={labelStyle}>Address</label>
             <textarea
               required
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', minHeight: '80px', boxSizing: 'border-box' }}
+              style={{ ...inputStyle, minHeight: '80px' }}
               placeholder="House No., Street, Barangay, City"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>I am a:</label>
+            <label style={labelStyle}>I am a:</label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              style={inputStyle}
             >
               <option value="CUSTOMER">Customer</option>
               <option value="RIDER">Rider</option>
@@ -130,7 +150,7 @@ export default function RegisterPage() {
               padding: '15px',
               backgroundColor: loading ? 'gray' : 'green',
               color: 'white',
-              border: 'none',
+              border: '2px solid black',
               borderRadius: '8px',
               fontSize: '18px',
               fontWeight: 'bold',

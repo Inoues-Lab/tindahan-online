@@ -1,122 +1,145 @@
-// src/app/login/page.tsx
+// src/app/register/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+    address: '',
+    role: 'CUSTOMER'
+  })
   const [loading, setLoading] = useState(false)
-  const [checkingAuth, setCheckingAuth] = useState(true)
 
-  useEffect(() => {
-    // Check if user is already logged in
-    const checkLoggedIn = async () => {
-      try {
-        const response = await fetch('/api/auth/me')
-        const data = await response.json()
-        
-        if (data.user) {
-          // Already logged in - redirect to appropriate dashboard
-          if (data.user.role === 'ADMIN') {
-            router.push('/admin')
-          } else if (data.user.role === 'RIDER') {
-            router.push('/rider')
-          } else {
-            router.push('/')
-          }
-        }
-      } catch (error) {
-        console.log('Not logged in')
-      } finally {
-        setCheckingAuth(false)
-      }
-    }
-    
-    checkLoggedIn()
-  }, [router])
+  const inputStyle = {
+    width: '100%',
+    padding: '12px',
+    borderRadius: '8px',
+    border: '2px solid black',
+    fontSize: '16px',
+    boxSizing: 'border-box' as const,
+    backgroundColor: 'white',
+    color: 'black',
+    fontWeight: 'bold' as const
+  }
+
+  const labelStyle = {
+    display: 'block',
+    fontWeight: 'bold' as const,
+    marginBottom: '5px',
+    color: 'black',
+    fontSize: '16px'
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify(formData)
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        // Redirect based on role
-        if (data.user.role === 'ADMIN') {
-          router.push('/admin')
-        } else if (data.user.role === 'RIDER') {
-          router.push('/rider')
-        } else {
-          router.push('/')
-        }
+        alert('Registration successful! Please login.')
+        router.push('/login')
       } else {
-        alert(data.error || 'Login failed')
+        alert(data.error || 'Registration failed')
       }
     } catch (error) {
-      alert('Login error')
+      alert('Registration error')
     } finally {
       setLoading(false)
     }
   }
 
-  // Show loading while checking auth status
-  if (checkingAuth) {
-    return (
-      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p>Loading...</p>
-      </main>
-    )
-  }
-
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', width: '100%', maxWidth: '400px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', textAlign: 'center', marginBottom: '10px' }}>
-          Welcome Back
+    <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', width: '100%', maxWidth: '500px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', textAlign: 'center', marginBottom: '30px', color: 'black' }}>
+          Register
         </h1>
-        <p style={{ textAlign: 'center', color: 'gray', marginBottom: '30px' }}>
-          Login to your account
-        </p>
 
-        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '20px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '15px' }}>
           <div>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'gray' }}>
-              Email
-            </label>
+            <label style={labelStyle}>Full Name</label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              style={inputStyle}
+              placeholder="Juan Dela Cruz"
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Email</label>
             <input
               type="email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              style={inputStyle}
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'gray' }}>
-              Password
-            </label>
+            <label style={labelStyle}>Password</label>
             <input
               type="password"
               required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              style={inputStyle}
               placeholder="••••••••"
             />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Phone Number</label>
+            <input
+              type="text"
+              required
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              style={inputStyle}
+              placeholder="09xxxxxxxxx"
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Address</label>
+            <textarea
+              required
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              style={{ ...inputStyle, minHeight: '80px' }}
+              placeholder="House No., Street, Barangay, City"
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>I am a:</label>
+            <select
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              style={inputStyle}
+            >
+              <option value="CUSTOMER">Customer</option>
+              <option value="RIDER">Rider</option>
+            </select>
           </div>
 
           <button
@@ -125,9 +148,9 @@ export default function LoginPage() {
             style={{
               width: '100%',
               padding: '15px',
-              backgroundColor: loading ? 'gray' : 'blue',
+              backgroundColor: loading ? 'gray' : 'green',
               color: 'white',
-              border: 'none',
+              border: '2px solid black',
               borderRadius: '8px',
               fontSize: '18px',
               fontWeight: 'bold',
@@ -135,13 +158,13 @@ export default function LoginPage() {
               boxShadow: '3px 3px 0px black'
             }}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Registering...' : 'Register'}
           </button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <Link href="/register" style={{ color: 'blue', fontWeight: 'bold' }}>
-            Don't have an account? Register here
+          <Link href="/login" style={{ color: 'blue', fontWeight: 'bold' }}>
+            Already have an account? Login here
           </Link>
         </div>
       </div>
