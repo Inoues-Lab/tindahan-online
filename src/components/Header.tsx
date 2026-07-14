@@ -1,185 +1,122 @@
 // src/components/Header.tsx
 'use client'
 
-import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCart } from '@/context/CartContext'
-
-function CartCountBadge() {
-  const { cartCount } = useCart()
-
-  if (cartCount === 0) return null
-
-  return (
-    <span style={{
-      position: 'absolute',
-      top: '-8px',
-      right: '-15px',
-      backgroundColor: 'red',
-      color: 'white',
-      borderRadius: '50%',
-      padding: '2px 6px',
-      fontSize: '12px',
-      fontWeight: 'bold',
-      minWidth: '18px',
-      textAlign: 'center'
-    }}>
-      {cartCount}
-    </span>
-  )
-}
 
 export default function Header() {
   const router = useRouter()
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [userRole, setUserRole] = useState<string>('')
-  const [userName, setUserName] = useState<string>('')
+  const [user, setUser] = useState<any>(null)
+  const [cartCount, setCartCount] = useState(0)
 
   useEffect(() => {
-    checkAuth()
+    // Fetch user info
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        setUser(data.user)
+      })
+      .catch(() => setUser(null))
+
+    // Load cart count
+    const loadCartCount = () => {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]')
+      const count = cart.reduce((sum: number, item: any) => sum + item.quantity, 0)
+      setCartCount(count)
+    }
+
+    loadCartCount()
+    
+    // Listen for cart updates
+    window.addEventListener('storage', loadCartCount)
+    window.addEventListener('cartUpdated', loadCartCount)
+    
+    return () => {
+      window.removeEventListener('storage', loadCartCount)
+      window.removeEventListener('cartUpdated', loadCartCount)
+    }
   }, [])
 
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/auth/me')
-      const data = await response.json()
-      
-      if (data.user) {
-        setIsLoggedIn(true)
-        setUserRole(data.user.role)
-        setUserName(data.user.name)
-      } else {
-        setIsLoggedIn(false)
-        setUserRole('')
-        setUserName('')
-      }
-    } catch (error) {
-      console.error('Auth check error:', error)
-      setIsLoggedIn(false)
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      localStorage.clear()
-      setIsLoggedIn(false)
-      setUserRole('')
-      setUserName('')
-      window.location.href = '/'
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
+  const handleLogout = () => {
+    // Clear auth cookies
+    document.cookie = 'userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/'
+    document.cookie = 'userRole=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/'
+    // DON'T clear localStorage cart - keep it for when they login again
+    router.push('/')
+    router.refresh()
   }
 
   return (
-    <header style={{ backgroundColor: 'white', borderBottom: '3px solid black', padding: '15px 20px' }}>
+    <header style={{ backgroundColor: 'white', borderBottom: '2px solid black', padding: '15px 20px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: 'black', margin: 0 }}>🛒 Tindahan Online</h1>
+        <Link href="/" style={{ fontSize: '24px', fontWeight: 'bold', color: 'black', textDecoration: 'none' }}>
+          🛒 Tindahan Online
         </Link>
-
-        <nav style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          {(!isLoggedIn || userRole === 'CUSTOMER') && (
-            <Link href="/cart" style={{ 
-              textDecoration: 'none', 
-              color: 'black', 
-              fontWeight: 'bold',
-              fontSize: '16px',
-              position: 'relative'
-            }}>
-              Cart 🛒
-              <CartCountBadge />
-            </Link>
-          )}
-
-          {userRole === 'CUSTOMER' && (
-            <Link href="/orders/my-orders" style={{ 
-              textDecoration: 'none', 
-              color: 'black', 
-              fontWeight: 'bold',
-              fontSize: '16px'
-            }}>
-              My Orders 📦
-            </Link>
-          )}
-
-          {userRole === 'ADMIN' && (
-            <Link href="/admin/products" style={{ 
-              textDecoration: 'none', 
-              color: 'black', 
-              fontWeight: 'bold',
-              fontSize: '16px'
-            }}>
-              Products 📦
-            </Link>
-          )}
-
-          {/* ONLY customers see Shop link - NOT riders or admin */}
-          {userRole === 'CUSTOMER' && (
-            <Link href="/" style={{ 
-              textDecoration: 'none', 
-              color: 'black', 
-              fontWeight: 'bold',
-              fontSize: '16px'
-            }}>
-              Shop
-            </Link>
-          )}
-
-          {isLoggedIn ? (
+        
+        <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          {user ? (
             <>
-              {userRole === 'RIDER' && (
-                <Link href="/rider" style={{ 
-                  textDecoration: 'none', 
-                  color: 'black', 
-                  fontWeight: 'bold',
-                  fontSize: '16px'
-                }}>
-                  Rider 🏍️
+              {user.role === 'ADMIN' && (
+                <Link href="/admin" style={{ color: 'black', textDecoration: 'none', fontWeight: 'bold' }}>
+                  Admin
                 </Link>
               )}
-              {userRole === 'ADMIN' && (
-                <Link href="/admin" style={{ 
-                  textDecoration: 'none', 
-                  color: 'black', 
-                  fontWeight: 'bold',
-                  fontSize: '16px'
-                }}>
-                  Admin 🔧
+              {user.role === 'RIDER' && (
+                <Link href="/rider" style={{ color: 'black', textDecoration: 'none', fontWeight: 'bold' }}>
+                  Rider
                 </Link>
+              )}
+              {user.role === 'CUSTOMER' && (
+                <>
+                  <Link href="/cart" style={{ color: 'black', textDecoration: 'none', fontWeight: 'bold', position: 'relative' }}>
+                    Cart 🛒
+                    {cartCount > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        right: '-15px',
+                        backgroundColor: 'red',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+                  <Link href="/orders/my-orders" style={{ color: 'black', textDecoration: 'none', fontWeight: 'bold' }}>
+                    My Orders 📦
+                  </Link>
+                  <Link href="/" style={{ color: 'black', textDecoration: 'none', fontWeight: 'bold' }}>
+                    Shop
+                  </Link>
+                </>
               )}
               <button
                 onClick={handleLogout}
-                style={{ 
-                  backgroundColor: 'red', 
-                  color: 'white', 
-                  padding: '10px 20px', 
-                  borderRadius: '8px', 
+                style={{
+                  backgroundColor: 'red',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
                   border: '2px solid black',
                   fontWeight: 'bold',
-                  cursor: 'pointer',
-                  fontSize: '16px'
+                  cursor: 'pointer'
                 }}
               >
                 Logout
               </button>
             </>
           ) : (
-            <Link href="/login" style={{ textDecoration: 'none' }}>
-              <button style={{ 
-                backgroundColor: 'blue', 
-                color: 'white', 
-                padding: '10px 20px', 
-                borderRadius: '8px', 
-                border: '2px solid black',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                fontSize: '16px'
-              }}>
-                Login
-              </button>
+            <Link href="/login" style={{ backgroundColor: 'blue', color: 'white', padding: '8px 16px', borderRadius: '8px', border: '2px solid black', fontWeight: 'bold', textDecoration: 'none' }}>
+              Login
             </Link>
           )}
         </nav>
