@@ -1,12 +1,26 @@
 // src/app/api/rider/orders/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
-    const user = await requireAuth(['RIDER', 'ADMIN'])
-    if (user instanceof NextResponse) return user
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+    const userRole = cookieStore.get('userRole')?.value
+
+    if (!userId || userRole !== 'RIDER') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get rider's RiderProfile
+    const riderProfile = await prisma.riderProfile.findUnique({
+      where: { userId: userId }
+    })
+
+    if (!riderProfile) {
+      return NextResponse.json({ error: 'Rider profile not found' }, { status: 404 })
+    }
 
     // Get all pending orders with unassigned deliveries
     const pendingOrders = await prisma.order.findMany({
@@ -24,11 +38,11 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     })
 
-    // Get orders assigned to this rider
+    // Get orders assigned to this rider (use RiderProfile.id)
     const myOrders = await prisma.order.findMany({
       where: {
         delivery: {
-          riderId: user.id
+          riderId: riderProfile.id
         }
       },
       include: {

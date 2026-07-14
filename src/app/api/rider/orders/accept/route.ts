@@ -14,13 +14,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get rider from database
-    const rider = await prisma.user.findUnique({
-      where: { id: userId }
+    // Get rider's RiderProfile (Delivery.riderId references RiderProfile, not User)
+    const riderProfile = await prisma.riderProfile.findUnique({
+      where: { userId: userId }
     })
 
-    if (!rider) {
-      return NextResponse.json({ error: 'Rider not found' }, { status: 404 })
+    if (!riderProfile) {
+      return NextResponse.json({ error: 'Rider profile not found' }, { status: 404 })
     }
 
     const body = await request.json()
@@ -50,22 +50,21 @@ export async function POST(request: Request) {
         data: { status: 'ACCEPTED' }
       })
 
-      // Update or create delivery record
+      // Update delivery with RiderProfile.id (not User.id)
       if (order.delivery) {
         await tx.delivery.update({
           where: { id: order.delivery.id },
           data: {
-            riderId: rider.id,
+            riderId: riderProfile.id,  // Use RiderProfile.id!
             status: 'ASSIGNED',
             acceptedAt: new Date()
           }
         })
       } else {
-        // Create delivery if it doesn't exist
         await tx.delivery.create({
           data: {
             orderId: orderId,
-            riderId: rider.id,
+            riderId: riderProfile.id,  // Use RiderProfile.id!
             status: 'ASSIGNED',
             acceptedAt: new Date()
           }
