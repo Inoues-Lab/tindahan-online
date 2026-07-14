@@ -4,18 +4,22 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '@/components/Header'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'CUSTOMER' })
-  const [error, setError] = useState('')
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+    address: '',
+    role: 'CUSTOMER'
+  })
   const [loading, setLoading] = useState(false)
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError('')
 
     try {
       const response = await fetch('/api/auth/register', {
@@ -30,86 +34,118 @@ export default function RegisterPage() {
         alert('Registration successful! Please login.')
         router.push('/login')
       } else {
-        setError(data.error || 'Registration failed')
+        alert(data.error || 'Registration failed')
       }
-    } catch (err) {
-      setError('An error occurred')
+    } catch (error) {
+      alert('Registration error')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: 'white' }}>
-      <Header />
-      <div style={{ maxWidth: '500px', margin: '50px auto', padding: '20px' }}>
-        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: 'black', textAlign: 'center', marginBottom: '30px', marginTop: 0 }}>Register</h1>
-          
-          {error && (
-            <div style={{ backgroundColor: '#ffebee', color: 'red', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', fontWeight: 'bold' }}>
-              {error}
-            </div>
-          )}
+    <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', width: '100%', maxWidth: '500px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', textAlign: 'center', marginBottom: '30px' }}>
+          Register
+        </h1>
 
-          <form onSubmit={handleRegister}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', color: 'black', marginBottom: '8px' }}>Full Name</label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', color: 'black', boxSizing: 'border-box' }}
-              />
-            </div>
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '15px' }}>
+          <div>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Full Name</label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              placeholder="Juan Dela Cruz"
+            />
+          </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', color: 'black', marginBottom: '8px' }}>Email</label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', color: 'black', boxSizing: 'border-box' }}
-              />
-            </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Email</label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              placeholder="you@example.com"
+            />
+          </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', color: 'black', marginBottom: '8px' }}>Password</label>
-              <input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', color: 'black', boxSizing: 'border-box' }}
-              />
-            </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Password</label>
+            <input
+              type="password"
+              required
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              placeholder="••••••••"
+            />
+          </div>
 
-            <div style={{ marginBottom: '30px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', color: 'black', marginBottom: '8px' }}>I am a:</label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', color: 'black', boxSizing: 'border-box' }}
-              >
-                <option value="CUSTOMER">Customer</option>
-                <option value="RIDER">Rider</option>
-              </select>
-            </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Phone Number</label>
+            <input
+              type="text"
+              required
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
+              placeholder="09xxxxxxxxx"
+            />
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ width: '100%', backgroundColor: loading ? 'gray' : 'green', color: 'white', padding: '15px', fontSize: '18px', fontWeight: 'bold', border: '3px solid black', borderRadius: '8px', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+          <div>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Address</label>
+            <textarea
+              required
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', minHeight: '80px', boxSizing: 'border-box' }}
+              placeholder="House No., Street, Barangay, City"
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>I am a:</label>
+            <select
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', boxSizing: 'border-box' }}
             >
-              {loading ? 'Registering...' : 'Register'}
-            </button>
-          </form>
+              <option value="CUSTOMER">Customer</option>
+              <option value="RIDER">Rider</option>
+            </select>
+          </div>
 
-          <p style={{ textAlign: 'center', marginTop: '20px', fontWeight: 'bold', color: 'black' }}>
-            Already have an account? <Link href="/login" style={{ color: 'blue', textDecoration: 'underline' }}>Login here</Link>
-          </p>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '15px',
+              backgroundColor: loading ? 'gray' : 'green',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: '3px 3px 0px black'
+            }}
+          >
+            {loading ? 'Registering...' : 'Register'}
+          </button>
+        </form>
+
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+          <Link href="/login" style={{ color: 'blue', fontWeight: 'bold' }}>
+            Already have an account? Login here
+          </Link>
         </div>
       </div>
     </main>
