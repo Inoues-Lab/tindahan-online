@@ -13,6 +13,7 @@ export default function RiderDashboard() {
   const [myOrders, setMyOrders] = useState<any[]>([])
   const [cashOnHand, setCashOnHand] = useState(0)
   const [todayEarnings, setTodayEarnings] = useState(0)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     checkAuth()
@@ -32,14 +33,19 @@ export default function RiderDashboard() {
       setUser(data.user)
       fetchRiderData()
     } catch (error) {
+      console.error('Auth error:', error)
       router.push('/login')
     }
   }
 
   const fetchRiderData = async () => {
     try {
+      console.log('Fetching rider orders...')
       const ordersRes = await fetch('/api/rider/orders')
+      console.log('Response status:', ordersRes.status)
+      
       const ordersData = await ordersRes.json()
+      console.log('Orders data:', ordersData)
       
       if (ordersRes.ok) {
         setPendingOrders(ordersData.pendingOrders || [])
@@ -56,9 +62,13 @@ export default function RiderDashboard() {
         }, 0)
         
         setTodayEarnings(todaysIncome)
+      } else {
+        console.error('Failed to fetch orders:', ordersData)
+        setError(ordersData.error || 'Failed to load orders')
       }
     } catch (error) {
       console.error('Error fetching rider data:', error)
+      setError('Error loading orders: ' + error)
     } finally {
       setLoading(false)
     }
@@ -66,7 +76,7 @@ export default function RiderDashboard() {
 
   const acceptOrder = async (orderId: string) => {
     try {
-      const response = await fetch(`/api/rider/orders/accept`, {
+      const response = await fetch('/api/rider/orders/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId })
@@ -104,6 +114,12 @@ export default function RiderDashboard() {
           Accept deliveries and earn money
         </p>
 
+        {error && (
+          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px' }}>
+            <strong style={{ color: 'red' }}>Error:</strong> {error}
+          </div>
+        )}
+
         <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '30px', boxShadow: '4px 4px 0px black' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>💰 Rider Earnings</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
@@ -125,11 +141,8 @@ export default function RiderDashboard() {
           </div>
         </div>
 
-        {/* Pending Orders - Available for all riders */}
         <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '30px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-            📦 Available Orders ({pendingOrders.length})
-          </h2>
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>📦 Available Orders ({pendingOrders.length})</h2>
           {pendingOrders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
               <p style={{ fontSize: '18px', color: 'gray' }}>No orders available right now</p>
@@ -153,7 +166,7 @@ export default function RiderDashboard() {
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ fontSize: '14px', color: 'gray' }}>Delivery Fee</p>
                       <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>₱{order.deliveryFee?.toFixed(2) || '0.00'}</p>
-                      <p style={{ fontSize: '12px', color: 'gray' }}>Total: {order.totalAmount?.toFixed(2)}</p>
+                      <p style={{ fontSize: '12px', color: 'gray' }}>Total: ₱{order.totalAmount?.toFixed(2)}</p>
                     </div>
                   </div>
                   <button
@@ -179,12 +192,9 @@ export default function RiderDashboard() {
           )}
         </div>
 
-        {/* My Orders */}
         {myOrders.length > 0 && (
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-              ️ My Orders ({myOrders.length})
-            </h2>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>📋 My Orders ({myOrders.length})</h2>
             <div style={{ display: 'grid', gap: '15px' }}>
               {myOrders.map((order) => (
                 <div key={order.id} style={{ padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px solid black' }}>
