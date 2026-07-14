@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 
-// GET: Fetch orders for the logged-in user
 export async function GET() {
   try {
     const user = await requireAuth(['CUSTOMER', 'RIDER', 'ADMIN'])
@@ -22,7 +21,7 @@ export async function GET() {
       orders = await prisma.order.findMany({ 
         where: { 
           delivery: { 
-            rider: { userId: user.id } 
+            riderId: user.id 
           } 
         },
         include: { 
@@ -45,14 +44,13 @@ export async function GET() {
   }
 }
 
-// POST: SECURE CHECKOUT
 export async function POST(request: Request) {
   try {
     const customer = await requireAuth(['CUSTOMER'])
     if (customer instanceof NextResponse) return customer
 
     const body = await request.json()
-    const { items, deliveryAddress, contactNumber } = body
+    const { items, deliveryAddress, contactNumber, deliveryFee } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
@@ -87,23 +85,21 @@ export async function POST(request: Request) {
       })
     }
 
-    const deliveryFee = 50 + (totalWeight * 10)
-    const riderPayout = deliveryFee
+    const finalDeliveryFee = deliveryFee || (40 + (totalWeight * 5))
+    const riderPayout = finalDeliveryFee
 
     const order = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
           customerId: customer.id,
           totalAmount,
-          deliveryFee,
+          deliveryFee: finalDeliveryFee,
           riderPayout,
           requiredLoadKg: totalWeight,
           deliveryAddress,
           contactNumber,
           paymentMethod: 'COD',
-          items: {
-            create: orderItemsData
-          }
+          items: { create: orderItemsData }
         }
       })
 

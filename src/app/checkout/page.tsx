@@ -11,12 +11,12 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
   
-  // Address states
   const [showPopup, setShowPopup] = useState(false)
   const [useRegisteredAddress, setUseRegisteredAddress] = useState<boolean | null>(null)
   const [registeredAddress, setRegisteredAddress] = useState('')
   const [customAddress, setCustomAddress] = useState('')
   const [phone, setPhone] = useState('')
+  const [distanceKm, setDistanceKm] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -24,22 +24,17 @@ export default function CheckoutPage() {
       .then(data => {
         if (data.user) {
           setUser(data.user)
-          // AUTO-FILL phone from user profile
           setPhone(data.user.phone || '')
-          // Store registered address
           setRegisteredAddress(data.user.address || '')
           
-          // Load cart
           const savedCart = localStorage.getItem('cart')
           if (savedCart) {
             try { setCart(JSON.parse(savedCart)) } catch (e) { setCart([]) }
           }
           
-          // Show popup if user has a registered address
           if (data.user.address && data.user.address.trim() !== '') {
             setShowPopup(true)
           } else {
-            // No registered address - show custom address field directly
             setUseRegisteredAddress(false)
           }
         } else {
@@ -54,11 +49,22 @@ export default function CheckoutPage() {
     setShowPopup(false)
   }
 
+  // Calculate delivery fee
+  const totalWeight = cart.reduce((sum, item) => sum + (item.weightKg * item.quantity), 0)
+  const distance = parseFloat(distanceKm) || 0
+  
+  const baseFee = 40 // First 3km
+  const extraKm = Math.max(0, distance - 3)
+  const distanceFee = extraKm * 10
+  const weightFee = totalWeight * 5
+  const deliveryFee = baseFee + distanceFee + weightFee
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0) + deliveryFee
+
   const handleCheckout = async () => {
     const finalAddress = useRegisteredAddress ? registeredAddress : customAddress
     
-    if (!finalAddress || !phone) {
-      alert('Please provide delivery address and phone number')
+    if (!finalAddress || !phone || !distanceKm) {
+      alert('Please provide delivery address, phone number, and distance from warehouse')
       return
     }
     
@@ -70,7 +76,9 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           items: cart.map(item => ({ productId: item.id, quantity: item.quantity })),
           deliveryAddress: finalAddress,
-          contactNumber: phone
+          contactNumber: phone,
+          distanceKm: distance,
+          deliveryFee: deliveryFee
         })
       })
       const data = await response.json()
@@ -88,8 +96,6 @@ export default function CheckoutPage() {
     }
   }
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-
   if (!user) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
@@ -103,25 +109,15 @@ export default function CheckoutPage() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       
-      {/* POPUP - Shows when user has registered address */}
       {showPopup && (
         <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
         }}>
           <div style={{
-            backgroundColor: 'white',
-            padding: '30px',
-            borderRadius: '12px',
-            border: '3px solid black',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: '8px 8px 0px black'
+            backgroundColor: 'white', padding: '30px', borderRadius: '12px',
+            border: '3px solid black', maxWidth: '500px', width: '90%', boxShadow: '8px 8px 0px black'
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center', color: 'black' }}>
               📍 Delivery Address
@@ -134,40 +130,14 @@ export default function CheckoutPage() {
               <p style={{ color: 'black', fontSize: '14px' }}>{registeredAddress}</p>
             </div>
             <div style={{ display: 'flex', gap: '15px' }}>
-              <button
-                onClick={() => handleAddressChoice(true)}
-                style={{
-                  flex: 1,
-                  padding: '15px',
-                  backgroundColor: 'green',
-                  color: 'white',
-                  border: '2px solid black',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  boxShadow: '3px 3px 0px black'
-                }}
-              >
-                ✅ Yes
-              </button>
-              <button
-                onClick={() => handleAddressChoice(false)}
-                style={{
-                  flex: 1,
-                  padding: '15px',
-                  backgroundColor: 'blue',
-                  color: 'white',
-                  border: '2px solid black',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  boxShadow: '3px 3px 0px black'
-                }}
-              >
-                ❌ No
-              </button>
+              <button onClick={() => handleAddressChoice(true)} style={{
+                flex: 1, padding: '15px', backgroundColor: 'green', color: 'white',
+                border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black'
+              }}>✅ Yes</button>
+              <button onClick={() => handleAddressChoice(false)} style={{
+                flex: 1, padding: '15px', backgroundColor: 'blue', color: 'white',
+                border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black'
+              }}>❌ No</button>
             </div>
           </div>
         </div>
@@ -188,7 +158,20 @@ export default function CheckoutPage() {
                   <span style={{ color: 'green', fontWeight: 'bold' }}>₱{(item.price * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '20px', fontSize: '18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', color: 'black' }}>
+                <span>Subtotal:</span>
+                <span style={{ fontWeight: 'bold' }}>₱{cart.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', color: 'black' }}>
+                <span>Delivery Fee:</span>
+                <span style={{ fontWeight: 'bold', color: 'blue' }}>
+                  ₱{deliveryFee.toFixed(2)} 
+                  <span style={{ fontSize: '12px', color: 'gray', fontWeight: 'normal' }}>
+                    {' '}(Base ₱40 + {distance}km + {totalWeight.toFixed(1)}kg)
+                  </span>
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '15px', fontSize: '20px', borderTop: '2px solid black', paddingTop: '15px' }}>
                 <span style={{ color: 'black' }}>Total:</span>
                 <span style={{ color: 'green', fontSize: '24px' }}>₱{total.toFixed(2)}</span>
               </div>
@@ -199,7 +182,6 @@ export default function CheckoutPage() {
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '3px 3px 0px black' }}>
           <h2 style={{ fontSize: '20px', marginBottom: '15px', color: 'black' }}>Delivery Details</h2>
           
-          {/* Show registered address if "Yes" was clicked */}
           {useRegisteredAddress === true && (
             <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
               <p style={{ fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>📍 Using your current address:</p>
@@ -207,55 +189,44 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {/* Show custom address input if "No" was clicked OR no registered address */}
           {useRegisteredAddress === false && (
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>
-                Delivery Address
-              </label>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Delivery Address</label>
               <textarea
                 value={customAddress}
                 onChange={(e) => setCustomAddress(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '2px solid black',
-                  minHeight: '80px',
-                  boxSizing: 'border-box',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  color: 'black',
-                  backgroundColor: 'white'
-                }}
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
                 placeholder="Enter delivery address (work, office, etc.)"
               />
-              <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>
-                ℹ️ This won't change your registered address
-              </p>
+              <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>ℹ️ This won't change your registered address</p>
             </div>
           )}
 
-          {/* Phone Number - AUTO-FILLED from profile */}
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>
-              Contact Number
+              📍 Distance from Warehouse (Dardarat, Tagudin)
             </label>
+            <input
+              type="number"
+              value={distanceKm}
+              onChange={(e) => setDistanceKm(e.target.value)}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
+              placeholder="Enter distance in km (e.g., 5)"
+              min="0"
+              step="0.5"
+            />
+            <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>
+              ℹ️ Fee: ₱40 base (first 3km) + ₱10/km + ₱5/kg weight
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Contact Number</label>
             <input
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '2px solid black',
-                boxSizing: 'border-box',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                color: 'black',
-                backgroundColor: 'white'
-              }}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
               placeholder="09xxxxxxxxx"
             />
           </div>
@@ -264,14 +235,10 @@ export default function CheckoutPage() {
             onClick={handleCheckout}
             disabled={loading || cart.length === 0}
             style={{
-              width: '100%',
-              padding: '15px',
+              width: '100%', padding: '15px',
               backgroundColor: cart.length === 0 ? 'gray' : 'green',
-              color: 'white',
-              border: '2px solid black',
-              borderRadius: '8px',
-              fontSize: '18px',
-              fontWeight: 'bold',
+              color: 'white', border: '2px solid black', borderRadius: '8px',
+              fontSize: '18px', fontWeight: 'bold',
               cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
               boxShadow: '3px 3px 0px black'
             }}
