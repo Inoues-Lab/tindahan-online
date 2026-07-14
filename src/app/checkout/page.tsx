@@ -10,17 +10,17 @@ const deliveryZones = {
   zone1: {
     name: 'Near Barangays (0-7km)',
     baseFee: 40,
-    barangays: [
+    locations: [
       'Dardarat', 'Farola', 'Tarangotong', 'Bimmanga', 'Dacutan',
       'Las-ud', 'Garitan', 'Tallaoen', 'Becques', 'Magsaysay',
       'Del Pilar', 'Cabugbugan', 'Rizal', 'Quirino', 'Jardin',
-      'Sawat', 'Ranget', 'Baritao', 'Bario-an', 'Libtong'
+      'Sawat', 'Ranget', 'Baritao', 'Bario-an', 'Libtong', 'Tagudin'
     ]
   },
   zone2: {
     name: 'Far Barangays (7-15km)',
     baseFee: 60,
-    barangays: [
+    locations: [
       'Tampugo', 'Borono', 'Pudoc West', 'Pudoc East',
       'Bucao West', 'Bucao East', 'Salvacion', 'Gabur',
       'Malacañang', 'Ambalayat', 'Lubnac', 'Bitalag',
@@ -31,18 +31,41 @@ const deliveryZones = {
   zone3: {
     name: 'Nearby Towns',
     baseFee: 80,
-    towns: [
-      'Sudipen, La Union', 'Bangar, La Union', 'Suyo, Ilocos Sur',
-      'Alilem, Ilocos Sur', 'Luna, La Union', 'Sugpon, Ilocos Sur'
+    locations: [
+      'Sudipen', 'Bangar', 'Suyo', 'Alilem', 'Luna', 'Sugpon'
     ]
   },
   zone4: {
     name: 'Far Towns/Cities',
     baseFee: 100,
-    towns: [
-      'Candon City', 'San Fernando, La Union', 'Vigan City',
-      'Santa, Ilocos Sur', 'Tagburot, La Union'
+    locations: [
+      'Candon', 'San Fernando', 'Vigan', 'Santa', 'Tagburot'
     ]
+  }
+}
+
+// Function to auto-detect zone from address
+function detectDeliveryZone(address: string): { zone: string; baseFee: number; zoneName: string } {
+  const addressLower = address.toLowerCase()
+  
+  // Check each zone
+  for (const [zoneKey, zoneData] of Object.entries(deliveryZones)) {
+    for (const location of zoneData.locations) {
+      if (addressLower.includes(location.toLowerCase())) {
+        return {
+          zone: zoneKey,
+          baseFee: zoneData.baseFee,
+          zoneName: zoneData.name
+        }
+      }
+    }
+  }
+  
+  // Default to zone 4 if not found
+  return {
+    zone: 'zone4',
+    baseFee: 100,
+    zoneName: 'Far Towns/Cities (Default)'
   }
 }
 
@@ -58,8 +81,7 @@ export default function CheckoutPage() {
   const [customAddress, setCustomAddress] = useState('')
   const [phone, setPhone] = useState('')
   
-  const [selectedZone, setSelectedZone] = useState('')
-  const [selectedLocation, setSelectedLocation] = useState('')
+  const [deliveryZone, setDeliveryZone] = useState<any>(null)
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -92,25 +114,29 @@ export default function CheckoutPage() {
     setShowPopup(false)
   }
 
-  // Calculate delivery fee based on zone + weight
+  // Determine which address is being used
+  const finalAddress = useRegisteredAddress === true ? registeredAddress : 
+                       useRegisteredAddress === false ? customAddress : ''
+
+  // Auto-detect zone and calculate fee when address changes
+  useEffect(() => {
+    if (finalAddress) {
+      const zone = detectDeliveryZone(finalAddress)
+      setDeliveryZone(zone)
+    }
+  }, [finalAddress])
+
+  // Calculate delivery fee
   const totalWeight = cart.reduce((sum, item) => sum + (item.weightKg * item.quantity), 0)
-  
-  let baseFee = 40
-  if (selectedZone === 'zone1') baseFee = 40
-  else if (selectedZone === 'zone2') baseFee = 60
-  else if (selectedZone === 'zone3') baseFee = 80
-  else if (selectedZone === 'zone4') baseFee = 100
-  
+  const baseFee = deliveryZone?.baseFee || 40
   const weightFee = totalWeight * 5
   const deliveryFee = baseFee + weightFee
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const total = subtotal + deliveryFee
 
   const handleCheckout = async () => {
-    const finalAddress = useRegisteredAddress ? registeredAddress : customAddress
-    
-    if (!finalAddress || !phone || !selectedZone) {
-      alert('Please select delivery zone, provide address, and phone number')
+    if (!finalAddress || !phone) {
+      alert('Please provide delivery address and phone number')
       return
     }
     
@@ -124,8 +150,7 @@ export default function CheckoutPage() {
           deliveryAddress: finalAddress,
           contactNumber: phone,
           deliveryFee: deliveryFee,
-          deliveryZone: selectedZone,
-          deliveryLocation: selectedLocation
+          deliveryZone: deliveryZone?.zone || 'zone1'
         })
       })
       const data = await response.json()
@@ -215,6 +240,7 @@ export default function CheckoutPage() {
                   ₱{deliveryFee.toFixed(2)} 
                   <span style={{ fontSize: '12px', color: 'gray', fontWeight: 'normal' }}>
                     {' '}(Base ₱{baseFee} + {totalWeight.toFixed(1)}kg × ₱5)
+                    {deliveryZone && <span> - {deliveryZone.zoneName}</span>}
                   </span>
                 </span>
               </div>
@@ -231,8 +257,13 @@ export default function CheckoutPage() {
           
           {useRegisteredAddress === true && (
             <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
-              <p style={{ fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>📍 Using your current address:</p>
+              <p style={{ fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>📍 Delivery Address:</p>
               <p style={{ color: 'black', fontWeight: 'bold' }}>{registeredAddress}</p>
+              {deliveryZone && (
+                <p style={{ fontSize: '12px', color: 'blue', marginTop: '5px' }}>
+                  Zone: {deliveryZone.zoneName} (Base fee: ₱{deliveryZone.baseFee})
+                </p>
+              )}
             </div>
           )}
 
@@ -245,61 +276,16 @@ export default function CheckoutPage() {
                 style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
                 placeholder="Enter delivery address (work, office, etc.)"
               />
-              <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>ℹ️ This won't change your registered address</p>
+              {deliveryZone && customAddress && (
+                <p style={{ fontSize: '12px', color: 'blue', marginTop: '5px' }}>
+                   Detected: {deliveryZone.zoneName} (Base fee: ₱{deliveryZone.baseFee})
+                </p>
+              )}
+              <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>
+                ℹ️ This won't change your registered address
+              </p>
             </div>
           )}
-
-          {/* Delivery Zone Selection */}
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'black', fontSize: '16px' }}>
-              📍 Delivery Zone (from Dardarat, Tagudin)
-            </label>
-            <select
-              value={selectedZone}
-              onChange={(e) => {
-                setSelectedZone(e.target.value)
-                setSelectedLocation('')
-              }}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white', marginBottom: '10px' }}
-            >
-              <option value="">Select your location...</option>
-              <option value="zone1">Zone 1 - Near Barangays (₱40 base)</option>
-              <option value="zone2">Zone 2 - Far Barangays (₱60 base)</option>
-              <option value="zone3">Zone 3 - Nearby Towns (₱80 base)</option>
-              <option value="zone4">Zone 4 - Far Towns/Cities (100 base)</option>
-            </select>
-            
-            {selectedZone && (
-              <div>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '14px' }}>
-                  Select Barangay/Town:
-                </label>
-                <select
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', color: 'black', backgroundColor: 'white' }}
-                >
-                  <option value="">Select...</option>
-                  {selectedZone === 'zone1' && deliveryZones.zone1.barangays.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                  {selectedZone === 'zone2' && deliveryZones.zone2.barangays.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                  {selectedZone === 'zone3' && deliveryZones.zone3.towns.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                  {selectedZone === 'zone4' && deliveryZones.zone4.towns.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            
-            <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>
-              ️ Fee: Base fee + ₱5/kg weight
-            </p>
-          </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Contact Number</label>
@@ -314,13 +300,13 @@ export default function CheckoutPage() {
 
           <button
             onClick={handleCheckout}
-            disabled={loading || cart.length === 0}
+            disabled={loading || cart.length === 0 || !finalAddress}
             style={{
               width: '100%', padding: '15px',
-              backgroundColor: cart.length === 0 ? 'gray' : 'green',
+              backgroundColor: (cart.length === 0 || !finalAddress) ? 'gray' : 'green',
               color: 'white', border: '2px solid black', borderRadius: '8px',
               fontSize: '18px', fontWeight: 'bold',
-              cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
+              cursor: (cart.length === 0 || !finalAddress) ? 'not-allowed' : 'pointer',
               boxShadow: '3px 3px 0px black'
             }}
           >
