@@ -1,21 +1,16 @@
-// src/app/register/page.tsx
+// src/app/login/page.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const router = useRouter()
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    phone: '',
-    address: '',
-    role: 'CUSTOMER'
-  })
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
 
   const inputStyle = {
     width: '100%',
@@ -37,59 +32,75 @@ export default function RegisterPage() {
     fontSize: '16px'
   }
 
+  useEffect(() => {
+    const checkLoggedIn = async () => {
+      try {
+        const response = await fetch('/api/auth/me')
+        const data = await response.json()
+        if (data.user) {
+          if (data.user.role === 'ADMIN') router.push('/admin')
+          else if (data.user.role === 'RIDER') router.push('/rider')
+          else router.push('/')
+        }
+      } catch (error) {
+        console.log('Not logged in')
+      } finally {
+        setCheckingAuth(false)
+      }
+    }
+    checkLoggedIn()
+  }, [router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ email, password })
       })
-
       const data = await response.json()
-
       if (response.ok) {
-        alert('Registration successful! Please login.')
-        router.push('/login')
+        if (data.user.role === 'ADMIN') router.push('/admin')
+        else if (data.user.role === 'RIDER') router.push('/rider')
+        else router.push('/')
       } else {
-        alert(data.error || 'Registration failed')
+        alert(data.error || 'Login failed')
       }
     } catch (error) {
-      alert('Registration error')
+      alert('Login error')
     } finally {
       setLoading(false)
     }
   }
 
+  if (checkingAuth) {
+    return (
+      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Loading...</p>
+      </main>
+    )
+  }
+
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', width: '100%', maxWidth: '500px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', textAlign: 'center', marginBottom: '30px', color: 'black' }}>
-          Register
+      <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', width: '100%', maxWidth: '400px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', textAlign: 'center', marginBottom: '10px', color: 'black' }}>
+          Welcome Back
         </h1>
+        <p style={{ textAlign: 'center', color: 'gray', marginBottom: '30px' }}>
+          Login to your account
+        </p>
 
-        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '15px' }}>
-          <div>
-            <label style={labelStyle}>Full Name</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              style={inputStyle}
-              placeholder="Juan Dela Cruz"
-            />
-          </div>
-
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '20px' }}>
           <div>
             <label style={labelStyle}>Email</label>
             <input
               type="email"
               required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               style={inputStyle}
               placeholder="you@example.com"
             />
@@ -100,46 +111,11 @@ export default function RegisterPage() {
             <input
               type="password"
               required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               style={inputStyle}
               placeholder="••••••••"
             />
-          </div>
-
-          <div>
-            <label style={labelStyle}>Phone Number</label>
-            <input
-              type="text"
-              required
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              style={inputStyle}
-              placeholder="09xxxxxxxxx"
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>Address</label>
-            <textarea
-              required
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              style={{ ...inputStyle, minHeight: '80px' }}
-              placeholder="House No., Street, Barangay, City"
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>I am a:</label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              style={inputStyle}
-            >
-              <option value="CUSTOMER">Customer</option>
-              <option value="RIDER">Rider</option>
-            </select>
           </div>
 
           <button
@@ -148,7 +124,7 @@ export default function RegisterPage() {
             style={{
               width: '100%',
               padding: '15px',
-              backgroundColor: loading ? 'gray' : 'green',
+              backgroundColor: loading ? 'gray' : 'blue',
               color: 'white',
               border: '2px solid black',
               borderRadius: '8px',
@@ -158,13 +134,13 @@ export default function RegisterPage() {
               boxShadow: '3px 3px 0px black'
             }}
           >
-            {loading ? 'Registering...' : 'Register'}
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <Link href="/login" style={{ color: 'blue', fontWeight: 'bold' }}>
-            Already have an account? Login here
+          <Link href="/register" style={{ color: 'blue', fontWeight: 'bold' }}>
+            Don't have an account? Register here
           </Link>
         </div>
       </div>
