@@ -5,6 +5,47 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 
+// Zone-based delivery fees from Dardarat, Tagudin
+const deliveryZones = {
+  zone1: {
+    name: 'Near Barangays (0-7km)',
+    baseFee: 40,
+    barangays: [
+      'Dardarat', 'Farola', 'Tarangotong', 'Bimmanga', 'Dacutan',
+      'Las-ud', 'Garitan', 'Tallaoen', 'Becques', 'Magsaysay',
+      'Del Pilar', 'Cabugbugan', 'Rizal', 'Quirino', 'Jardin',
+      'Sawat', 'Ranget', 'Baritao', 'Bario-an', 'Libtong'
+    ]
+  },
+  zone2: {
+    name: 'Far Barangays (7-15km)',
+    baseFee: 60,
+    barangays: [
+      'Tampugo', 'Borono', 'Pudoc West', 'Pudoc East',
+      'Bucao West', 'Bucao East', 'Salvacion', 'Gabur',
+      'Malacañang', 'Ambalayat', 'Lubnac', 'Bitalag',
+      'Lacong', 'Lantag', 'Pallogan', 'Pacac', 'Cabaroan',
+      'Cabulanglangan', 'Ag-aguman', 'Bio', 'Baracbac', 'San Miguel', 'Pula'
+    ]
+  },
+  zone3: {
+    name: 'Nearby Towns',
+    baseFee: 80,
+    towns: [
+      'Sudipen, La Union', 'Bangar, La Union', 'Suyo, Ilocos Sur',
+      'Alilem, Ilocos Sur', 'Luna, La Union', 'Sugpon, Ilocos Sur'
+    ]
+  },
+  zone4: {
+    name: 'Far Towns/Cities',
+    baseFee: 100,
+    towns: [
+      'Candon City', 'San Fernando, La Union', 'Vigan City',
+      'Santa, Ilocos Sur', 'Tagburot, La Union'
+    ]
+  }
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const [cart, setCart] = useState<any[]>([])
@@ -16,7 +57,9 @@ export default function CheckoutPage() {
   const [registeredAddress, setRegisteredAddress] = useState('')
   const [customAddress, setCustomAddress] = useState('')
   const [phone, setPhone] = useState('')
-  const [distanceKm, setDistanceKm] = useState('')
+  
+  const [selectedZone, setSelectedZone] = useState('')
+  const [selectedLocation, setSelectedLocation] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -49,22 +92,25 @@ export default function CheckoutPage() {
     setShowPopup(false)
   }
 
-  // Calculate delivery fee
+  // Calculate delivery fee based on zone + weight
   const totalWeight = cart.reduce((sum, item) => sum + (item.weightKg * item.quantity), 0)
-  const distance = parseFloat(distanceKm) || 0
   
-  const baseFee = 40 // First 3km
-  const extraKm = Math.max(0, distance - 3)
-  const distanceFee = extraKm * 10
+  let baseFee = 40
+  if (selectedZone === 'zone1') baseFee = 40
+  else if (selectedZone === 'zone2') baseFee = 60
+  else if (selectedZone === 'zone3') baseFee = 80
+  else if (selectedZone === 'zone4') baseFee = 100
+  
   const weightFee = totalWeight * 5
-  const deliveryFee = baseFee + distanceFee + weightFee
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0) + deliveryFee
+  const deliveryFee = baseFee + weightFee
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const total = subtotal + deliveryFee
 
   const handleCheckout = async () => {
     const finalAddress = useRegisteredAddress ? registeredAddress : customAddress
     
-    if (!finalAddress || !phone || !distanceKm) {
-      alert('Please provide delivery address, phone number, and distance from warehouse')
+    if (!finalAddress || !phone || !selectedZone) {
+      alert('Please select delivery zone, provide address, and phone number')
       return
     }
     
@@ -77,8 +123,9 @@ export default function CheckoutPage() {
           items: cart.map(item => ({ productId: item.id, quantity: item.quantity })),
           deliveryAddress: finalAddress,
           contactNumber: phone,
-          distanceKm: distance,
-          deliveryFee: deliveryFee
+          deliveryFee: deliveryFee,
+          deliveryZone: selectedZone,
+          deliveryLocation: selectedLocation
         })
       })
       const data = await response.json()
@@ -120,7 +167,7 @@ export default function CheckoutPage() {
             border: '3px solid black', maxWidth: '500px', width: '90%', boxShadow: '8px 8px 0px black'
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center', color: 'black' }}>
-              📍 Delivery Address
+               Delivery Address
             </h2>
             <p style={{ fontSize: '18px', marginBottom: '20px', textAlign: 'center', color: 'black', fontWeight: 'bold' }}>
               Do you want to use your current address?
@@ -160,14 +207,14 @@ export default function CheckoutPage() {
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', color: 'black' }}>
                 <span>Subtotal:</span>
-                <span style={{ fontWeight: 'bold' }}>₱{cart.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}</span>
+                <span style={{ fontWeight: 'bold' }}>₱{subtotal.toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', color: 'black' }}>
                 <span>Delivery Fee:</span>
                 <span style={{ fontWeight: 'bold', color: 'blue' }}>
                   ₱{deliveryFee.toFixed(2)} 
                   <span style={{ fontSize: '12px', color: 'gray', fontWeight: 'normal' }}>
-                    {' '}(Base ₱40 + {distance}km + {totalWeight.toFixed(1)}kg)
+                    {' '}(Base ₱{baseFee} + {totalWeight.toFixed(1)}kg × ₱5)
                   </span>
                 </span>
               </div>
@@ -202,21 +249,55 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {/* Delivery Zone Selection */}
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>
-              📍 Distance from Warehouse (Dardarat, Tagudin)
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'black', fontSize: '16px' }}>
+              📍 Delivery Zone (from Dardarat, Tagudin)
             </label>
-            <input
-              type="number"
-              value={distanceKm}
-              onChange={(e) => setDistanceKm(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
-              placeholder="Enter distance in km (e.g., 5)"
-              min="0"
-              step="0.5"
-            />
+            <select
+              value={selectedZone}
+              onChange={(e) => {
+                setSelectedZone(e.target.value)
+                setSelectedLocation('')
+              }}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white', marginBottom: '10px' }}
+            >
+              <option value="">Select your location...</option>
+              <option value="zone1">Zone 1 - Near Barangays (₱40 base)</option>
+              <option value="zone2">Zone 2 - Far Barangays (₱60 base)</option>
+              <option value="zone3">Zone 3 - Nearby Towns (₱80 base)</option>
+              <option value="zone4">Zone 4 - Far Towns/Cities (100 base)</option>
+            </select>
+            
+            {selectedZone && (
+              <div>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '14px' }}>
+                  Select Barangay/Town:
+                </label>
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', color: 'black', backgroundColor: 'white' }}
+                >
+                  <option value="">Select...</option>
+                  {selectedZone === 'zone1' && deliveryZones.zone1.barangays.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                  {selectedZone === 'zone2' && deliveryZones.zone2.barangays.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                  {selectedZone === 'zone3' && deliveryZones.zone3.towns.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                  {selectedZone === 'zone4' && deliveryZones.zone4.towns.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
             <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>
-              ℹ️ Fee: ₱40 base (first 3km) + ₱10/km + ₱5/kg weight
+              ️ Fee: Base fee + ₱5/kg weight
             </p>
           </div>
 
