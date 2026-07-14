@@ -15,7 +15,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Order ID required' }, { status: 400 })
     }
 
-    // Check if order is still pending
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: { delivery: true }
@@ -29,28 +28,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Order already taken' }, { status: 400 })
     }
 
-    // Create or update delivery assignment
     await prisma.$transaction(async (tx) => {
-      // Update order status
       await tx.order.update({
         where: { id: orderId },
         data: { status: 'ACCEPTED' }
       })
 
-      // Create delivery record
       if (order.delivery) {
         await tx.delivery.update({
           where: { id: order.delivery.id },
           data: {
-            riderId: rider.id,
-            status: 'ASSIGNED',
-            acceptedAt: new Date()
-          }
-        })
-      } else {
-        await tx.delivery.create({
-          data: {
-            orderId: orderId,
             riderId: rider.id,
             status: 'ASSIGNED',
             acceptedAt: new Date()

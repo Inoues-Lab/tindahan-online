@@ -13,7 +13,8 @@ export async function GET() {
       orders = await prisma.order.findMany({ 
         include: { 
           items: { include: { product: true } }, 
-          customer: true 
+          customer: true,
+          delivery: true
         },
         orderBy: { createdAt: 'desc' }
       })
@@ -26,13 +27,14 @@ export async function GET() {
         },
         include: { 
           items: { include: { product: true } }, 
-          customer: true 
+          customer: true,
+          delivery: true
         }
       })
     } else {
       orders = await prisma.order.findMany({ 
         where: { customerId: user.id },
-        include: { items: { include: { product: true } } },
+        include: { items: { include: { product: true } }, delivery: true },
         orderBy: { createdAt: 'desc' }
       })
     }
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
     if (customer instanceof NextResponse) return customer
 
     const body = await request.json()
-    const { items, deliveryAddress, contactNumber, deliveryFee } = body
+    const { items, deliveryAddress, contactNumber, deliveryFee, deliveryZone } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
@@ -88,6 +90,7 @@ export async function POST(request: Request) {
     const finalDeliveryFee = deliveryFee || (40 + (totalWeight * 5))
     const riderPayout = finalDeliveryFee
 
+    // Create order AND delivery record together
     const order = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
@@ -99,7 +102,14 @@ export async function POST(request: Request) {
           deliveryAddress,
           contactNumber,
           paymentMethod: 'COD',
-          items: { create: orderItemsData }
+          status: 'PENDING',
+          items: { create: orderItemsData },
+          // Create delivery record automatically
+          delivery: {
+            create: {
+              status: 'UNASSIGNED'
+            }
+          }
         }
       })
 
