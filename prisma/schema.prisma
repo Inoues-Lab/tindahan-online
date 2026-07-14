@@ -13,6 +13,7 @@ model User {
   email        String   @unique
   passwordHash String
   phone        String?
+  address      String?   // ← Add this line here
   role         Role     @default(CUSTOMER)
   createdAt    DateTime @default(now())
 
