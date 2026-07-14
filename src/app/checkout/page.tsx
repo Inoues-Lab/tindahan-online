@@ -24,18 +24,23 @@ export default function CheckoutPage() {
       .then(data => {
         if (data.user) {
           setUser(data.user)
-          setPhone(data.user.phone || '')
+          // AUTO-FILL phone from user data
+          if (data.user.phone) {
+            setPhone(data.user.phone)
+          }
           
+          // Load cart
           const savedCart = localStorage.getItem('cart')
           if (savedCart) {
             try { setCart(JSON.parse(savedCart)) } catch (e) { setCart([]) }
           }
           
           // Show popup if user has a registered address
-          if (data.user.address) {
+          if (data.user.address && data.user.address.trim() !== '') {
+            setAddress(data.user.address)
             setShowAddressPopup(true)
           } else {
-            // No registered address, just show the form
+            // No registered address - just show custom address field
             setUseRegisteredAddress(false)
           }
         } else {
@@ -93,7 +98,9 @@ export default function CheckoutPage() {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
         <Header />
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}><p>Loading...</p></div>
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}>
+          <p>Loading...</p>
+        </div>
       </main>
     )
   }
@@ -102,12 +109,12 @@ export default function CheckoutPage() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       
-      {/* ADDRESS POPUP MODAL */}
+      {/* ADDRESS POPUP - Shows when user has registered address */}
       {showAddressPopup && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
+          backgroundColor: 'rgba(0,0,0,0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -120,12 +127,12 @@ export default function CheckoutPage() {
             border: '3px solid black',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: '4px 4px 0px black'
+            boxShadow: '8px 8px 0px black'
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center', color: 'black' }}>
               📍 Delivery Address
             </h2>
-            <p style={{ fontSize: '16px', marginBottom: '20px', textAlign: 'center', color: 'black' }}>
+            <p style={{ fontSize: '16px', marginBottom: '20px', textAlign: 'center', color: 'black', fontWeight: 'bold' }}>
               Do you want to use your registered address?
             </p>
             <div style={{ backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
@@ -148,7 +155,7 @@ export default function CheckoutPage() {
                   boxShadow: '3px 3px 0px black'
                 }}
               >
-                ✅ Yes
+                ✅ Yes, use it
               </button>
               <button
                 onClick={() => handleAddressChoice(false)}
@@ -165,7 +172,7 @@ export default function CheckoutPage() {
                   boxShadow: '3px 3px 0px black'
                 }}
               >
-                ❌ No
+                ❌ No, use different address
               </button>
             </div>
           </div>
@@ -184,12 +191,12 @@ export default function CheckoutPage() {
               {cart.map((item, idx) => (
                 <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
                   <span style={{ color: 'black', fontWeight: 'bold' }}>{item.name} x {item.quantity}</span>
-                  <span style={{ color: 'green', fontWeight: 'bold' }}>{(item.price * item.quantity).toFixed(2)}</span>
+                  <span style={{ color: 'green', fontWeight: 'bold' }}>₱{(item.price * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '20px', fontSize: '18px' }}>
                 <span style={{ color: 'black' }}>Total:</span>
-                <span style={{ color: 'green' }}>₱{total.toFixed(2)}</span>
+                <span style={{ color: 'green', fontSize: '24px' }}>{total.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -206,7 +213,7 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {/* Show custom address input if "No" was clicked */}
+          {/* Show custom address input if "No" was clicked OR no registered address */}
           {useRegisteredAddress === false && (
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>
