@@ -20,7 +20,8 @@ export async function GET() {
         email: true,
         phone: true,
         address: true,
-        role: true
+        role: true,
+        cashOnHand: true  // MAKE SURE THIS IS INCLUDED
       }
     })
 

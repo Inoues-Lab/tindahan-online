@@ -9,6 +9,8 @@ export async function POST(request: Request) {
     const userId = cookieStore.get('userId')?.value
     const userRole = cookieStore.get('userRole')?.value
 
+    console.log('📝 Update status request:', { userId, userRole })
+
     if (!userId || userRole !== 'RIDER') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -31,6 +33,8 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { orderId, status, proofUrl } = body
 
+    console.log('📦 Order data:', { orderId, status, proofUrl })
+
     if (!orderId) {
       return NextResponse.json({ error: 'Order ID required' }, { status: 400 })
     }
@@ -43,6 +47,8 @@ export async function POST(request: Request) {
       where: { id: orderId },
       include: { delivery: true }
     })
+
+    console.log(' Order from DB:', order)
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -74,23 +80,30 @@ export async function POST(request: Request) {
           data: { status: 'ONLINE' }
         })
 
-        // Calculate what rider needs to remit to admin:
-        // Total order amount MINUS rider's earnings
+        // Calculate what rider needs to remit to admin
         const amountToRemit = order.totalAmount - order.riderPayout
+        
+        console.log('💰 Cash calculation:', {
+          totalAmount: order.totalAmount,
+          riderPayout: order.riderPayout,
+          amountToRemit: amountToRemit
+        })
 
         // Add to rider's cash on hand (money to remit to admin)
-        await tx.user.update({
+        const updatedUser = await tx.user.update({
           where: { id: userId },
           data: {
             cashOnHand: { increment: amountToRemit }
           }
         })
+
+        console.log('✅ Updated user cash on hand:', updatedUser.cashOnHand)
       }
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error updating status:', error)
+    console.error('❌ Error updating status:', error)
     return NextResponse.json({ error: 'Failed to update status', details: String(error) }, { status: 500 })
   }
 }
