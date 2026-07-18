@@ -74,11 +74,15 @@ export async function POST(request: Request) {
           data: { status: 'ONLINE' }
         })
 
-        // Add ONLY rider's share (80% of delivery fee) to cash on hand
+        // Calculate what rider needs to remit to admin:
+        // Total order amount MINUS rider's earnings
+        const amountToRemit = order.totalAmount - order.riderPayout
+
+        // Add to rider's cash on hand (money to remit to admin)
         await tx.user.update({
           where: { id: userId },
           data: {
-            cashOnHand: { increment: order.riderPayout }
+            cashOnHand: { increment: amountToRemit }
           }
         })
       }

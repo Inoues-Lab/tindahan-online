@@ -15,7 +15,6 @@ export default function RiderDashboard() {
   const [todayEarnings, setTodayEarnings] = useState(0)
   const [error, setError] = useState('')
   
-  // Photo upload modal
   const [showPhotoModal, setShowPhotoModal] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -54,7 +53,6 @@ export default function RiderDashboard() {
         setPendingOrders(ordersData.pendingOrders || [])
         setMyOrders(ordersData.myOrders || [])
         
-        // Calculate today's income from COMPLETED deliveries
         const today = new Date().toISOString().split('T')[0]
         const todaysCompleted = (ordersData.myOrders || []).filter((order: any) => {
           if (order.status !== 'COMPLETED') return false
@@ -195,7 +193,6 @@ export default function RiderDashboard() {
           </div>
         )}
 
-        {/* Earnings */}
         <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '30px', boxShadow: '4px 4px 0px black' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>💰 Rider Earnings</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
@@ -206,7 +203,7 @@ export default function RiderDashboard() {
             </div>
             <div style={{ padding: '20px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '2px solid blue' }}>
               <p style={{ fontSize: '14px', color: 'gray', marginBottom: '5px' }}>Cash on Hand</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'blue' }}>{cashOnHand.toFixed(2)}</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'blue' }}>₱{cashOnHand.toFixed(2)}</p>
               <p style={{ fontSize: '12px', color: 'gray' }}>To remit to admin</p>
             </div>
             <div style={{ padding: '20px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
@@ -217,7 +214,6 @@ export default function RiderDashboard() {
           </div>
         </div>
 
-        {/* Available Orders */}
         <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '30px', boxShadow: '4px 4px 0px black' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>📦 Available Orders ({pendingOrders.length})</h2>
           {pendingOrders.length === 0 ? (
@@ -241,9 +237,9 @@ export default function RiderDashboard() {
                       <p style={{ color: 'gray', fontSize: '14px' }}>Weight: {order.requiredLoadKg}kg</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '14px', color: 'gray' }}>Delivery Fee</p>
-                      <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>₱{order.deliveryFee?.toFixed(2) || '0.00'}</p>
-                      <p style={{ fontSize: '12px', color: 'gray' }}>Total: ₱{order.totalAmount?.toFixed(2)}</p>
+                      <p style={{ fontSize: '14px', color: 'gray' }}>Customer Pays (COD)</p>
+                      <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>₱{order.totalAmount?.toFixed(2)}</p>
+                      <p style={{ fontSize: '12px', color: 'blue' }}>You earn: ₱{order.riderPayout?.toFixed(2)}</p>
                     </div>
                   </div>
                   <button
@@ -269,10 +265,9 @@ export default function RiderDashboard() {
           )}
         </div>
 
-        {/* My Orders */}
         {myOrders.length > 0 && (
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}> My Orders ({myOrders.length})</h2>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>📋 My Orders ({myOrders.length})</h2>
             <div style={{ display: 'grid', gap: '15px' }}>
               {myOrders.map((order) => (
                 <div key={order.id} style={{ padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px solid black' }}>
@@ -294,7 +289,9 @@ export default function RiderDashboard() {
                       )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{order.riderPayout?.toFixed(2)}</p>
+                      <p style={{ fontSize: '14px', color: 'gray' }}>Customer Paid</p>
+                      <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{order.totalAmount?.toFixed(2)}</p>
+                      <p style={{ fontSize: '12px', color: 'blue' }}>You earn: ₱{order.riderPayout?.toFixed(2)}</p>
                     </div>
                   </div>
                   
@@ -324,7 +321,6 @@ export default function RiderDashboard() {
         )}
       </div>
 
-      {/* Photo Upload Modal */}
       {showPhotoModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -336,7 +332,7 @@ export default function RiderDashboard() {
             border: '3px solid black', maxWidth: '500px', width: '90%', boxShadow: '8px 8px 0px black'
           }}>
             <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', color: 'black' }}>
-              📸 Proof of Delivery
+               Proof of Delivery
             </h2>
             <p style={{ fontSize: '14px', marginBottom: '20px', textAlign: 'center', color: 'gray' }}>
               Order #{selectedOrder?.id.slice(0, 8).toUpperCase()}
