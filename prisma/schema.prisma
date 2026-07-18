@@ -62,7 +62,7 @@ model Order {
   totalAmount Float
   deliveryFee Float
   riderPayout Float
-
+  platformIncome Float @default(0)  // ← ADD @default(0) HERE
   requiredLoadKg  Float
   deliveryAddress String
   contactNumber   String

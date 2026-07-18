@@ -9,72 +9,36 @@ export async function GET() {
     const userRole = cookieStore.get('userRole')?.value
 
     if (userRole !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get all completed orders
-    const completedOrders = await prisma.order.findMany({
-      where: { status: 'COMPLETED' },
-      select: {
-        totalAmount: true,
-        deliveryFee: true,
-        riderPayout: true,
-        createdAt: true
-      }
-    })
+    const orders = await prisma.order.findMany()
 
-    // Get all riders - fetch all fields to avoid type issues
+    // Total Revenue = Sum of all order totals
+    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0)
+
+    // Platform Income = Sum of platformIncome from all orders
+    const platformIncome = orders.reduce((sum, order) => 
+      sum + (order.platformIncome || 0), 0
+    )
+
+    // Pending Remittances = Total cash on hand of all riders
     const riders = await prisma.user.findMany({
-      where: { role: 'RIDER' }
+      where: { role: 'RIDER' },
+      select: { cashOnHand: true }
     })
-
-    // Calculate totals
-    const totalRevenue = completedOrders.reduce((sum, order) => sum + order.totalAmount, 0)
-    const totalDeliveryFees = completedOrders.reduce((sum, order) => sum + order.deliveryFee, 0)
-    const totalRiderPayouts = completedOrders.reduce((sum, order) => sum + (order.riderPayout || 0), 0)
     
-    // Calculate total rider cash on hand
-    const totalRiderCashOnHand = riders.reduce((sum, rider: any) => sum + (rider.cashOnHand || 0), 0)
-
-    // Calculate pending remittances
-    const pendingRemittances = totalRiderCashOnHand
-
-    // Platform income from delivery fees
-    const platformIncome = totalDeliveryFees
-
-    // Get orders by status
-    const pendingOrders = await prisma.order.count({ where: { status: 'PENDING' } })
-    const acceptedOrders = await prisma.order.count({ where: { status: 'ACCEPTED' } })
-    const outForDeliveryOrders = await prisma.order.count({ where: { status: 'OUT_FOR_DELIVERY' } })
-    const completedOrdersCount = await prisma.order.count({ where: { status: 'COMPLETED' } })
-
-    // Map riders with only needed fields
-    const ridersData = riders.map((rider: any) => ({
-      id: rider.id,
-      name: rider.name,
-      email: rider.email,
-      phone: rider.phone,
-      cashOnHand: rider.cashOnHand || 0,
-      remittanceLimit: rider.remittanceLimit || 2000
-    }))
+    const pendingRemittances = riders.reduce((sum, rider) => 
+      sum + (rider.cashOnHand || 0), 0
+    )
 
     return NextResponse.json({
       totalRevenue,
-      totalDeliveryFees,
-      totalRiderPayouts,
-      pendingRemittances,
       platformIncome,
-      riders: ridersData,
-      ordersStats: {
-        pending: pendingOrders,
-        accepted: acceptedOrders,
-        outForDelivery: outForDeliveryOrders,
-        completed: completedOrdersCount,
-        total: completedOrders.length
-      }
+      pendingRemittances
     })
   } catch (error) {
-    console.error('Error fetching income data:', error)
+    console.error('Error fetching income:', error)
     return NextResponse.json({ error: 'Failed to fetch income data' }, { status: 500 })
   }
 }

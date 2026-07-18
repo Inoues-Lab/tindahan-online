@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN     "platformIncome" DOUBLE PRECISION NOT NULL DEFAULT 0;

@@ -1,15 +1,20 @@
 // src/app/api/orders/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
-    const user = await requireAuth(['CUSTOMER', 'RIDER', 'ADMIN'])
-    if (user instanceof NextResponse) return user
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+    const userRole = cookieStore.get('userRole')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     let orders
-    if (user.role === 'ADMIN') {
+    if (userRole === 'ADMIN') {
       orders = await prisma.order.findMany({ 
         include: { 
           items: { include: { product: true } }, 
@@ -18,11 +23,15 @@ export async function GET() {
         },
         orderBy: { createdAt: 'desc' }
       })
-    } else if (user.role === 'RIDER') {
+    } else if (userRole === 'RIDER') {
+      const riderProfile = await prisma.riderProfile.findUnique({
+        where: { userId: userId }
+      })
+
       orders = await prisma.order.findMany({ 
         where: { 
           delivery: { 
-            riderId: user.id 
+            riderId: riderProfile?.id 
           } 
         },
         include: { 
@@ -33,7 +42,7 @@ export async function GET() {
       })
     } else {
       orders = await prisma.order.findMany({ 
-        where: { customerId: user.id },
+        where: { customerId: userId },
         include: { items: { include: { product: true } }, delivery: true },
         orderBy: { createdAt: 'desc' }
       })
@@ -48,11 +57,20 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const customer = await requireAuth(['CUSTOMER'])
-    if (customer instanceof NextResponse) return customer
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const customer = await prisma.user.findUnique({ where: { id: userId } })
+    if (!customer) {
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+    }
 
     const body = await request.json()
-    const { items, deliveryAddress, contactNumber, deliveryFee, deliveryZone } = body
+    const { items, deliveryAddress, contactNumber, deliveryFee } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
@@ -61,7 +79,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing delivery details' }, { status: 400 })
     }
 
-    let totalAmount = 0
+    let subtotal = 0
     let totalWeight = 0
     const orderItemsData: any[] = []
 
@@ -76,35 +94,45 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Not enough stock for ${product.name}` }, { status: 400 })
       }
 
-      const itemTotal = product.price * item.quantity
-      totalAmount += itemTotal
+      // Apply 5% markup to product price
+      const priceWithMarkup = product.price * 1.05
+      const itemTotal = priceWithMarkup * item.quantity
+      subtotal += itemTotal
       totalWeight += product.weightKg * item.quantity
 
       orderItemsData.push({
         productId: product.id,
         quantity: item.quantity,
-        price: product.price
+        price: priceWithMarkup
       })
     }
 
     const finalDeliveryFee = deliveryFee || (40 + (totalWeight * 5))
-    const riderPayout = finalDeliveryFee
+    
+    // Split delivery fee: 80% to rider, 20% to platform
+    const riderPayout = finalDeliveryFee * 0.80
+    const platformDeliveryShare = finalDeliveryFee * 0.20
+    
+    // Platform income from product markup (the 5%)
+    const platformProductShare = subtotal - (subtotal / 1.05)
+    
+    // Total platform income
+    const totalPlatformIncome = platformProductShare + platformDeliveryShare
 
-    // Create order AND delivery record together
     const order = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
           customerId: customer.id,
-          totalAmount,
+          totalAmount: subtotal + finalDeliveryFee,
           deliveryFee: finalDeliveryFee,
-          riderPayout,
+          riderPayout: riderPayout,
+          platformIncome: totalPlatformIncome,
           requiredLoadKg: totalWeight,
           deliveryAddress,
           contactNumber,
           paymentMethod: 'COD',
           status: 'PENDING',
           items: { create: orderItemsData },
-          // Create delivery record automatically
           delivery: {
             create: {
               status: 'UNASSIGNED'

@@ -74,6 +74,7 @@ export async function POST(request: Request) {
           data: { status: 'ONLINE' }
         })
 
+        // Add ONLY rider's share (80% of delivery fee) to cash on hand
         await tx.user.update({
           where: { id: userId },
           data: {
