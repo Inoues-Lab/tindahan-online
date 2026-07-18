@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get rider profile
+    // Get or create rider profile
     let riderProfile = await prisma.riderProfile.findUnique({
       where: { userId: userId }
     })
