@@ -15,12 +15,18 @@ export default function RiderDashboard() {
   const [todayEarnings, setTodayEarnings] = useState(0)
   const [error, setError] = useState('')
   
+  // Remittance limit popup
+  const [showRemittancePopup, setShowRemittancePopup] = useState(false)
+  const [remittanceData, setRemittanceData] = useState({ cashOnHand: 0, limit: 20000 })
+  
   const [showPhotoModal, setShowPhotoModal] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const REMITTANCE_LIMIT = 20000
 
   useEffect(() => {
     checkAuth()
@@ -38,55 +44,55 @@ export default function RiderDashboard() {
       }
       
       setUser(data.user)
+      setCashOnHand(data.user.cashOnHand || 0)
       fetchRiderData()
     } catch (error) {
       router.push('/login')
     }
   }
 
- const fetchRiderData = async () => {
-  try {
-    const ordersRes = await fetch('/api/rider/orders')
-    const ordersData = await ordersRes.json()
-    
-    if (ordersRes.ok) {
-      setPendingOrders(ordersData.pendingOrders || [])
-      setMyOrders(ordersData.myOrders || [])
+  const fetchRiderData = async () => {
+    try {
+      const ordersRes = await fetch('/api/rider/orders')
+      const ordersData = await ordersRes.json()
       
-      // Fetch current user data to get updated cashOnHand
-      const meRes = await fetch('/api/auth/me')
-      const meData = await meRes.json()
-      
-      if (meRes.ok && meData.user) {
-        setCashOnHand(meData.user.cashOnHand || 0)
+      if (ordersRes.ok) {
+        setPendingOrders(ordersData.pendingOrders || [])
+        setMyOrders(ordersData.myOrders || [])
+        
+        const meRes = await fetch('/api/auth/me')
+        const meData = await meRes.json()
+        
+        if (meRes.ok && meData.user) {
+          setCashOnHand(meData.user.cashOnHand || 0)
+        }
+        
+        const today = new Date().toISOString().split('T')[0]
+        const todaysCompleted = (ordersData.myOrders || []).filter((order: any) => {
+          if (order.status !== 'COMPLETED') return false
+          
+          const completedDate = order.delivery?.completedAt 
+            ? new Date(order.delivery.completedAt).toISOString().split('T')[0]
+            : new Date(order.updatedAt).toISOString().split('T')[0]
+          
+          return completedDate === today
+        })
+        
+        const todaysIncome = todaysCompleted.reduce((sum: number, order: any) => {
+          return sum + (order.riderPayout || 0)
+        }, 0)
+        
+        setTodayEarnings(todaysIncome)
+        setError('')
+      } else {
+        setError(ordersData.error || 'Failed to load orders')
       }
-      
-      const today = new Date().toISOString().split('T')[0]
-      const todaysCompleted = (ordersData.myOrders || []).filter((order: any) => {
-        if (order.status !== 'COMPLETED') return false
-        
-        const completedDate = order.delivery?.completedAt 
-          ? new Date(order.delivery.completedAt).toISOString().split('T')[0]
-          : new Date(order.updatedAt).toISOString().split('T')[0]
-        
-        return completedDate === today
-      })
-      
-      const todaysIncome = todaysCompleted.reduce((sum: number, order: any) => {
-        return sum + (order.riderPayout || 0)
-      }, 0)
-      
-      setTodayEarnings(todaysIncome)
-      setError('')
-    } else {
-      setError(ordersData.error || 'Failed to load orders')
+    } catch (error) {
+      setError('Error loading orders')
+    } finally {
+      setLoading(false)
     }
-  } catch (error) {
-    setError('Error loading orders')
-  } finally {
-    setLoading(false)
   }
-}
 
   const acceptOrder = async (orderId: string) => {
     try {
@@ -96,11 +102,19 @@ export default function RiderDashboard() {
         body: JSON.stringify({ orderId })
       })
       
+      const data = await response.json()
+      
       if (response.ok) {
         alert('Order accepted!')
         fetchRiderData()
+      } else if (data.error === 'REMITTANCE_LIMIT_REACHED') {
+        // Show professional remittance popup
+        setRemittanceData({
+          cashOnHand: data.cashOnHand,
+          limit: data.remittanceLimit
+        })
+        setShowRemittancePopup(true)
       } else {
-        const data = await response.json()
         alert(data.error || 'Failed to accept order')
       }
     } catch (error) {
@@ -209,14 +223,16 @@ export default function RiderDashboard() {
               <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>₱{todayEarnings.toFixed(2)}</p>
               <p style={{ fontSize: '12px', color: 'gray' }}>From completed deliveries</p>
             </div>
-            <div style={{ padding: '20px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '2px solid blue' }}>
+            <div style={{ padding: '20px', backgroundColor: cashOnHand >= REMITTANCE_LIMIT ? '#fee' : '#e3f2fd', borderRadius: '8px', border: `2px solid ${cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'blue'}` }}>
               <p style={{ fontSize: '14px', color: 'gray', marginBottom: '5px' }}>Cash on Hand</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'blue' }}>₱{cashOnHand.toFixed(2)}</p>
-              <p style={{ fontSize: '12px', color: 'gray' }}>To remit to admin</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'blue' }}>₱{cashOnHand.toFixed(2)}</p>
+              <p style={{ fontSize: '12px', color: cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'gray' }}>
+                {cashOnHand >= REMITTANCE_LIMIT ? '⚠️ Limit reached!' : 'To remit to admin'}
+              </p>
             </div>
             <div style={{ padding: '20px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
               <p style={{ fontSize: '14px', color: 'gray', marginBottom: '5px' }}>Remittance Limit</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'orange' }}>₱2000.00</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'orange' }}>₱{REMITTANCE_LIMIT.toLocaleString()}.00</p>
               <p style={{ fontSize: '12px', color: 'gray' }}>Max cash before remitting</p>
             </div>
           </div>
@@ -329,6 +345,137 @@ export default function RiderDashboard() {
         )}
       </div>
 
+      {/* Remittance Limit Popup */}
+      {showRemittancePopup && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white', padding: '40px', borderRadius: '16px',
+            border: '4px solid #ff4444', maxWidth: '550px', width: '90%', 
+            boxShadow: '0px 10px 40px rgba(0,0,0,0.3)',
+            animation: 'slideIn 0.3s ease-out'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+              <div style={{ 
+                fontSize: '64px', 
+                marginBottom: '15px' 
+              }}>
+                ⚠️
+              </div>
+              <h2 style={{ 
+                fontSize: '28px', 
+                fontWeight: 'bold', 
+                color: '#ff4444',
+                marginBottom: '10px'
+              }}>
+                Remittance Limit Reached
+              </h2>
+            </div>
+
+            <div style={{ 
+              backgroundColor: '#fff3cd', 
+              padding: '20px', 
+              borderRadius: '12px', 
+              border: '2px solid #ffc107',
+              marginBottom: '25px'
+            }}>
+              <p style={{ 
+                fontSize: '16px', 
+                color: '#856404', 
+                marginBottom: '10px',
+                textAlign: 'center',
+                fontWeight: 'bold'
+              }}>
+                📢 Action Required
+              </p>
+              <p style={{ 
+                fontSize: '18px', 
+                color: '#856404',
+                lineHeight: '1.6',
+                textAlign: 'center'
+              }}>
+                You have reached the remittance limit of <strong>₱{remittanceData.limit.toLocaleString()}.00</strong>
+              </p>
+              <p style={{ 
+                fontSize: '20px', 
+                color: '#d9534f',
+                marginTop: '10px',
+                fontWeight: 'bold',
+                textAlign: 'center'
+              }}>
+                Current Cash on Hand: ₱{remittanceData.cashOnHand.toFixed(2)}
+              </p>
+            </div>
+
+            <div style={{ 
+              backgroundColor: '#e8f5e9', 
+              padding: '20px', 
+              borderRadius: '12px', 
+              border: '2px solid #4caf50',
+              marginBottom: '25px'
+            }}>
+              <p style={{ 
+                fontSize: '16px', 
+                color: '#2e7d32', 
+                marginBottom: '10px',
+                fontWeight: 'bold'
+              }}>
+                🔔 Important Notice:
+              </p>
+              <p style={{ 
+                fontSize: '15px', 
+                color: '#2e7d32',
+                lineHeight: '1.6'
+              }}>
+                For your safety and security, please remit your cash on hand to the admin before accepting new orders. The admin is waiting for your remittance to process your earnings and ensure smooth operations.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button
+                onClick={() => setShowRemittancePopup(false)}
+                style={{
+                  flex: 1,
+                  padding: '15px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: '2px solid #495057',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '16px',
+                  cursor: 'pointer'
+                }}
+              >
+                I Understand
+              </button>
+              <button
+                onClick={() => {
+                  setShowRemittancePopup(false)
+                  window.location.href = '/'
+                }}
+                style={{
+                  flex: 1,
+                  padding: '15px',
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  border: '2px solid #1e7e34',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '16px',
+                  cursor: 'pointer'
+                }}
+              >
+                Contact Admin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Upload Modal */}
       {showPhotoModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,

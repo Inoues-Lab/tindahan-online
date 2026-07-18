@@ -13,9 +13,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get or create rider profile
+    // Get rider profile
     let riderProfile = await prisma.riderProfile.findUnique({
-      where: { userId: userId }
+      where: { userId: userId },
+      include: { user: true }
     })
 
     if (!riderProfile) {
@@ -24,9 +25,23 @@ export async function POST(request: Request) {
           userId: userId,
           vehicleType: 'MOTORCYCLE',
           maxLoadKg: 15.0,
-          status: 'ON_DELIVERY'
-        }
+          status: 'ONLINE'
+        },
+        include: { user: true }
       })
+    }
+
+    // Check cash on hand limit (₱20,000)
+    const REMITTANCE_LIMIT = 20000
+    const currentCashOnHand = riderProfile.user.cashOnHand || 0
+
+    if (currentCashOnHand >= REMITTANCE_LIMIT) {
+      return NextResponse.json({ 
+        error: 'REMITTANCE_LIMIT_REACHED',
+        message: `You have reached the remittance limit of ${REMITTANCE_LIMIT.toLocaleString()}.00. Please remit your cash on hand to the admin before accepting new orders.`,
+        cashOnHand: currentCashOnHand,
+        remittanceLimit: REMITTANCE_LIMIT
+      }, { status: 403 })
     }
 
     const body = await request.json()
@@ -74,6 +89,12 @@ export async function POST(request: Request) {
           }
         })
       }
+
+      // Update rider status
+      await tx.riderProfile.update({
+        where: { id: riderProfile!.id },
+        data: { status: 'ON_DELIVERY' }
+      })
     })
 
     return NextResponse.json({ success: true })
