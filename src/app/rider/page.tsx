@@ -44,41 +44,49 @@ export default function RiderDashboard() {
     }
   }
 
-  const fetchRiderData = async () => {
-    try {
-      const ordersRes = await fetch('/api/rider/orders')
-      const ordersData = await ordersRes.json()
+ const fetchRiderData = async () => {
+  try {
+    const ordersRes = await fetch('/api/rider/orders')
+    const ordersData = await ordersRes.json()
+    
+    if (ordersRes.ok) {
+      setPendingOrders(ordersData.pendingOrders || [])
+      setMyOrders(ordersData.myOrders || [])
       
-      if (ordersRes.ok) {
-        setPendingOrders(ordersData.pendingOrders || [])
-        setMyOrders(ordersData.myOrders || [])
-        
-        const today = new Date().toISOString().split('T')[0]
-        const todaysCompleted = (ordersData.myOrders || []).filter((order: any) => {
-          if (order.status !== 'COMPLETED') return false
-          
-          const completedDate = order.delivery?.completedAt 
-            ? new Date(order.delivery.completedAt).toISOString().split('T')[0]
-            : new Date(order.updatedAt).toISOString().split('T')[0]
-          
-          return completedDate === today
-        })
-        
-        const todaysIncome = todaysCompleted.reduce((sum: number, order: any) => {
-          return sum + (order.riderPayout || 0)
-        }, 0)
-        
-        setTodayEarnings(todaysIncome)
-        setError('')
-      } else {
-        setError(ordersData.error || 'Failed to load orders')
+      // Fetch current user data to get updated cashOnHand
+      const meRes = await fetch('/api/auth/me')
+      const meData = await meRes.json()
+      
+      if (meRes.ok && meData.user) {
+        setCashOnHand(meData.user.cashOnHand || 0)
       }
-    } catch (error) {
-      setError('Error loading orders')
-    } finally {
-      setLoading(false)
+      
+      const today = new Date().toISOString().split('T')[0]
+      const todaysCompleted = (ordersData.myOrders || []).filter((order: any) => {
+        if (order.status !== 'COMPLETED') return false
+        
+        const completedDate = order.delivery?.completedAt 
+          ? new Date(order.delivery.completedAt).toISOString().split('T')[0]
+          : new Date(order.updatedAt).toISOString().split('T')[0]
+        
+        return completedDate === today
+      })
+      
+      const todaysIncome = todaysCompleted.reduce((sum: number, order: any) => {
+        return sum + (order.riderPayout || 0)
+      }, 0)
+      
+      setTodayEarnings(todaysIncome)
+      setError('')
+    } else {
+      setError(ordersData.error || 'Failed to load orders')
     }
+  } catch (error) {
+    setError('Error loading orders')
+  } finally {
+    setLoading(false)
   }
+}
 
   const acceptOrder = async (orderId: string) => {
     try {
