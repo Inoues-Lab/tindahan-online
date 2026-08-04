@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         })
 
         // Calculate what rider needs to remit to admin
-        const amountToRemit = order.totalAmount - order.riderPayout
+        const amountToRemit = (order.totalAmount || 0) - (order.riderPayout || 0)
         
         console.log('💰 Cash calculation:', {
           totalAmount: order.totalAmount,
