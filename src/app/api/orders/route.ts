@@ -1,3 +1,60 @@
+// src/app/api/orders/route.ts
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { cookies } from 'next/headers'
+
+export async function GET() {
+  try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+    const userRole = cookieStore.get('userRole')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let orders
+    if (userRole === 'ADMIN') {
+      orders = await prisma.order.findMany({ 
+        include: { 
+          items: { include: { product: true } }, 
+          customer: true,
+          delivery: true
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    } else if (userRole === 'RIDER') {
+      const riderProfile = await prisma.riderProfile.findUnique({
+        where: { userId: userId }
+      })
+
+      orders = await prisma.order.findMany({ 
+        where: { 
+          delivery: { 
+            riderId: riderProfile?.id 
+          } 
+        },
+        include: { 
+          items: { include: { product: true } }, 
+          customer: true,
+          delivery: true
+        }
+      })
+    } else {
+      orders = await prisma.order.findMany({ 
+        where: { customerId: userId },
+        include: { items: { include: { product: true } }, delivery: true },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    return NextResponse.json({ orders })
+  } catch (error) {
+    console.error('Error fetching orders:', error)
+    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
