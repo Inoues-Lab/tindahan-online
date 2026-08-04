@@ -9,11 +9,12 @@ export async function POST(request: Request) {
     const userId = cookieStore.get('userId')?.value
     const userRole = cookieStore.get('userRole')?.value
 
+    console.log(' Update status request:', { userId, userRole })
+
     if (!userId || userRole !== 'RIDER') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get or create rider profile
     let riderProfile = await prisma.riderProfile.findUnique({
       where: { userId: userId }
     })
@@ -32,13 +33,14 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { orderId, status, proofUrl } = body
 
+    console.log(' Order data:', { orderId, status, proofUrl })
+
     if (!orderId) {
       return NextResponse.json({ error: 'Order ID required' }, { status: 400 })
     }
 
-    // Only COMPLETED status requires proof
     if (status === 'COMPLETED' && !proofUrl) {
-      return NextResponse.json({ error: 'Photo proof is required to mark as delivered' }, { status: 400 })
+      return NextResponse.json({ error: 'Photo proof is required' }, { status: 400 })
     }
 
     const order = await prisma.order.findUnique({
@@ -46,69 +48,63 @@ export async function POST(request: Request) {
       include: { delivery: true }
     })
 
+    console.log(' Order from DB:', order)
+
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Verify this rider owns the delivery
     if (order.delivery?.riderId !== riderProfile.id) {
-      return NextResponse.json({ error: 'You are not assigned to this order' }, { status: 403 })
+      return NextResponse.json({ error: 'Not assigned to this order' }, { status: 403 })
     }
 
     await prisma.$transaction(async (tx) => {
-      // Update order status
       await tx.order.update({
         where: { id: orderId },
-        data: { status: status }
+        data: { status }
       })
 
-      // Update delivery with proof if provided
       if (order.delivery) {
-        const updateData: any = {
-          status: status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS'
-        }
-
-        if (proofUrl) {
-          updateData.proofUrl = proofUrl
-          updateData.completedAt = new Date()
-        }
-
         await tx.delivery.update({
           where: { id: order.delivery.id },
-          data: updateData
+          data: {
+            status: status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS',
+            ...(proofUrl && { proofUrl, completedAt: new Date() })
+          }
         })
       }
 
-      // If completed, update rider status back to ONLINE and add to cash on hand
       if (status === 'COMPLETED') {
         await tx.riderProfile.update({
           where: { id: riderProfile.id },
+          data: { status: 'ONLINE' }
+        })
+
+        // Calculate what rider needs to remit to admin
+        // For PABILI/PADALA, totalAmount might be null, so use deliveryFee or 0
+        const amountToRemit = (order.totalAmount || order.deliveryFee || 0) - (order.riderPayout || 0)
+        
+        console.log('💰 Cash calculation:', {
+          totalAmount: order.totalAmount,
+          riderPayout: order.riderPayout,
+          amountToRemit: amountToRemit
+        })
+
+        // Add to rider's cash on hand (money to remit to admin)
+        const updatedUser = await tx.user.update({
+          where: { id: userId },
           data: {
-            status: 'ONLINE'
+            cashOnHand: { increment: amountToRemit }
           }
         })
 
-        // Add delivery fee to rider's cash on hand
-        await tx.user.update({
-          where: { id: userId },
-          data: {
-            cashOnHand: {
-              increment: order.riderPayout
-            }
-          }
-        })
-      } else {
-        // Update rider status to ON_DELIVERY
-        await tx.riderProfile.update({
-          where: { id: riderProfile.id },
-          data: { status: 'ON_DELIVERY' }
-        })
+        console.log('✅ Updated user cash on hand:', updatedUser.cashOnHand)
       }
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error updating order status:', error)
+    console.error('❌ Error updating status:', error)
     return NextResponse.json({ error: 'Failed to update status', details: String(error) }, { status: 500 })
   }
 }
