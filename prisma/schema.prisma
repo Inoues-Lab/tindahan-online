@@ -53,28 +53,6 @@ model Product {
   orderItems OrderItem[]
 }
 
-model Order {
-  id         String @id @default(uuid())
-  customerId String
-  customer   User   @relation(fields: [customerId], references: [id])
-
-  status      OrderStatus @default(PENDING)
-  totalAmount Float
-  deliveryFee Float
-  riderPayout Float
-  platformIncome Float @default(0)  // ← ADD @default(0) HERE
-  requiredLoadKg  Float
-  deliveryAddress String
-  contactNumber   String
-
-  createdAt DateTime @default(now())
-
-  items         OrderItem[]
-  delivery      Delivery?
-  paymentMethod String      @default("COD")
-  isRemitted    Boolean     @default(false)
-}
-
 model OrderItem {
   id      String @id @default(uuid())
   orderId String
@@ -110,7 +88,55 @@ model Remittance {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+// Add this enum at the top with your other enums
+enum ServiceType {
+  GROCERY
+  PABILI
+  PADALA
+}
 
+// Update the Order model - add these fields:
+model Order {
+  id         String @id @default(uuid())
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id])
+
+  status      OrderStatus @default(PENDING)
+  serviceType ServiceType @default(GROCERY)  // NEW
+  
+  // GROCERY fields
+  totalAmount Float?
+  deliveryFee Float?
+  riderPayout Float?
+  platformIncome Float @default(0)
+  requiredLoadKg Float?
+  
+  // Common fields
+  deliveryAddress String?
+  contactNumber   String?
+  
+  // PABILI fields
+  itemDescription String?
+  maxAmount       Float?
+  storeLocation   String?
+  receiptUrl      String?
+  
+  // PADALA fields
+  senderName      String?
+  senderAddress   String?
+  senderContact   String?
+  receiverName    String?
+  receiverAddress String?
+  receiverContact String?
+  packageDescription String?
+  
+  createdAt DateTime @default(now())
+
+  items         OrderItem[]
+  delivery      Delivery?
+  paymentMethod String      @default("COD")
+  isRemitted    Boolean     @default(false)
+}
 enum Role {
   CUSTOMER
   RIDER

@@ -119,6 +119,16 @@ export default function Header() {
               Login
             </Link>
           )}
+          // Add these buttons next to your existing navigation
+<div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+  <a href="/pabili" style={{ padding: '10px 20px', backgroundColor: '#ffc107', color: 'black', borderRadius: '8px', border: '2px solid black', fontWeight: 'bold', textDecoration: 'none', fontSize: '14px' }}>
+    🛒 PABILI
+  </a>
+  <a href="/padala" style={{ padding: '10px 20px', backgroundColor: '#17a2b8', color: 'white', borderRadius: '8px', border: '2px solid black', fontWeight: 'bold', textDecoration: 'none', fontSize: '14px' }}>
+    📦 PADALA
+  </a>
+  {/* Your existing nav items */}
+</div>
         </nav>
       </div>
     </header>

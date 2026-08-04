@@ -15,9 +15,11 @@ export default function RiderDashboard() {
   const [todayEarnings, setTodayEarnings] = useState(0)
   const [error, setError] = useState('')
   
-  // Remittance limit popup
   const [showRemittancePopup, setShowRemittancePopup] = useState(false)
+  const [showContactModal, setShowContactModal] = useState(false)
   const [remittanceData, setRemittanceData] = useState({ cashOnHand: 0, limit: 20000 })
+  const [contactMessage, setContactMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
   
   const [showPhotoModal, setShowPhotoModal] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
@@ -108,7 +110,6 @@ export default function RiderDashboard() {
         alert('Order accepted!')
         fetchRiderData()
       } else if (data.error === 'REMITTANCE_LIMIT_REACHED') {
-        // Show professional remittance popup
         setRemittanceData({
           cashOnHand: data.cashOnHand,
           limit: data.remittanceLimit
@@ -119,6 +120,30 @@ export default function RiderDashboard() {
       }
     } catch (error) {
       alert('Error accepting order')
+    }
+  }
+
+  const handleContactAdmin = async () => {
+    setShowContactModal(true)
+  }
+
+  const sendMessageToAdmin = async () => {
+    if (!contactMessage.trim()) {
+      alert('Please enter a message')
+      return
+    }
+
+    setSendingMessage(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      alert('Message sent to admin! They will contact you soon.')
+      setShowContactModal(false)
+      setShowRemittancePopup(false)
+      setContactMessage('')
+    } catch (error) {
+      alert('Failed to send message. Please try again.')
+    } finally {
+      setSendingMessage(false)
     }
   }
 
@@ -252,12 +277,55 @@ export default function RiderDashboard() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
                     <div>
                       <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>Order #{order.id.slice(0, 8).toUpperCase()}</h3>
+                      
+                      {/* SERVICE TYPE BADGE */}
+                      {order.serviceType && order.serviceType !== 'GROCERY' && (
+                        <span style={{ 
+                          display: 'inline-block',
+                          padding: '4px 8px', 
+                          backgroundColor: order.serviceType === 'PABILI' ? '#ffc107' : '#17a2b8',
+                          color: 'black',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          marginBottom: '5px',
+                          marginRight: '10px'
+                        }}>
+                          {order.serviceType === 'PABILI' ? '🛒 PABILI' : '📦 PADALA'}
+                        </span>
+                      )}
+                      
                       <p style={{ color: 'gray', marginBottom: '5px' }}>{order.customer?.name}</p>
                       <p style={{ color: 'gray', marginBottom: '5px' }}>{order.deliveryAddress}</p>
                       <p style={{ color: 'gray', fontSize: '14px' }}>Contact: {order.contactNumber}</p>
-                      <p style={{ color: 'gray', fontSize: '14px' }}>
-                        Items: {order.items.map((item: any) => `${item.product.name} x${item.quantity}`).join(', ')}
-                      </p>
+                      
+                      {/* PABILI DETAILS */}
+                      {order.serviceType === 'PABILI' && (
+                        <div style={{ backgroundColor: '#fff3cd', padding: '10px', borderRadius: '8px', marginBottom: '10px', border: '2px solid #ffc107' }}>
+                          <p style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '5px' }}>🛒 What to buy:</p>
+                          <p style={{ fontSize: '14px', marginBottom: '5px' }}>{order.itemDescription}</p>
+                          {order.storeLocation && <p style={{ fontSize: '14px', marginBottom: '5px' }}> Where: {order.storeLocation}</p>}
+                          {order.maxAmount && <p style={{ fontSize: '14px', fontWeight: 'bold' }}>💰 Max Budget: ₱{order.maxAmount.toFixed(2)}</p>}
+                        </div>
+                      )}
+                      
+                      {/* PADALA DETAILS */}
+                      {order.serviceType === 'PADALA' && (
+                        <div style={{ backgroundColor: '#d1ecf1', padding: '10px', borderRadius: '8px', marginBottom: '10px', border: '2px solid #17a2b8' }}>
+                          <p style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '5px' }}> Package:</p>
+                          <p style={{ fontSize: '14px', marginBottom: '5px' }}>{order.packageDescription}</p>
+                          <p style={{ fontSize: '14px', marginBottom: '5px' }}>👤 Sender: {order.senderName} - {order.senderContact}</p>
+                          <p style={{ fontSize: '14px' }}>📍 Pickup: {order.senderAddress}</p>
+                        </div>
+                      )}
+                      
+                      {/* GROCERY ITEMS */}
+                      {!order.serviceType || order.serviceType === 'GROCERY' ? (
+                        <p style={{ color: 'gray', fontSize: '14px' }}>
+                          Items: {order.items?.map((item: any) => `${item.product.name} x${item.quantity}`).join(', ')}
+                        </p>
+                      ) : null}
+                      
                       <p style={{ color: 'gray', fontSize: '14px' }}>Weight: {order.requiredLoadKg}kg</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -291,13 +359,30 @@ export default function RiderDashboard() {
 
         {myOrders.length > 0 && (
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>📋 My Orders ({myOrders.length})</h2>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}> My Orders ({myOrders.length})</h2>
             <div style={{ display: 'grid', gap: '15px' }}>
               {myOrders.map((order) => (
                 <div key={order.id} style={{ padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px solid black' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <div>
                       <h3 style={{ fontSize: '18px', fontWeight: 'bold' }}>Order #{order.id.slice(0, 8).toUpperCase()}</h3>
+                      
+                      {/* SERVICE TYPE BADGE */}
+                      {order.serviceType && order.serviceType !== 'GROCERY' && (
+                        <span style={{ 
+                          display: 'inline-block',
+                          padding: '4px 8px', 
+                          backgroundColor: order.serviceType === 'PABILI' ? '#ffc107' : '#17a2b8',
+                          color: 'black',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          marginBottom: '5px'
+                        }}>
+                          {order.serviceType === 'PABILI' ? '🛒 PABILI' : '📦 PADALA'}
+                        </span>
+                      )}
+                      
                       <p style={{ color: 'gray' }}>{order.deliveryAddress}</p>
                       <p style={{ color: 'gray' }}>
                         Status: <span style={{ 
@@ -347,129 +432,49 @@ export default function RiderDashboard() {
 
       {/* Remittance Limit Popup */}
       {showRemittancePopup && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white', padding: '40px', borderRadius: '16px',
-            border: '4px solid #ff4444', maxWidth: '550px', width: '90%', 
-            boxShadow: '0px 10px 40px rgba(0,0,0,0.3)',
-            animation: 'slideIn 0.3s ease-out'
-          }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', border: '4px solid #ff4444', maxWidth: '550px', width: '90%', boxShadow: '0px 10px 40px rgba(0,0,0,0.3)' }}>
             <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-              <div style={{ 
-                fontSize: '64px', 
-                marginBottom: '15px' 
-              }}>
-                ⚠️
-              </div>
-              <h2 style={{ 
-                fontSize: '28px', 
-                fontWeight: 'bold', 
-                color: '#ff4444',
-                marginBottom: '10px'
-              }}>
-                Remittance Limit Reached
-              </h2>
+              <div style={{ fontSize: '64px', marginBottom: '15px' }}>⚠️</div>
+              <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#ff4444', marginBottom: '10px' }}>Remittance Limit Reached</h2>
             </div>
-
-            <div style={{ 
-              backgroundColor: '#fff3cd', 
-              padding: '20px', 
-              borderRadius: '12px', 
-              border: '2px solid #ffc107',
-              marginBottom: '25px'
-            }}>
-              <p style={{ 
-                fontSize: '16px', 
-                color: '#856404', 
-                marginBottom: '10px',
-                textAlign: 'center',
-                fontWeight: 'bold'
-              }}>
-                📢 Action Required
-              </p>
-              <p style={{ 
-                fontSize: '18px', 
-                color: '#856404',
-                lineHeight: '1.6',
-                textAlign: 'center'
-              }}>
-                You have reached the remittance limit of <strong>₱{remittanceData.limit.toLocaleString()}.00</strong>
-              </p>
-              <p style={{ 
-                fontSize: '20px', 
-                color: '#d9534f',
-                marginTop: '10px',
-                fontWeight: 'bold',
-                textAlign: 'center'
-              }}>
-                Current Cash on Hand: ₱{remittanceData.cashOnHand.toFixed(2)}
-              </p>
+            <div style={{ backgroundColor: '#fff3cd', padding: '20px', borderRadius: '12px', border: '2px solid #ffc107', marginBottom: '25px' }}>
+              <p style={{ fontSize: '16px', color: '#856404', marginBottom: '10px', textAlign: 'center', fontWeight: 'bold' }}> Action Required</p>
+              <p style={{ fontSize: '18px', color: '#856404', lineHeight: '1.6', textAlign: 'center' }}>You have reached the remittance limit of <strong>₱{remittanceData.limit.toLocaleString()}.00</strong></p>
+              <p style={{ fontSize: '20px', color: '#d9534f', marginTop: '10px', fontWeight: 'bold', textAlign: 'center' }}>Current Cash on Hand: ₱{remittanceData.cashOnHand.toFixed(2)}</p>
             </div>
-
-            <div style={{ 
-              backgroundColor: '#e8f5e9', 
-              padding: '20px', 
-              borderRadius: '12px', 
-              border: '2px solid #4caf50',
-              marginBottom: '25px'
-            }}>
-              <p style={{ 
-                fontSize: '16px', 
-                color: '#2e7d32', 
-                marginBottom: '10px',
-                fontWeight: 'bold'
-              }}>
-                🔔 Important Notice:
-              </p>
-              <p style={{ 
-                fontSize: '15px', 
-                color: '#2e7d32',
-                lineHeight: '1.6'
-              }}>
-                For your safety and security, please remit your cash on hand to the admin before accepting new orders. The admin is waiting for your remittance to process your earnings and ensure smooth operations.
-              </p>
+            <div style={{ backgroundColor: '#e8f5e9', padding: '20px', borderRadius: '12px', border: '2px solid #4caf50', marginBottom: '25px' }}>
+              <p style={{ fontSize: '16px', color: '#2e7d32', marginBottom: '10px', fontWeight: 'bold' }}>🔔 Important Notice:</p>
+              <p style={{ fontSize: '15px', color: '#2e7d32', lineHeight: '1.6' }}>For your safety and security, please remit your cash on hand to the admin before accepting new orders. The admin is waiting for your remittance to process your earnings and ensure smooth operations.</p>
             </div>
-
             <div style={{ display: 'flex', gap: '15px' }}>
-              <button
-                onClick={() => setShowRemittancePopup(false)}
-                style={{
-                  flex: 1,
-                  padding: '15px',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: '2px solid #495057',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  fontSize: '16px',
-                  cursor: 'pointer'
-                }}
-              >
-                I Understand
-              </button>
-              <button
-                onClick={() => {
-                  setShowRemittancePopup(false)
-                  window.location.href = '/'
-                }}
-                style={{
-                  flex: 1,
-                  padding: '15px',
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  border: '2px solid #1e7e34',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  fontSize: '16px',
-                  cursor: 'pointer'
-                }}
-              >
-                Contact Admin
-              </button>
+              <button onClick={() => setShowRemittancePopup(false)} style={{ flex: 1, padding: '15px', backgroundColor: '#6c757d', color: 'white', border: '2px solid #495057', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>I Understand</button>
+              <button onClick={handleContactAdmin} style={{ flex: 1, padding: '15px', backgroundColor: '#28a745', color: 'white', border: '2px solid #1e7e34', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>Contact Admin</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Admin Modal */}
+      {showContactModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }}>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', border: '4px solid #28a745', maxWidth: '500px', width: '90%', boxShadow: '0px 10px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '15px' }}>📱</div>
+              <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#28a745', marginBottom: '10px' }}>Contact Admin</h2>
+              <p style={{ fontSize: '16px', color: 'gray' }}>Send a message about your remittance</p>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px', color: 'black' }}>Your Message:</label>
+              <textarea value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} placeholder="Example: Hi admin, I have ₱23,821.75 cash on hand. When and where can I remit?" style={{ width: '100%', padding: '15px', borderRadius: '8px', border: '2px solid #ddd', fontSize: '16px', minHeight: '120px', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+            </div>
+            <div style={{ backgroundColor: '#e8f5e9', padding: '15px', borderRadius: '8px', border: '2px solid #4caf50', marginBottom: '25px' }}>
+              <p style={{ fontSize: '14px', color: '#2e7d32', marginBottom: '5px' }}> <strong>Quick Info:</strong></p>
+              <p style={{ fontSize: '13px', color: '#2e7d32' }}>You can also contact admin directly via phone: <strong>0955-165-2430</strong></p>
+            </div>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button onClick={() => { setShowContactModal(false); setContactMessage('') }} style={{ flex: 1, padding: '15px', backgroundColor: '#6c757d', color: 'white', border: '2px solid #495057', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={sendMessageToAdmin} disabled={sendingMessage || !contactMessage.trim()} style={{ flex: 1, padding: '15px', backgroundColor: (!contactMessage.trim() || sendingMessage) ? '#ccc' : '#28a745', color: 'white', border: '2px solid #1e7e34', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: (!contactMessage.trim() || sendingMessage) ? 'not-allowed' : 'pointer' }}>{sendingMessage ? 'Sending...' : 'Send Message'}</button>
             </div>
           </div>
         </div>
@@ -477,95 +482,19 @@ export default function RiderDashboard() {
 
       {/* Photo Upload Modal */}
       {showPhotoModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white', padding: '30px', borderRadius: '12px',
-            border: '3px solid black', maxWidth: '500px', width: '90%', boxShadow: '8px 8px 0px black'
-          }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', color: 'black' }}>
-               Proof of Delivery
-            </h2>
-            <p style={{ fontSize: '14px', marginBottom: '20px', textAlign: 'center', color: 'gray' }}>
-              Order #{selectedOrder?.id.slice(0, 8).toUpperCase()}
-            </p>
-            
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', maxWidth: '500px', width: '90%', boxShadow: '8px 8px 0px black' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', color: 'black' }}>📸 Proof of Delivery</h2>
+            <p style={{ fontSize: '14px', marginBottom: '20px', textAlign: 'center', color: 'gray' }}>Order #{selectedOrder?.id.slice(0, 8).toUpperCase()}</p>
             <div style={{ marginBottom: '20px' }}>
-              <p style={{ fontWeight: 'bold', color: 'red', marginBottom: '10px', textAlign: 'center' }}>
-                ⚠️ Photo is REQUIRED to mark as delivered
-              </p>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handlePhotoSelect}
-                style={{ display: 'none' }}
-              />
-              
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  width: '100%',
-                  padding: '15px',
-                  backgroundColor: photoFile ? '#e8f5e9' : '#f0f0f0',
-                  border: '2px dashed black',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 'bold'
-                }}
-              >
-                {photoFile ? '✅ Photo Selected' : '📷 Take Photo / Upload'}
-              </button>
-
-              {photoPreview && (
-                <div style={{ marginTop: '15px' }}>
-                  <img 
-                    src={photoPreview} 
-                    alt="Proof" 
-                    style={{ width: '100%', borderRadius: '8px', border: '2px solid black' }}
-                  />
-                </div>
-              )}
+              <p style={{ fontWeight: 'bold', color: 'red', marginBottom: '10px', textAlign: 'center' }}>⚠️ Photo is REQUIRED to mark as delivered</p>
+              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelect} style={{ display: 'none' }} />
+              <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '15px', backgroundColor: photoFile ? '#e8f5e9' : '#f0f0f0', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}>{photoFile ? '✅ Photo Selected' : '📷 Take Photo / Upload'}</button>
+              {photoPreview && (<div style={{ marginTop: '15px' }}><img src={photoPreview} alt="Proof" style={{ width: '100%', borderRadius: '8px', border: '2px solid black' }} /></div>)}
             </div>
-
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={() => setShowPhotoModal(false)}
-                style={{
-                  flex: 1,
-                  padding: '15px',
-                  backgroundColor: 'gray',
-                  color: 'white',
-                  border: '2px solid black',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleMarkDelivered}
-                disabled={!photoFile || uploading}
-                style={{
-                  flex: 1,
-                  padding: '15px',
-                  backgroundColor: !photoFile ? 'gray' : 'green',
-                  color: 'white',
-                  border: '2px solid black',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  cursor: !photoFile ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {uploading ? 'Uploading...' : 'Confirm Delivery'}
-              </button>
+              <button onClick={() => setShowPhotoModal(false)} style={{ flex: 1, padding: '15px', backgroundColor: 'gray', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleMarkDelivered} disabled={!photoFile || uploading} style={{ flex: 1, padding: '15px', backgroundColor: !photoFile ? 'gray' : 'green', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: !photoFile ? 'not-allowed' : 'pointer' }}>{uploading ? 'Uploading...' : 'Confirm Delivery'}</button>
             </div>
           </div>
         </div>
