@@ -126,7 +126,6 @@ export default function RemittancePage() {
           </button>
         </div>
 
-        {/* Summary Card */}
         <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '30px', boxShadow: '4px 4px 0px black' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>💰 Remittance Summary</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
@@ -145,10 +144,9 @@ export default function RemittancePage() {
           </div>
         </div>
 
-        {/* Riders with Balance */}
         <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '30px', boxShadow: '4px 4px 0px black' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-            🏍️ Riders with Cash on Hand ({ridersWithBalance.length})
+            ️ Riders with Cash on Hand ({ridersWithBalance.length})
           </h2>
           
           {ridersWithBalance.length === 0 ? (
@@ -195,7 +193,6 @@ export default function RemittancePage() {
           )}
         </div>
 
-        {/* Remittance History */}
         {remittances.length > 0 && (
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
             <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
