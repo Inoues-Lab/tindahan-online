@@ -3,23 +3,48 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
+export async function GET() {
+  try {
+    const cookieStore = await cookies()
+    const userRole = cookieStore.get('userRole')?.value
+
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const remittances = await prisma.remittance.findMany({
+      include: {
+        rider: true
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    return NextResponse.json({ remittances })
+  } catch (error) {
+    console.error('Error fetching remittances:', error)
+    return NextResponse.json({ error: 'Failed to fetch remittances' }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
-    const adminId = cookieStore.get('userId')?.value
-    const adminRole = cookieStore.get('userRole')?.value
+    const userId = cookieStore.get('userId')?.value
+    const userRole = cookieStore.get('userRole')?.value
 
-    if (adminRole !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
     const { riderId, amount } = body
 
-    console.log('Processing remittance:', { riderId, amount })
+    if (!riderId || !amount) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
 
-    // Get rider with all fields
-    const rider: any = await prisma.user.findUnique({
+    // Verify rider exists and has the cash on hand
+    const rider = await prisma.user.findUnique({
       where: { id: riderId }
     })
 
@@ -31,65 +56,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient cash on hand' }, { status: 400 })
     }
 
-    // Create remittance record
-    const remittance = await prisma.remittance.create({
-      data: {
-        riderId,
-        amount,
-        status: 'COMPLETED'
-      }
-    })
-
-    // Update rider's cash on hand
-    const newCashOnHand = rider.cashOnHand - amount
-
-    await prisma.user.update({
-      where: { id: riderId },
-      data: { cashOnHand: newCashOnHand }
-    })
-
-    console.log('Remittance processed:', remittance.id)
-
-    return NextResponse.json({ 
-      success: true, 
-      remittance,
-      newCashOnHand 
-    })
-  } catch (error: any) {
-    console.error('Error processing remittance:', error)
-    return NextResponse.json({ 
-      error: 'Failed to process remittance',
-      message: error.message 
-    }, { status: 500 })
-  }
-}
-
-export async function GET() {
-  try {
-    const cookieStore = await cookies()
-    const userRole = cookieStore.get('userRole')?.value
-
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    const remittances = await prisma.remittance.findMany({
-      include: {
-        rider: {
-          select: {
-            name: true,
-            email: true
-          }
+    // Process remittance
+    await prisma.$transaction(async (tx) => {
+      // Create remittance record
+      await tx.remittance.create({
+        data: {
+          riderId: riderId,
+          amount: amount,
+          status: 'COMPLETED'
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      })
+
+      // Reset rider's cash on hand to 0
+      await tx.user.update({
+        where: { id: riderId },
+        data: {
+          cashOnHand: 0
+        }
+      })
     })
 
-    return NextResponse.json({ remittances })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error fetching remittances:', error)
-    return NextResponse.json({ error: 'Failed to fetch remittances' }, { status: 500 })
+    console.error('Error processing remittance:', error)
+    return NextResponse.json({ error: 'Failed to process remittance', details: String(error) }, { status: 500 })
   }
 }
