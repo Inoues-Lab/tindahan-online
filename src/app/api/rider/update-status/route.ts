@@ -80,7 +80,7 @@ export async function POST(request: Request) {
           data: { status: 'ONLINE' }
         })
 
-        // Calculate what rider needs to remit to admin
+        
         // For PABILI/PADALA, totalAmount might be null, so use deliveryFee or 0
         const amountToRemit = (order.totalAmount || order.deliveryFee || 0) - (order.riderPayout || 0)
         
