@@ -11,6 +11,7 @@ enum UserRole {
   ADMIN
   CUSTOMER
   RIDER
+  MERCHANT
 }
 
 enum OrderStatus {
@@ -36,75 +37,79 @@ enum ServiceType {
 }
 
 model User {
-  id         String   @id @default(uuid())
-  name       String
-  email      String   @unique
-  password   String
-  phone      String?
-  address    String?
-  role       UserRole @default(CUSTOMER)
-  cashOnHand Float    @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  orders       Order[]
-  cart         Cart?
-  riderProfile RiderProfile?
-  remittances  Remittance[]
+  id             String             @id @default(uuid())
+  name           String
+  email          String             @unique
+  password       String
+  phone          String?
+  address        String?
+  role           UserRole           @default(CUSTOMER)
+  cashOnHand     Float              @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  
+  orders         Order[]
+  cart           Cart?
+  riderProfile   RiderProfile?
+  merchantProfile MerchantProfile?
+  merchantApplications MerchantApplication[]
+  remittances    Remittance[]
 }
 
 model Product {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   name        String
   description String?
   price       Float
-  stock       Int      @default(0)
+  stock       Int         @default(0)
   imageUrl    String?
-  weightKg    Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  orderItems OrderItem[]
-  cartItems  CartItem[]
+  weightKg    Float       @default(0)
+  merchantId  String?
+  merchant    MerchantProfile? @relation(fields: [merchantId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
 }
 
 model Order {
-  id         String @id @default(uuid())
-  customerId String
-  customer   User   @relation(fields: [customerId], references: [id])
-
-  status      OrderStatus @default(PENDING)
-  serviceType ServiceType @default(GROCERY)
-
-  totalAmount    Float?
-  deliveryFee    Float?
-  riderPayout    Float?
-  platformIncome Float  @default(0)
-  requiredLoadKg Float?
-
-  deliveryAddress String?
-  contactNumber   String?
-
-  itemDescription String?
-  maxAmount       Float?
-  storeLocation   String?
-  receiptUrl      String?
-
-  senderName         String?
-  senderAddress      String?
-  senderContact      String?
-  receiverName       String?
-  receiverAddress    String?
-  receiverContact    String?
+  id                String        @id @default(uuid())
+  customerId        String
+  customer          User          @relation(fields: [customerId], references: [id])
+  
+  status            OrderStatus   @default(PENDING)
+  serviceType       ServiceType   @default(GROCERY)
+  
+  totalAmount       Float?
+  deliveryFee       Float?
+  riderPayout       Float?
+  platformIncome    Float         @default(0)
+  requiredLoadKg    Float?
+  
+  deliveryAddress   String?
+  contactNumber     String?
+  
+  itemDescription   String?
+  maxAmount         Float?
+  storeLocation     String?
+  receiptUrl        String?
+  
+  senderName        String?
+  senderAddress     String?
+  senderContact     String?
+  receiverName      String?
+  receiverAddress   String?
+  receiverContact   String?
   packageDescription String?
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  items         OrderItem[]
-  delivery      Delivery?
-  paymentMethod String      @default("COD")
-  isRemitted    Boolean     @default(false)
+  items             OrderItem[]
+  delivery          Delivery?
+  paymentMethod     String        @default("COD")
+  isRemitted        Boolean       @default(false)
 }
 
 model OrderItem {
@@ -115,44 +120,44 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
   quantity  Int
   price     Float
-
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Delivery {
-  id          String         @id @default(uuid())
-  orderId     String         @unique
-  order       Order          @relation(fields: [orderId], references: [id])
+  id          String           @id @default(uuid())
+  orderId     String           @unique
+  order       Order            @relation(fields: [orderId], references: [id])
   riderId     String?
-  rider       RiderProfile?  @relation(fields: [riderId], references: [id])
-  status      DeliveryStatus @default(UNASSIGNED)
+  rider       RiderProfile?    @relation(fields: [riderId], references: [id])
+  status      DeliveryStatus   @default(UNASSIGNED)
   proofUrl    String?
   acceptedAt  DateTime?
   completedAt DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model RiderProfile {
-  id          String     @id @default(uuid())
-  userId      String     @unique
-  user        User       @relation(fields: [userId], references: [id])
-  vehicleType String     @default("MOTORCYCLE")
-  maxLoadKg   Float      @default(15.0)
-  status      String     @default("ONLINE")
-  deliveries  Delivery[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id           String     @id @default(uuid())
+  userId       String     @unique
+  user         User       @relation(fields: [userId], references: [id])
+  vehicleType  String     @default("MOTORCYCLE")
+  maxLoadKg    Float      @default(15.0)
+  status       String     @default("ONLINE")
+  deliveries   Delivery[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Cart {
-  id        String     @id @default(uuid())
-  userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id])
+  id        String      @id @default(uuid())
+  userId    String      @unique
+  user      User        @relation(fields: [userId], references: [id])
   items     CartItem[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
 
 model CartItem {
@@ -176,4 +181,30 @@ model Remittance {
   status    String   @default("COMPLETED")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model MerchantProfile {
+  id             String             @id @default(uuid())
+  userId         String             @unique
+  user           User               @relation(fields: [userId], references: [id])
+  storeName      String
+  businessType   String             @default("General")
+  status         String             @default("APPROVED") 
+  commissionRate Float              @default(0.20)
+  products       Product[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model MerchantApplication {
+  id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  storeName      String
+  businessType   String
+  contactNumber  String
+  status         String         @default("PENDING")
+  adminNotes     String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
