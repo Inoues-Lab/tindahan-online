@@ -1,4 +1,3 @@
-// src/components/PWAInstallPrompt.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
