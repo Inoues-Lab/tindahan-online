@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
@@ -15,7 +14,7 @@ export default function RegisterPage() {
     password: '',
     phone: '',
     address: '',
-    role: (searchParams.get('role') as any) || 'CUSTOMER'
+    role: 'CUSTOMER' // Default role
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,7 +138,7 @@ export default function RegisterPage() {
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>I am a:</label>
             <select
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
             >
               <option value="CUSTOMER">Customer</option>
