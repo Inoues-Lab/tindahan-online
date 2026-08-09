@@ -1,13 +1,9 @@
-import PWAInstall from '@/app/pwa-install'
-
-// Then add it before closing </main> tag:
-// <PWAInstall />
-// src/app/rider/page.tsx
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
+import PWAInstall from '@/app/pwa-install'
 
 export default function RiderDashboard() {
   const router = useRouter()
@@ -60,8 +56,8 @@ export default function RiderDashboard() {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, {
         body: body,
-        icon: '/logo.png',
-        badge: '/logo.png',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
         requireInteraction: true
       })
     }
@@ -95,7 +91,7 @@ export default function RiderDashboard() {
       animation: slideDown 0.5s ease-out;
     `
     alertDiv.innerHTML = `
-      <div style="font-size: 32px; margin-bottom: 10px;"></div>
+      <div style="font-size: 32px; margin-bottom: 10px;">📦</div>
       <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${title}</div>
       <div style="font-size: 14px;">${body}</div>
     `
@@ -157,7 +153,7 @@ export default function RiderDashboard() {
         if (currentCount > previousOrdersCount.current && currentCount > 0) {
           const newOrdersCount = currentCount - previousOrdersCount.current
           sendNotification(
-            ' New Order Available!',
+            '📦 New Order Available!',
             `${newOrdersCount} new order${newOrdersCount > 1 ? 's' : ''} available!`
           )
         }
@@ -338,7 +334,7 @@ export default function RiderDashboard() {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
         <div style={{ marginBottom: '20px' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>
-            Rider Dashboard 
+            Rider Dashboard 🏍️
           </h1>
           <p style={{ fontSize: '16px', color: 'gray', marginBottom: '15px' }}>
             Accept deliveries and earn money
@@ -365,7 +361,7 @@ export default function RiderDashboard() {
                 gap: '8px'
               }}
             >
-               {notificationPermission === 'denied' ? 'Enable Notifications' : 'Allow Notifications'}
+              🔔 {notificationPermission === 'denied' ? 'Enable Notifications' : 'Allow Notifications'}
             </button>
           )}
         </div>
@@ -377,23 +373,23 @@ export default function RiderDashboard() {
         )}
 
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}> Rider Earnings</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>💰 Rider Earnings</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
             <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Income</p>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>{todayEarnings.toFixed(2)}</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{todayEarnings.toFixed(2)}</p>
               <p style={{ fontSize: '11px', color: 'gray' }}>From completed deliveries</p>
             </div>
             <div style={{ padding: '15px', backgroundColor: cashOnHand >= REMITTANCE_LIMIT ? '#fee' : '#e3f2fd', borderRadius: '8px', border: `2px solid ${cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'blue'}` }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Cash on Hand</p>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', color: cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'blue' }}>{cashOnHand.toFixed(2)}</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'blue' }}>₱{cashOnHand.toFixed(2)}</p>
               <p style={{ fontSize: '11px', color: cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'gray' }}>
                 {cashOnHand >= REMITTANCE_LIMIT ? '⚠️ Limit!' : 'To remit to admin'}
               </p>
             </div>
             <div style={{ padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Remittance Limit</p>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'orange' }}>{REMITTANCE_LIMIT.toLocaleString()}.00</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'orange' }}>₱{REMITTANCE_LIMIT.toLocaleString()}.00</p>
               <p style={{ fontSize: '11px', color: 'gray' }}>Max cash before remitting</p>
             </div>
           </div>
@@ -402,7 +398,7 @@ export default function RiderDashboard() {
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>
-               Available Orders {pendingOrders.length > 0 && (
+              📦 Available Orders {pendingOrders.length > 0 && (
                 <span style={{ 
                   display: 'inline-block',
                   padding: '4px 12px', 
@@ -431,7 +427,7 @@ export default function RiderDashboard() {
                   fontSize: '14px'
                 }}
               >
-                 Refresh
+                🔄 Refresh
               </button>
             )}
           </div>
@@ -459,7 +455,7 @@ export default function RiderDashboard() {
                         marginBottom: '5px',
                         marginRight: '5px'
                       }}>
-                        {order.serviceType === 'PABILI' ? ' PABILI' : ' PADALA'}
+                        {order.serviceType === 'PABILI' ? '🛒 PABILI' : '📦 PADALA'}
                       </span>
                     )}
                     
@@ -469,15 +465,15 @@ export default function RiderDashboard() {
                     
                     {order.serviceType === 'PABILI' && (
                       <div style={{ backgroundColor: '#fff3cd', padding: '8px', borderRadius: '8px', marginBottom: '8px', border: '2px solid #ffc107' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}> What to buy:</p>
+                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>🛒 What to buy:</p>
                         <p style={{ fontSize: '12px', marginBottom: '3px' }}>{order.itemDescription}</p>
-                        {order.maxAmount && <p style={{ fontSize: '12px', fontWeight: 'bold' }}> Max: {order.maxAmount.toFixed(2)}</p>}
+                        {order.maxAmount && <p style={{ fontSize: '12px', fontWeight: 'bold' }}>💰 Max: ₱{order.maxAmount.toFixed(2)}</p>}
                       </div>
                     )}
                     
                     {order.serviceType === 'PADALA' && (
                       <div style={{ backgroundColor: '#d1ecf1', padding: '8px', borderRadius: '8px', marginBottom: '8px', border: '2px solid #17a2b8' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}> Package:</p>
+                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>📦 Package:</p>
                         <p style={{ fontSize: '12px', marginBottom: '3px' }}>{order.packageDescription}</p>
                       </div>
                     )}
@@ -493,10 +489,10 @@ export default function RiderDashboard() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                     <div>
                       <p style={{ fontSize: '12px', color: 'gray' }}>Customer Pays</p>
-                      <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>{order.totalAmount?.toFixed(2)}</p>
+                      <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{order.totalAmount?.toFixed(2)}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '12px', color: 'blue', fontWeight: 'bold' }}>You earn: {order.riderPayout?.toFixed(2)}</p>
+                      <p style={{ fontSize: '12px', color: 'blue', fontWeight: 'bold' }}>You earn: ₱{order.riderPayout?.toFixed(2)}</p>
                     </div>
                   </div>
                   <button
@@ -523,7 +519,7 @@ export default function RiderDashboard() {
 
         {myOrders.length > 0 && (
           <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}> My Orders ({myOrders.length})</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>📋 My Orders ({myOrders.length})</h2>
             <div style={{ display: 'grid', gap: '15px' }}>
               {myOrders.map((order) => (
                 <div key={order.id} style={{ padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px solid black' }}>
@@ -541,7 +537,7 @@ export default function RiderDashboard() {
                         fontWeight: 'bold',
                         marginBottom: '5px'
                       }}>
-                        {order.serviceType === 'PABILI' ? ' PABILI' : ' PADALA'}
+                        {order.serviceType === 'PABILI' ? '🛒 PABILI' : '📦 PADALA'}
                       </span>
                     )}
                     
@@ -557,10 +553,10 @@ export default function RiderDashboard() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                     <div>
                       <p style={{ fontSize: '12px', color: 'gray' }}>Customer Paid</p>
-                      <p style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>{order.totalAmount?.toFixed(2)}</p>
+                      <p style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>₱{order.totalAmount?.toFixed(2)}</p>
                     </div>
                     <div>
-                      <p style={{ fontSize: '12px', color: 'blue', fontWeight: 'bold' }}>You earn: {order.riderPayout?.toFixed(2)}</p>
+                      <p style={{ fontSize: '12px', color: 'blue', fontWeight: 'bold' }}>You earn: ₱{order.riderPayout?.toFixed(2)}</p>
                     </div>
                   </div>
                   
@@ -579,7 +575,7 @@ export default function RiderDashboard() {
                         fontSize: '15px'
                       }}
                     >
-                       Mark as Delivered (Photo Required)
+                      📸 Mark as Delivered (Photo Required)
                     </button>
                   )}
                 </div>
@@ -589,6 +585,8 @@ export default function RiderDashboard() {
         )}
       </div>
 
+      <PWAInstall />
+
       {showRemittancePopup && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid #ff4444', maxWidth: '500px', width: '100%', boxShadow: '0px 10px 40px rgba(0,0,0,0.3)' }}>
@@ -597,9 +595,9 @@ export default function RiderDashboard() {
               <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#ff4444', marginBottom: '10px' }}>Remittance Limit Reached</h2>
             </div>
             <div style={{ backgroundColor: '#fff3cd', padding: '15px', borderRadius: '12px', border: '2px solid #ffc107', marginBottom: '20px' }}>
-              <p style={{ fontSize: '14px', color: '#856404', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}> Action Required</p>
-              <p style={{ fontSize: '16px', color: '#856404', textAlign: 'center' }}>Limit: <strong>{remittanceData.limit.toLocaleString()}.00</strong></p>
-              <p style={{ fontSize: '18px', color: '#d9534f', marginTop: '8px', fontWeight: 'bold', textAlign: 'center' }}>Current: {remittanceData.cashOnHand.toFixed(2)}</p>
+              <p style={{ fontSize: '14px', color: '#856404', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}>📢 Action Required</p>
+              <p style={{ fontSize: '16px', color: '#856404', textAlign: 'center' }}>Limit: <strong>₱{remittanceData.limit.toLocaleString()}.00</strong></p>
+              <p style={{ fontSize: '18px', color: '#d9534f', marginTop: '8px', fontWeight: 'bold', textAlign: 'center' }}>Current: ₱{remittanceData.cashOnHand.toFixed(2)}</p>
             </div>
             <button onClick={() => setShowRemittancePopup(false)} style={{ width: '100%', padding: '12px', backgroundColor: '#6c757d', color: 'white', border: '2px solid #495057', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}>I Understand</button>
           </div>
@@ -625,10 +623,10 @@ export default function RiderDashboard() {
       {showPhotoModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '3px solid black', maxWidth: '500px', width: '100%' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}> Proof of Delivery</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>📸 Proof of Delivery</h2>
             <p style={{ fontSize: '12px', marginBottom: '15px', textAlign: 'center', color: 'gray' }}>Order #{selectedOrder?.id.slice(0, 8).toUpperCase()}</p>
             <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelect} style={{ display: 'none' }} />
-            <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '12px', backgroundColor: photoFile ? '#e8f5e9' : '#f0f0f0', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', marginBottom: '15px' }}>{photoFile ? ' Photo Selected' : ' Take Photo'}</button>
+            <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '12px', backgroundColor: photoFile ? '#e8f5e9' : '#f0f0f0', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', marginBottom: '15px' }}>{photoFile ? '✅ Photo Selected' : '📷 Take Photo'}</button>
             {photoPreview && (<img src={photoPreview} alt="Proof" style={{ width: '100%', borderRadius: '8px', border: '2px solid black', marginBottom: '15px' }} />)}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowPhotoModal(false)} style={{ flex: 1, padding: '12px', backgroundColor: 'gray', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>Cancel</button>
