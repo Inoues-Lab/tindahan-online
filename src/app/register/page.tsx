@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -15,7 +15,7 @@ export default function RegisterPage() {
     password: '',
     phone: '',
     address: '',
-    role: searchParams.get('role') || 'CUSTOMER'
+    role: (searchParams.get('role') as any) || 'CUSTOMER'
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,8 +66,8 @@ export default function RegisterPage() {
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', maxWidth: '500px', width: '100%' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>Welcome Back</h1>
-        <p style={{ textAlign: 'center', color: 'gray', marginBottom: '30px' }}>Login to your account</p>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>Create Account</h1>
+        <p style={{ textAlign: 'center', color: 'gray', marginBottom: '30px' }}>Join Tindahan Online today!</p>
 
         {error && (
           <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', color: 'red' }}>
@@ -76,6 +76,18 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Full Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Juan Dela Cruz"
+              required
+              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+            />
+          </div>
+
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Email</label>
             <input
@@ -96,8 +108,44 @@ export default function RegisterPage() {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               placeholder="••••••••"
               required
+              minLength={6}
               style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
             />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Phone Number</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="09XXXXXXXXX"
+              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Address</label>
+            <textarea
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              placeholder="House No., Street, Barangay, City"
+              rows={3}
+              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>I am a:</label>
+            <select
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+            >
+              <option value="CUSTOMER">Customer</option>
+              <option value="RIDER">Rider</option>
+              <option value="MERCHANT">Merchant</option>
+            </select>
           </div>
 
           <button
@@ -106,7 +154,7 @@ export default function RegisterPage() {
             style={{
               width: '100%',
               padding: '15px',
-              backgroundColor: loading ? 'gray' : 'blue',
+              backgroundColor: loading ? 'gray' : 'green',
               color: 'white',
               border: '2px solid black',
               borderRadius: '8px',
@@ -116,13 +164,13 @@ export default function RegisterPage() {
               boxShadow: '4px 4px 0px black'
             }}
           >
-            {loading ? 'Loading...' : 'Login'}
+            {loading ? 'Creating Account...' : 'Register'}
           </button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <Link href="/register" style={{ color: 'blue', textDecoration: 'underline', fontWeight: 'bold' }}>
-            Don't have an account? Register here
+          <Link href="/login" style={{ color: 'blue', textDecoration: 'underline', fontWeight: 'bold' }}>
+            Already have an account? Login here
           </Link>
         </div>
       </div>
