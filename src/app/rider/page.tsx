@@ -246,14 +246,27 @@ export default function RiderDashboard() {
   }
 
   const acceptOrder = async (orderId: string) => {
+    console.log('🟢 [Frontend] Accepting order:', orderId)
+    
+    if (!orderId) {
+      console.error('🔴 [Frontend] Order ID is undefined!')
+      alert('Error: Order ID is missing')
+      return
+    }
+
     try {
+      const body = JSON.stringify({ orderId })
+      console.log('🟢 [Frontend] Sending body:', body)
+      
       const response = await fetch('/api/rider/orders/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId })
+        body: body
       })
       
+      console.log('🟢 [Frontend] Response status:', response.status)
       const data = await response.json()
+      console.log('🟢 [Frontend] Response data:', data)
       
       if (response.ok) {
         alert('Order accepted!')
@@ -268,6 +281,7 @@ export default function RiderDashboard() {
         alert(data.error || 'Failed to accept order')
       }
     } catch (error) {
+      console.error('🔴 [Frontend] Error accepting order:', error)
       alert('Error accepting order')
     }
   }
