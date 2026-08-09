@@ -1,9 +1,7 @@
-// src/app/api/cart/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
-// GET - Get cart items
 export async function GET() {
   try {
     const cookieStore = await cookies()
@@ -43,7 +41,6 @@ export async function GET() {
   }
 }
 
-// POST - Add item to cart
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
@@ -94,7 +91,6 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT - Update cart item quantity
 export async function PUT(request: Request) {
   try {
     const cookieStore = await cookies()
@@ -127,7 +123,6 @@ export async function PUT(request: Request) {
   }
 }
 
-// DELETE - Remove item from cart
 export async function DELETE(request: Request) {
   try {
     const cookieStore = await cookies()

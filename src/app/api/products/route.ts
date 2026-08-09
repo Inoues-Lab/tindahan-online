@@ -1,9 +1,21 @@
-// src/app/api/admin/products/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+
     const products = await prisma.product.findMany({
       orderBy: { name: 'asc' }
     })
@@ -16,18 +28,33 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+
     const body = await request.json()
-    // Changed 'image' to 'imageUrl' to match the database schema
     const { name, description, price, stock, weightKg, imageUrl } = body
+
+    if (!name || !price || stock === undefined) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
 
     const product = await prisma.product.create({
       data: {
         name,
-        description,
-        price,
-        stock,
-        weightKg: weightKg || 1.0,
-        imageUrl: imageUrl || null // Changed from 'image'
+        description: description || null,
+        price: parseFloat(price),
+        stock: parseInt(stock),
+        weightKg: parseFloat(weightKg) || 1.0,
+        imageUrl: imageUrl || null
       }
     })
 
@@ -40,6 +67,18 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     
@@ -48,18 +87,17 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    // Changed 'image' to 'imageUrl' to match the database schema
     const { name, description, price, stock, weightKg, imageUrl } = body
 
     const product = await prisma.product.update({
       where: { id },
       data: {
         name,
-        description,
-        price,
-        stock,
-        weightKg: weightKg || 1.0,
-        imageUrl: imageUrl || null // Changed from 'image'
+        description: description || null,
+        price: parseFloat(price),
+        stock: parseInt(stock),
+        weightKg: parseFloat(weightKg) || 1.0,
+        imageUrl: imageUrl || null
       }
     })
 
@@ -72,6 +110,18 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     

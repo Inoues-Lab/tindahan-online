@@ -1,4 +1,3 @@
-// src/app/api/rider/orders/accept/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
@@ -7,10 +6,14 @@ export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
-    const userRole = cookieStore.get('userRole')?.value
 
-    if (!userId || userRole !== 'RIDER') {
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'RIDER') {
+      return NextResponse.json({ error: 'Rider access required' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -20,7 +23,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Order ID required' }, { status: 400 })
     }
 
-    // Check rider's cash on hand
     const rider = await prisma.user.findUnique({ where: { id: userId } })
     const REMITTANCE_LIMIT = 20000
 
@@ -32,7 +34,6 @@ export async function POST(request: Request) {
       }, { status: 403 })
     }
 
-    // Update order status and assign delivery to rider
     await prisma.order.update({
       where: { id: orderId },
       data: {

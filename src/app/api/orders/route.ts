@@ -1,4 +1,3 @@
-// src/app/api/orders/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
@@ -7,13 +6,17 @@ export async function GET() {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
-    const userRole = cookieStore.get('userRole')?.value
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (userRole === 'ADMIN') {
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    if (user.role === 'ADMIN') {
       const orders = await prisma.order.findMany({
         include: { customer: true, items: { include: { product: true } }, delivery: true },
         orderBy: { createdAt: 'desc' }
@@ -43,6 +46,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { items, deliveryAddress, contactNumber, paymentMethod, totalAmount, deliveryFee, serviceType } = body
 
@@ -50,12 +58,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No items in order' }, { status: 400 })
     }
 
-    // Calculate platform income (5% of product total)
     const productTotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
     const platformIncome = productTotal * 0.05
     const riderPayout = (deliveryFee || 50) * 0.80
 
-    // Step 1: Create the order first
     const order = await prisma.order.create({
       data: {
         customerId: userId,
@@ -78,7 +84,6 @@ export async function POST(request: Request) {
       }
     })
 
-    // Step 2: Create the delivery record separately
     await prisma.delivery.create({
       data: {
         orderId: order.id,
@@ -86,7 +91,6 @@ export async function POST(request: Request) {
       }
     })
 
-    // Step 3: Clear cart after order
     const cart = await prisma.cart.findUnique({ where: { userId } })
     if (cart) {
       await prisma.cartItem.deleteMany({ where: { cartId: cart.id } })
@@ -95,6 +99,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, order })
   } catch (error) {
     console.error('Error creating order:', error)
-    return NextResponse.json({ error: 'Failed to create order: ' + (error as any).message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
   }
 }

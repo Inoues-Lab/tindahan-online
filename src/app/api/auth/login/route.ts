@@ -1,4 +1,3 @@
-// src/app/api/auth/login/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
@@ -30,13 +29,10 @@ export async function POST(request: Request) {
     const cookieStore = await cookies()
     cookieStore.set('userId', user.id, {
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      sameSite: 'lax'
-    })
-    cookieStore.set('userRole', user.role, {
-      path: '/',
       maxAge: 60 * 60 * 24 * 7,
-      sameSite: 'lax'
+      sameSite: 'lax',
+      httpOnly: true,
+      secure: true
     })
 
     return NextResponse.json({

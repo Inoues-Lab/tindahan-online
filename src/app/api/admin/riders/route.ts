@@ -1,4 +1,3 @@
-// src/app/api/admin/riders/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
@@ -6,13 +5,17 @@ import { cookies } from 'next/headers'
 export async function GET() {
   try {
     const cookieStore = await cookies()
-    const userRole = cookieStore.get('userRole')?.value
+    const userId = cookieStore.get('userId')?.value
 
-    if (userRole !== 'ADMIN') {
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Just find many, no include needed for basic fields
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+
     const riders = await prisma.user.findMany({
       where: { role: 'RIDER' }
     })

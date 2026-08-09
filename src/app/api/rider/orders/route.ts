@@ -1,4 +1,3 @@
-// src/app/api/rider/orders/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
@@ -7,29 +6,16 @@ export async function GET() {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
-    const userRole = cookieStore.get('userRole')?.value
 
-    if (!userId || userRole !== 'RIDER') {
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get or create rider profile
-    let riderProfile = await prisma.riderProfile.findUnique({
-      where: { userId: userId }
-    })
-
-    if (!riderProfile) {
-      riderProfile = await prisma.riderProfile.create({
-        data: {
-          userId: userId,
-          vehicleType: 'MOTORCYCLE',
-          maxLoadKg: 15.0,
-          status: 'ONLINE'
-        }
-      })
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'RIDER') {
+      return NextResponse.json({ error: 'Rider access required' }, { status: 403 })
     }
 
-    // Get all pending orders with unassigned deliveries
     const pendingOrders = await prisma.order.findMany({
       where: {
         status: 'PENDING',
@@ -38,31 +24,33 @@ export async function GET() {
         }
       },
       include: {
-        items: { include: { product: true } },
         customer: true,
+        items: { include: { product: true } },
         delivery: true
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    // Get orders assigned to this rider
     const myOrders = await prisma.order.findMany({
       where: {
         delivery: {
-          riderId: riderProfile.id
+          riderId: userId
         }
       },
       include: {
-        items: { include: { product: true } },
         customer: true,
+        items: { include: { product: true } },
         delivery: true
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json({ pendingOrders, myOrders })
+    return NextResponse.json({
+      pendingOrders,
+      myOrders
+    })
   } catch (error) {
-    console.error('Error fetching orders:', error)
-    return NextResponse.json({ error: 'Failed to fetch orders', details: String(error) }, { status: 500 })
+    console.error('Error fetching rider orders:', error)
+    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
   }
 }

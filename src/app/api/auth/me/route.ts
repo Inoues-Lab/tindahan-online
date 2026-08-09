@@ -1,7 +1,6 @@
-// src/app/api/auth/me/route.ts
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
+import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
@@ -9,7 +8,7 @@ export async function GET() {
     const userId = cookieStore.get('userId')?.value
 
     if (!userId) {
-      return NextResponse.json({ user: null })
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
     const user = await prisma.user.findUnique({
@@ -18,20 +17,20 @@ export async function GET() {
         id: true,
         name: true,
         email: true,
+        role: true,
         phone: true,
         address: true,
-        role: true,
-        cashOnHand: true  // MAKE SURE THIS IS INCLUDED
+        cashOnHand: true
       }
     })
 
     if (!user) {
-      return NextResponse.json({ user: null })
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     return NextResponse.json({ user })
   } catch (error) {
     console.error('Error fetching user:', error)
-    return NextResponse.json({ user: null })
+    return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 })
   }
 }
