@@ -1,4 +1,3 @@
-// src/app/api/admin/remittance/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
@@ -6,23 +5,61 @@ import { cookies } from 'next/headers'
 export async function GET() {
   try {
     const cookieStore = await cookies()
-    const userRole = cookieStore.get('userRole')?.value
+    const userId = cookieStore.get('userId')?.value
 
-    if (userRole !== 'ADMIN') {
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const remittances = await prisma.remittance.findMany({
-      include: {
-        rider: true
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+
+    // Get all riders with cash on hand
+    const riders = await prisma.user.findMany({
+      where: {
+        role: 'RIDER',
+        cashOnHand: { gt: 0 }
       },
-      orderBy: { createdAt: 'desc' }
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        cashOnHand: true
+      }
     })
 
-    return NextResponse.json({ remittances })
+    // Get today's remittances
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const todayRemittances = await prisma.remittance.findMany({
+      where: {
+        createdAt: {
+          gte: today,
+          lt: tomorrow
+        }
+      },
+      include: {
+        rider: true
+      }
+    })
+
+    const totalPending = riders.reduce((sum, rider) => sum + rider.cashOnHand, 0)
+
+    return NextResponse.json({
+      riders,
+      todayRemittances,
+      totalPending,
+      processedToday: todayRemittances.length
+    })
   } catch (error) {
-    console.error('Error fetching remittances:', error)
-    return NextResponse.json({ error: 'Failed to fetch remittances' }, { status: 500 })
+    console.error('Error fetching remittance data:', error)
+    return NextResponse.json({ error: 'Failed to fetch remittance data' }, { status: 500 })
   }
 }
 
@@ -30,10 +67,14 @@ export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
-    const userRole = cookieStore.get('userRole')?.value
 
-    if (userRole !== 'ADMIN') {
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -43,7 +84,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Verify rider exists and has the cash on hand
+    // Verify rider exists and has enough cash
     const rider = await prisma.user.findUnique({
       where: { id: riderId }
     })
@@ -56,29 +97,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Insufficient cash on hand' }, { status: 400 })
     }
 
-    // Process remittance
-    await prisma.$transaction(async (tx) => {
-      // Create remittance record
-      await tx.remittance.create({
-        data: {
-          riderId: riderId,
-          amount: amount,
-          status: 'COMPLETED'
-        }
-      })
-
-      // Reset rider's cash on hand to 0
-      await tx.user.update({
-        where: { id: riderId },
-        data: {
-          cashOnHand: 0
-        }
-      })
+    // Create remittance record
+    const remittance = await prisma.remittance.create({
+      data: {
+        riderId,
+        amount,
+        status: 'COMPLETED'
+      }
     })
 
-    return NextResponse.json({ success: true })
+    // Reset rider's cash on hand
+    await prisma.user.update({
+      where: { id: riderId },
+      data: {
+        cashOnHand: { decrement: amount }
+      }
+    })
+
+    return NextResponse.json({ success: true, remittance })
   } catch (error) {
     console.error('Error processing remittance:', error)
-    return NextResponse.json({ error: 'Failed to process remittance', details: String(error) }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to process remittance' }, { status: 500 })
   }
 }

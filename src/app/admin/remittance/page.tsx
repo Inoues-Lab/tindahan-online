@@ -1,77 +1,77 @@
-// src/app/admin/remittance/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 
-export default function RemittancePage() {
+export default function AdminRemittancePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [riders, setRiders] = useState<any[]>([])
-  const [remittances, setRemittances] = useState<any[]>([])
+  const [totalPending, setTotalPending] = useState(0)
+  const [processedToday, setProcessedToday] = useState(0)
   const [processing, setProcessing] = useState<string | null>(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     checkAuth()
+    fetchRemittanceData()
   }, [router])
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('/api/auth/me')
-      const data = await response.json()
+      const res = await fetch('/api/auth/me')
+      const data = await res.json()
       
       if (!data.user || data.user.role !== 'ADMIN') {
-        alert('Access denied. Admins only.')
         router.push('/')
         return
       }
       
       setUser(data.user)
-      fetchData()
     } catch (error) {
-      router.push('/login')
+      router.push('/')
     }
   }
 
-  const fetchData = async () => {
+  const fetchRemittanceData = async () => {
     try {
-      const [ridersRes, remittancesRes] = await Promise.all([
-        fetch('/api/admin/riders'),
-        fetch('/api/admin/remittance')
-      ])
+      const res = await fetch('/api/admin/remittance')
+      const data = await res.json()
       
-      const ridersData = await ridersRes.json()
-      const remittancesData = await remittancesRes.json()
-      
-      if (ridersRes.ok) setRiders(ridersData.riders || [])
-      if (remittancesRes.ok) setRemittances(remittancesData.remittances || [])
+      if (res.ok) {
+        setRiders(data.riders || [])
+        setTotalPending(data.totalPending || 0)
+        setProcessedToday(data.processedToday || 0)
+      } else {
+        setError(data.error || 'Failed to load remittance data')
+      }
     } catch (error) {
-      console.error('Error fetching data:', error)
+      setError('Error loading remittance data')
     } finally {
       setLoading(false)
     }
   }
 
-  const processRemittance = async (riderId: string, amount: number, riderName: string) => {
+  const processRemittance = async (riderId: string, riderName: string, amount: number) => {
     if (!confirm(`Process remittance of ₱${amount.toFixed(2)} from ${riderName}?`)) {
       return
     }
 
     setProcessing(riderId)
     try {
-      const response = await fetch('/api/admin/remittance', {
+      const res = await fetch('/api/admin/remittance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ riderId, amount })
       })
 
-      const data = await response.json()
+      const data = await res.json()
 
-      if (response.ok) {
-        alert(`Remittance of ₱${amount.toFixed(2)} from ${riderName} processed successfully!`)
-        fetchData()
+      if (res.ok) {
+        alert(`Remittance of ₱${amount.toFixed(2)} processed successfully!`)
+        fetchRemittanceData()
       } else {
         alert(data.error || 'Failed to process remittance')
       }
@@ -86,91 +86,92 @@ export default function RemittancePage() {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
         <Header />
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <p>Loading...</p>
-        </div>
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
       </main>
     )
   }
-
-  const ridersWithBalance = riders.filter((rider: any) => rider.cashOnHand > 0)
-  const totalPendingRemittance = ridersWithBalance.reduce((sum: number, rider: any) => sum + rider.cashOnHand, 0)
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
-            <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: 'black', marginBottom: '10px' }}>
-              💸 Process Remittances
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
+              💸 Remittance Management
             </h1>
-            <p style={{ fontSize: '18px', color: 'gray' }}>
-              Collect cash on hand from riders
+            <p style={{ fontSize: '16px', color: 'gray' }}>
+              Process rider cash remittances
             </p>
           </div>
           <button
             onClick={() => router.push('/admin')}
             style={{
-              padding: '12px 24px',
+              padding: '12px 20px',
               backgroundColor: 'gray',
               color: 'white',
               border: '2px solid black',
               borderRadius: '8px',
               fontWeight: 'bold',
-              cursor: 'pointer',
-              fontSize: '16px'
+              cursor: 'pointer'
             }}
           >
             ← Back to Dashboard
           </button>
         </div>
 
-        <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '30px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>💰 Remittance Summary</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-            <div style={{ padding: '20px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
-              <p style={{ fontSize: '14px', color: 'gray', marginBottom: '5px' }}>Riders with Balance</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>{ridersWithBalance.length}</p>
+        {error && (
+          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px' }}>
+            <strong style={{ color: 'red' }}>Error:</strong> {error}
+          </div>
+        )}
+
+        {/* Summary Cards */}
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>💰 Remittance Summary</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+            <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
+              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Riders with Balance</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>{riders.length}</p>
             </div>
-            <div style={{ padding: '20px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
-              <p style={{ fontSize: '14px', color: 'gray', marginBottom: '5px' }}>Total Pending</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'orange' }}>₱{totalPendingRemittance.toFixed(2)}</p>
+            <div style={{ padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
+              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Total Pending</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'orange' }}>₱{totalPending.toFixed(2)}</p>
             </div>
-            <div style={{ padding: '20px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '2px solid blue' }}>
-              <p style={{ fontSize: '14px', color: 'gray', marginBottom: '5px' }}>Processed Today</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'blue' }}>{remittances.length}</p>
+            <div style={{ padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '2px solid blue' }}>
+              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Processed Today</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'blue' }}>{processedToday}</p>
             </div>
           </div>
         </div>
 
-        <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '30px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-            ️ Riders with Cash on Hand ({ridersWithBalance.length})
+        {/* Riders List */}
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>
+            Riders with Cash on Hand ({riders.length})
           </h2>
           
-          {ridersWithBalance.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-              <p style={{ fontSize: '18px', color: 'gray', marginBottom: '10px' }}>✅ All riders have remitted!</p>
-              <p style={{ fontSize: '14px', color: 'gray' }}>No pending remittances at the moment.</p>
+          {riders.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'gray' }}>
+              <p style={{ fontSize: '16px' }}>No riders with pending remittances</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gap: '15px' }}>
-              {ridersWithBalance.map((rider: any) => (
+              {riders.map((rider) => (
                 <div key={rider.id} style={{ padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px solid black' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <div>
-                      <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{rider.name}</h3>
-                      <p style={{ color: 'gray', marginBottom: '5px' }}>{rider.email}</p>
-                      <p style={{ color: 'gray', fontSize: '14px' }}>Phone: {rider.phone || 'N/A'}</p>
+                      <p style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '3px' }}>{rider.name}</p>
+                      <p style={{ fontSize: '13px', color: 'gray' }}>{rider.email}</p>
+                      <p style={{ fontSize: '13px', color: 'gray' }}>Phone: {rider.phone || 'N/A'}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '14px', color: 'gray' }}>Cash on Hand</p>
-                      <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'green' }}>₱{rider.cashOnHand.toFixed(2)}</p>
+                      <p style={{ fontSize: '12px', color: 'gray' }}>Cash on Hand</p>
+                      <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>{rider.cashOnHand.toFixed(2)}</p>
                     </div>
                   </div>
                   <button
-                    onClick={() => processRemittance(rider.id, rider.cashOnHand, rider.name)}
+                    onClick={() => processRemittance(rider.id, rider.name, rider.cashOnHand)}
                     disabled={processing === rider.id}
                     style={{
                       width: '100%',
@@ -181,8 +182,7 @@ export default function RemittancePage() {
                       borderRadius: '8px',
                       fontWeight: 'bold',
                       cursor: processing === rider.id ? 'not-allowed' : 'pointer',
-                      fontSize: '16px',
-                      boxShadow: '3px 3px 0px black'
+                      fontSize: '16px'
                     }}
                   >
                     {processing === rider.id ? 'Processing...' : `✅ Process Remittance - ₱${rider.cashOnHand.toFixed(2)}`}
@@ -192,32 +192,6 @@ export default function RemittancePage() {
             </div>
           )}
         </div>
-
-        {remittances.length > 0 && (
-          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-              📋 Remittance History ({remittances.length})
-            </h2>
-            <div style={{ display: 'grid', gap: '10px' }}>
-              {remittances.map((remittance: any) => (
-                <div key={remittance.id} style={{ padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px solid black', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>
-                      {remittance.rider?.name || 'Unknown Rider'}
-                    </p>
-                    <p style={{ fontSize: '12px', color: 'gray' }}>
-                      {new Date(remittance.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{remittance.amount.toFixed(2)}</p>
-                    <p style={{ fontSize: '12px', color: 'gray' }}>{remittance.status}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </main>
   )
