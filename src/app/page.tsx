@@ -4,212 +4,273 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  stock: number
-  imageUrl?: string
-  weightKg: number
-}
-
 export default function HomePage() {
   const router = useRouter()
-  const [products, setProducts] = useState<Product[]>([])
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
+  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchProducts()
-  }, [])
-
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch('/api/products')
-      const data = await res.json()
-      
-      if (res.ok) {
-        // Handle different response formats
-        let productsArray = []
-        if (Array.isArray(data)) {
-          productsArray = data
-        } else if (data.products && Array.isArray(data.products)) {
-          productsArray = data.products
-        } else if (data.items && Array.isArray(data.items)) {
-          productsArray = data.items
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) {
+          setUser(data.user)
+          // Redirect based on role
+          if (data.user.role === 'ADMIN') router.push('/admin')
+          else if (data.user.role === 'RIDER') router.push('/rider')
+          else if (data.user.role === 'MERCHANT') router.push('/merchant/dashboard')
         }
-        
-        setProducts(productsArray)
-        setFilteredProducts(productsArray)
-        setError('')
-      } else {
-        setError(data.error || 'Failed to load products')
-      }
-    } catch (error) {
-      console.error('Error fetching products:', error)
-      setError('Failed to load products')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value.toLowerCase()
-    setSearchTerm(term)
-    
-    if (term.trim() === '') {
-      setFilteredProducts(products)
-    } else {
-      const filtered = products.filter(product => 
-        product.name.toLowerCase().includes(term) ||
-        product.description.toLowerCase().includes(term)
-      )
-      setFilteredProducts(filtered)
-    }
-  }
-
-  const addToCart = async (productId: string) => {
-    try {
-      const res = await fetch('/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, quantity: 1 })
       })
-      
-      if (res.ok) {
-        alert('Added to cart!')
-      } else {
-        const data = await res.json()
-        alert(data.error || 'Failed to add to cart')
-      }
-    } catch (error) {
-      alert('Error adding to cart')
-    }
-  }
-
-  if (loading) {
-    return (
-      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <Header />
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <p>Loading products...</p>
-        </div>
-      </main>
-    )
-  }
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [router])
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
-        <div style={{ marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>
-            Fresh Groceries
-          </h1>
-          <p style={{ fontSize: '16px', color: 'gray', marginBottom: '15px' }}>
-            Delivered to your door within the day
-          </p>
-        </div>
-
-        {error && (
-          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px' }}>
-            <strong style={{ color: 'red' }}>Error:</strong> {error}
-            <button 
-              onClick={fetchProducts}
-              style={{ marginLeft: '10px', padding: '5px 10px', backgroundColor: 'blue', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        <div style={{ marginBottom: '20px' }}>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={handleSearch}
-            placeholder="Search products (type to filter)..."
+      
+      {/* Hero Section */}
+      <div style={{ 
+        backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '80px 20px',
+        textAlign: 'center',
+        color: 'white'
+      }}>
+        <h1 style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '20px', textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+          🛒 Tindahan Online
+        </h1>
+        <p style={{ fontSize: '24px', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>
+          Fresh groceries delivered to your door within the day!
+        </p>
+        
+        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '800px', margin: '0 auto' }}>
+          <button
+            onClick={() => router.push('/shop')}
             style={{
-              width: '100%',
-              padding: '12px 15px',
-              fontSize: '16px',
-              border: '2px solid black',
-              borderRadius: '8px',
-              boxSizing: 'border-box',
-              fontWeight: 'bold'
+              padding: '20px 40px',
+              backgroundColor: 'white',
+              color: '#667eea',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              fontSize: '20px',
+              cursor: 'pointer',
+              boxShadow: '4px 4px 0px black',
+              transition: 'transform 0.2s'
             }}
-          />
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translate(-2px, -2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translate(0, 0)'}
+          >
+            🛍️ Shop Now
+          </button>
+          
+          <button
+            onClick={() => router.push('/rider/apply')}
+            style={{
+              padding: '20px 40px',
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              fontSize: '20px',
+              cursor: 'pointer',
+              boxShadow: '4px 4px 0px black',
+              transition: 'transform 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translate(-2px, -2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translate(0, 0)'}
+          >
+            🏍️ Become a Rider
+          </button>
+          
+          <button
+            onClick={() => router.push('/merchant/apply')}
+            style={{
+              padding: '20px 40px',
+              backgroundColor: '#ffc107',
+              color: 'black',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              fontSize: '20px',
+              cursor: 'pointer',
+              boxShadow: '4px 4px 0px black',
+              transition: 'transform 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translate(-2px, -2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translate(0, 0)'}
+          >
+            🏪 Partner Merchant
+          </button>
         </div>
+      </div>
 
-        {filteredProducts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'white', borderRadius: '12px', border: '3px solid black' }}>
-            <p style={{ fontSize: '18px', color: 'gray' }}>
-              {error ? 'Failed to load products' : 'No products found'}
+      {/* Features Section */}
+      <div style={{ padding: '60px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+        <h2 style={{ fontSize: '36px', fontWeight: 'bold', textAlign: 'center', marginBottom: '50px' }}>
+          Why Choose Tindahan Online?
+        </h2>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
+          {/* Feature 1 */}
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '30px', 
+            borderRadius: '12px', 
+            border: '3px solid black',
+            boxShadow: '4px 4px 0px black',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}>🚚</div>
+            <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Same-Day Delivery</h3>
+            <p style={{ color: 'gray', fontSize: '16px' }}>
+              Order before 2 PM and get your groceries delivered the same day!
             </p>
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '15px' }}>
-            {filteredProducts.map((product) => (
-              <div key={product.id} style={{ backgroundColor: 'white', borderRadius: '12px', border: '3px solid black', overflow: 'hidden', boxShadow: '3px 3px 0px black' }}>
-                <div style={{ height: '200px', overflow: 'hidden', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {product.imageUrl ? (
-                    <img 
-                      src={product.imageUrl} 
-                      alt={product.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <span style={{ fontSize: '48px' }}>📦</span>
-                  )}
-                </div>
-                
-                <div style={{ padding: '15px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '5px', color: 'black' }}>
-                    {product.name}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'gray', marginBottom: '10px' }}>
-                    {product.description}
-                  </p>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <div>
-                      <p style={{ fontSize: '18px', fontWeight: 'bold', color: 'green', margin: 0 }}>
-                        ₱{product.price.toFixed(2)}
-                      </p>
-                      <p style={{ fontSize: '11px', color: 'gray', margin: 0 }}>
-                        {product.weightKg}kg
-                      </p>
-                    </div>
-                    <p style={{ fontSize: '12px', color: product.stock > 0 ? 'green' : 'red', fontWeight: 'bold', margin: 0 }}>
-                      {product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
-                    </p>
-                  </div>
-                  
-                  <button
-                    onClick={() => addToCart(product.id)}
-                    disabled={product.stock === 0}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      backgroundColor: product.stock === 0 ? 'gray' : 'green',
-                      color: 'white',
-                      border: '2px solid black',
-                      borderRadius: '8px',
-                      fontWeight: 'bold',
-                      cursor: product.stock === 0 ? 'not-allowed' : 'pointer',
-                      fontSize: '14px'
-                    }}
-                  >
-                    {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                  </button>
-                </div>
-              </div>
-            ))}
+
+          {/* Feature 2 */}
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '30px', 
+            borderRadius: '12px', 
+            border: '3px solid black',
+            boxShadow: '4px 4px 0px black',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}>💰</div>
+            <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Best Prices</h3>
+            <p style={{ color: 'gray', fontSize: '16px' }}>
+              Competitive prices with transparent pricing. No hidden fees!
+            </p>
           </div>
-        )}
+
+          {/* Feature 3 */}
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '30px', 
+            borderRadius: '12px', 
+            border: '3px solid black',
+            boxShadow: '4px 4px 0px black',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}>🛡️</div>
+            <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Secure & Safe</h3>
+            <p style={{ color: 'gray', fontSize: '16px' }}>
+              Verified riders and merchants. Your safety is our priority!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* How It Works */}
+      <div style={{ backgroundColor: '#f0f8ff', padding: '60px 20px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '36px', fontWeight: 'bold', textAlign: 'center', marginBottom: '50px' }}>
+            How It Works
+          </h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '30px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ 
+                width: '80px', 
+                height: '80px', 
+                backgroundColor: '#667eea', 
+                color: 'white', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                fontSize: '32px',
+                fontWeight: 'bold',
+                margin: '0 auto 20px',
+                border: '3px solid black'
+              }}>
+                1
+              </div>
+              <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px' }}>Browse & Order</h3>
+              <p style={{ color: 'gray' }}>Shop from your favorite local stores</p>
+            </div>
+
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ 
+                width: '80px', 
+                height: '80px', 
+                backgroundColor: '#28a745', 
+                color: 'white', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                fontSize: '32px',
+                fontWeight: 'bold',
+                margin: '0 auto 20px',
+                border: '3px solid black'
+              }}>
+                2
+              </div>
+              <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px' }}>We Process</h3>
+              <p style={{ color: 'gray' }}>Our team picks and packs your order</p>
+            </div>
+
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ 
+                width: '80px', 
+                height: '80px', 
+                backgroundColor: '#ffc107', 
+                color: 'black', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                fontSize: '32px',
+                fontWeight: 'bold',
+                margin: '0 auto 20px',
+                border: '3px solid black'
+              }}>
+                3
+              </div>
+              <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px' }}>Fast Delivery</h3>
+              <p style={{ color: 'gray' }}>Tracked delivery right to your door</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Call to Action Footer */}
+      <div style={{ 
+        backgroundColor: '#2c3e50', 
+        color: 'white', 
+        padding: '40px 20px', 
+        textAlign: 'center'
+      }}>
+        <h2 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '20px' }}>
+          Ready to Get Started?
+        </h2>
+        <p style={{ fontSize: '18px', marginBottom: '30px' }}>
+          Join thousands of satisfied customers in your area!
+        </p>
+        <button
+          onClick={() => router.push('/register')}
+          style={{
+            padding: '15px 40px',
+            backgroundColor: '#667eea',
+            color: 'white',
+            border: '3px solid black',
+            borderRadius: '12px',
+            fontWeight: 'bold',
+            fontSize: '18px',
+            cursor: 'pointer',
+            boxShadow: '4px 4px 0px black'
+          }}
+        >
+          Create Free Account
+        </button>
+        
+        <p style={{ marginTop: '30px', fontSize: '14px', color: '#95a5a6' }}>
+          © 2024 Tindahan Online. All rights reserved.
+        </p>
       </div>
     </main>
   )
