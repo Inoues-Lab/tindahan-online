@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
-import PWAInstall from '@/app/pwa-install'
+import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 
 export default function RiderDashboard() {
   const router = useRouter()
@@ -27,32 +27,49 @@ export default function RiderDashboard() {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [uploading, setUploading] = useState(false)
+  
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const notificationSoundRef = useRef<HTMLAudioElement | null>(null)
   const previousOrdersCount = useRef(0)
 
   const REMITTANCE_LIMIT = 20000
 
+  // Initialize notification sound
   useEffect(() => {
-    audioRef.current = new Audio('/notification-sound.mp3')
-    audioRef.current.volume = 1.0
+    notificationSoundRef.current = new Audio('/notification-sound.wav')
+    notificationSoundRef.current.volume = 1.0
+    
+    return () => {
+      if (notificationSoundRef.current) {
+        notificationSoundRef.current.pause()
+      }
+    }
   }, [])
 
   useEffect(() => {
     checkAuth()
   }, [router])
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchRiderData()
+    }, 5000)
+    
+    return () => clearInterval(interval)
+  }, [])
+
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
       const permission = await Notification.requestPermission()
       setNotificationPermission(permission)
       if (permission === 'granted') {
-        alert('Notifications enabled!')
+        alert('Notifications enabled! You will hear a sound and feel vibration when new orders arrive.')
       }
     }
   }
 
   const sendNotification = (title: string, body: string) => {
+    // Browser notification
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, {
         body: body,
@@ -62,16 +79,21 @@ export default function RiderDashboard() {
       })
     }
     
+    // Play notification sound
+    if (notificationSoundRef.current) {
+      notificationSoundRef.current.currentTime = 0
+      notificationSoundRef.current.volume = 1.0
+      notificationSoundRef.current.play().catch(err => {
+        console.log('Sound play failed:', err)
+      })
+    }
+    
+    // Vibrate phone (Android)
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate([200, 100, 200])
+      navigator.vibrate([300, 100, 300, 100, 300])
     }
     
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0
-      audioRef.current.volume = 1.0
-      audioRef.current.play().catch(() => {})
-    }
-    
+    // Show on-screen banner
     const alertDiv = document.createElement('div')
     alertDiv.style.cssText = `
       position: fixed;
@@ -103,18 +125,21 @@ export default function RiderDashboard() {
       setTimeout(() => alertDiv.remove(), 500)
     }, 5000)
     
-    const style = document.createElement('style')
-    style.textContent = `
-      @keyframes slideDown {
-        from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
-        to { transform: translateX(-50%) translateY(0); opacity: 1; }
-      }
-      @keyframes slideUp {
-        from { transform: translateX(-50%) translateY(0); opacity: 1; }
-        to { transform: translateX(-50%) translateY(-100px); opacity: 0; }
-      }
-    `
-    document.head.appendChild(style)
+    if (!document.getElementById('notification-styles')) {
+      const style = document.createElement('style')
+      style.id = 'notification-styles'
+      style.textContent = `
+        @keyframes slideDown {
+          from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+          to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateX(-50%) translateY(0); opacity: 1; }
+          to { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+        }
+      `
+      document.head.appendChild(style)
+    }
   }
 
   const checkAuth = async () => {
@@ -192,14 +217,6 @@ export default function RiderDashboard() {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchRiderData()
-    }, 5000)
-    
-    return () => clearInterval(interval)
-  }, [])
 
   const acceptOrder = async (orderId: string) => {
     try {
@@ -585,8 +602,6 @@ export default function RiderDashboard() {
         )}
       </div>
 
-      <PWAInstall />
-
       {showRemittancePopup && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid #ff4444', maxWidth: '500px', width: '100%', boxShadow: '0px 10px 40px rgba(0,0,0,0.3)' }}>
@@ -635,6 +650,8 @@ export default function RiderDashboard() {
           </div>
         </div>
       )}
+
+      <PWAInstallPrompt />
     </main>
   )
 }
