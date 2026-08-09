@@ -1,7 +1,7 @@
 // src/app/admin/products/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 
@@ -13,7 +13,6 @@ interface Product {
   stock: number
   imageUrl?: string
   weightKg: number
-  createdAt: string
 }
 
 export default function AdminProductsPage() {
@@ -23,6 +22,7 @@ export default function AdminProductsPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [uploading, setUploading] = useState(false)
   
   const [formData, setFormData] = useState({
     name: '',
@@ -30,8 +30,10 @@ export default function AdminProductsPage() {
     price: '',
     stock: '',
     weightKg: '',
-    imageUrl: ''
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     checkAuth()
@@ -66,14 +68,9 @@ export default function AdminProductsPage() {
 
   const openAddModal = () => {
     setEditingProduct(null)
-    setFormData({
-      name: '',
-      description: '',
-      price: '',
-      stock: '',
-      weightKg: '',
-      imageUrl: ''
-    })
+    setFormData({ name: '', description: '', price: '', stock: '', weightKg: '' })
+    setImageFile(null)
+    setImagePreview('')
     setShowModal(true)
   }
 
@@ -85,9 +82,50 @@ export default function AdminProductsPage() {
       price: product.price.toString(),
       stock: product.stock.toString(),
       weightKg: product.weightKg.toString(),
-      imageUrl: product.imageUrl || ''
     })
+    setImagePreview(product.imageUrl || '')
+    setImageFile(null)
     setShowModal(true)
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImageFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile) return imagePreview || null
+    
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', imageFile)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        return data.url
+      } else {
+        alert('Failed to upload image')
+        return null
+      }
+    } catch (error) {
+      alert('Error uploading image')
+      return null
+    } finally {
+      setUploading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,6 +136,9 @@ export default function AdminProductsPage() {
       return
     }
 
+    const imageUrl = await uploadImage()
+    if (uploading) return
+
     try {
       const url = editingProduct ? `/api/admin/products?id=${editingProduct.id}` : '/api/admin/products'
       const method = editingProduct ? 'PUT' : 'POST'
@@ -107,6 +148,7 @@ export default function AdminProductsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          imageUrl,
           price: parseFloat(formData.price),
           stock: parseInt(formData.stock),
           weightKg: parseFloat(formData.weightKg) || 1.0
@@ -183,7 +225,6 @@ export default function AdminProductsPage() {
               fontWeight: 'bold',
               cursor: 'pointer',
               fontSize: '16px',
-              whiteSpace: 'nowrap'
             }}
           >
             Add New Product
@@ -223,7 +264,7 @@ export default function AdminProductsPage() {
                 {filteredProducts.length === 0 ? (
                   <tr>
                     <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: 'gray' }}>
-                      {searchTerm ? 'No products found' : 'No products yet. Click "Add New Product" to start!'}
+                      {searchTerm ? 'No products found' : 'No products yet.'}
                     </td>
                   </tr>
                 ) : (
@@ -240,12 +281,13 @@ export default function AdminProductsPage() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '24px',
-                            flexShrink: 0
+                            flexShrink: 0,
+                            overflow: 'hidden'
                           }}>
                             {product.imageUrl ? (
-                              <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                              <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
-                              '📦'
+                              ''
                             )}
                           </div>
                           <div>
@@ -347,6 +389,40 @@ export default function AdminProductsPage() {
                 />
               </div>
 
+              {/* Image Upload Section */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Image</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#f0f0f0',
+                    border: '2px dashed black',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    marginBottom: '10px'
+                  }}
+                >
+                  {imageFile ? 'Change Image' : 'Upload Image'}
+                </button>
+                {imagePreview && (
+                  <div style={{ textAlign: 'center' }}>
+                    <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '2px solid black' }} />
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                 <div>
                   <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Price (₱) *</label>
@@ -375,47 +451,36 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Weight (kg)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={formData.weightKg}
-                    onChange={(e) => setFormData({ ...formData, weightKg: e.target.value })}
-                    placeholder="1.0"
-                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Image URL</label>
-                  <input
-                    type="url"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
-                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                  />
-                </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Weight (kg)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={formData.weightKg}
+                  onChange={(e) => setFormData({ ...formData, weightKg: e.target.value })}
+                  placeholder="1.0"
+                  style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                />
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                 <button
                   type="submit"
+                  disabled={uploading}
                   style={{
                     flex: 1,
                     padding: '12px',
-                    backgroundColor: 'green',
+                    backgroundColor: uploading ? 'gray' : 'green',
                     color: 'white',
                     border: '2px solid black',
                     borderRadius: '8px',
                     fontWeight: 'bold',
-                    cursor: 'pointer',
+                    cursor: uploading ? 'not-allowed' : 'pointer',
                     fontSize: '16px'
                   }}
                 >
-                  {editingProduct ? 'Update Product' : 'Add Product'}
+                  {uploading ? 'Uploading...' : (editingProduct ? 'Update Product' : 'Add Product')}
                 </button>
                 <button
                   type="button"
