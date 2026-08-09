@@ -16,6 +16,10 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState('')
   const [contactNumber, setContactNumber] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('COD')
+  
+  // New state for address confirmation popup
+  const [showAddressPopup, setShowAddressPopup] = useState(false)
+  const [registeredAddress, setRegisteredAddress] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -26,8 +30,14 @@ export default function CheckoutPage() {
           return
         }
         setUser(data.user)
-        setAddress(data.user.address || '')
+        setRegisteredAddress(data.user.address || '')
         setContactNumber(data.user.phone || '')
+        
+        // Show popup if user has a registered address
+        if (data.user.address) {
+          setShowAddressPopup(true)
+        }
+        
         fetchCart()
       })
       .catch(() => router.push('/login'))
@@ -46,6 +56,16 @@ export default function CheckoutPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const useRegisteredAddress = () => {
+    setAddress(registeredAddress)
+    setShowAddressPopup(false)
+  }
+
+  const useNewAddress = () => {
+    setAddress('')
+    setShowAddressPopup(false)
   }
 
   const placeOrder = async () => {
@@ -109,7 +129,7 @@ export default function CheckoutPage() {
       <Header />
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '20px' }}>
-           Checkout
+          🛒 Checkout
         </h1>
 
         {cartItems.length === 0 ? (
@@ -153,7 +173,7 @@ export default function CheckoutPage() {
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px' }}
                 >
-                  <option value="COD"> Cash on Delivery (COD)</option>
+                  <option value="COD">💵 Cash on Delivery (COD)</option>
                   <option value="GCASH">📱 GCash</option>
                 </select>
               </div>
@@ -161,7 +181,7 @@ export default function CheckoutPage() {
 
             {/* Order Summary */}
             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', height: 'fit-content' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}> Order Summary</h2>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>📋 Order Summary</h2>
               
               <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '15px' }}>
                 {cartItems.map((item) => (
@@ -182,7 +202,7 @@ export default function CheckoutPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
                   <span>Delivery Fee:</span>
-                  <span>₱{deliveryFee.toFixed(2)}</span>
+                  <span>{deliveryFee.toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', borderTop: '2px solid black', paddingTop: '10px' }}>
                   <span>Total:</span>
@@ -230,6 +250,60 @@ export default function CheckoutPage() {
           </div>
         )}
       </div>
+
+      {/* Address Confirmation Popup */}
+      {showAddressPopup && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid black', maxWidth: '500px', width: '100%', boxShadow: '0px 10px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '10px' }}></div>
+              <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: 'black', marginBottom: '10px' }}>Use Registered Address?</h2>
+              <p style={{ fontSize: '14px', color: 'gray' }}>Would you like to use your saved address?</p>
+            </div>
+            
+            <div style={{ backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '8px', border: '2px solid #ddd', marginBottom: '20px' }}>
+              <p style={{ fontSize: '14px', color: 'black', margin: 0, lineHeight: '1.5' }}>
+                {registeredAddress}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={useRegisteredAddress}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: 'green',
+                  color: 'white',
+                  border: '2px solid black',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                ✅ Yes, Use This Address
+              </button>
+              <button
+                onClick={useNewAddress}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: 'white',
+                  color: 'black',
+                  border: '2px solid black',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                ✏️ No, Enter New Address
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
