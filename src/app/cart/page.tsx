@@ -7,188 +7,165 @@ import Header from '@/components/Header'
 
 interface CartItem {
   id: string
-  name: string
-  price: number
-  weightKg: number
   quantity: number
+  product: {
+    id: string
+    name: string
+    description: string
+    price: number
+    imageUrl?: string
+    weightKg: number
+  }
 }
 
 export default function CartPage() {
   const router = useRouter()
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [key, setKey] = useState(0) // Force re-render
+  const [items, setItems] = useState<CartItem[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
 
-  // Load cart from localStorage
-  const loadCart = () => {
-    const savedCart = localStorage.getItem('cart')
-    if (savedCart) {
-      try {
-        const parsed = JSON.parse(savedCart)
-        setCart(parsed)
-      } catch (e) {
-        console.error('Error parsing cart:', e)
-        setCart([])
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        setUser(data.user)
+        if (!data.user) router.push('/login')
+      })
+      .catch(() => router.push('/login'))
+  }, [router])
+
+  useEffect(() => {
+    fetchCart()
+  }, [])
+
+  const fetchCart = async () => {
+    try {
+      const res = await fetch('/api/cart')
+      const data = await res.json()
+      if (res.ok) {
+        setItems(data.items || [])
+        setTotal(data.total || 0)
       }
-    } else {
-      setCart([])
+    } catch (error) {
+      console.error('Error fetching cart:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  useEffect(() => {
-    loadCart()
-  }, [key]) // Re-run when key changes
-
-  const updateQuantity = (productId: string, newQuantity: number) => {
-    const updatedCart = cart.map(item =>
-      item.id === productId ? { ...item, quantity: newQuantity } : item
-    ).filter(item => item.quantity > 0)
-
-    setCart(updatedCart)
-    localStorage.setItem('cart', JSON.stringify(updatedCart))
+  const updateQuantity = async (cartItemId: string, quantity: number) => {
+    try {
+      const res = await fetch('/api/cart', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cartItemId, quantity })
+      })
+      if (res.ok) fetchCart()
+    } catch (error) {
+      alert('Failed to update quantity')
+    }
   }
 
-  const removeItem = (productId: string) => {
-    const updatedCart = cart.filter(item => item.id !== productId)
-    setCart(updatedCart)
-    localStorage.setItem('cart', JSON.stringify(updatedCart))
+  const removeItem = async (cartItemId: string) => {
+    if (!confirm('Remove this item from cart?')) return
+    try {
+      const res = await fetch(`/api/cart?cartItemId=${cartItemId}`, {
+        method: 'DELETE'
+      })
+      if (res.ok) fetchCart()
+    } catch (error) {
+      alert('Failed to remove item')
+    }
   }
 
-  const refreshCart = () => {
-    setKey(prev => prev + 1) // Force re-render
+  if (loading) {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <Header />
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading cart...</div>
+      </main>
+    )
   }
-
-  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold' }}>
-            Shopping Cart 🛒
-          </h1>
-          <button
-            onClick={refreshCart}
-            style={{
-              backgroundColor: 'blue',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: '2px solid black',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-             Refresh
-          </button>
-        </div>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '20px' }}>
+           Shopping Cart
+        </h1>
 
-        {cart.length === 0 ? (
-          <div style={{ backgroundColor: 'white', padding: '60px 20px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
-            <p style={{ fontSize: '20px', color: 'gray', marginBottom: '20px' }}>Your cart is empty</p>
+        {items.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'white', borderRadius: '12px', border: '3px solid black' }}>
+            <p style={{ fontSize: '48px', marginBottom: '10px' }}>🛒</p>
+            <p style={{ fontSize: '18px', color: 'gray', marginBottom: '20px' }}>Your cart is empty</p>
             <button
               onClick={() => router.push('/')}
-              style={{
-                backgroundColor: 'blue',
-                color: 'white',
-                padding: '15px 30px',
-                borderRadius: '8px',
-                border: '2px solid black',
-                fontWeight: 'bold',
-                fontSize: '16px',
-                cursor: 'pointer'
-              }}
+              style={{ padding: '12px 24px', backgroundColor: 'blue', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}
             >
-              Continue Shopping
+              Start Shopping
             </button>
           </div>
         ) : (
           <>
-            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px' }}>
-              {cart.map((item) => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #eee' }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{item.name}</h3>
-                    <p style={{ color: 'gray' }}>₱{item.price.toFixed(2)} each</p>
+            <div style={{ display: 'grid', gap: '15px', marginBottom: '20px' }}>
+              {items.map((item) => (
+                <div key={item.id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '12px', border: '3px solid black', display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ width: '80px', height: '80px', backgroundColor: '#f0f0f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
+                    📦
+                  </div>
+                  <div style={{ flex: 1, minWidth: '150px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '5px' }}>{item.product.name}</h3>
+                    <p style={{ fontSize: '13px', color: 'gray' }}>{item.product.description}</p>
+                    <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'green', marginTop: '5px' }}>₱{item.product.price.toFixed(2)}</p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <button
                       onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      style={{
-                        width: '30px',
-                        height: '30px',
-                        borderRadius: '50%',
-                        border: '2px solid black',
-                        backgroundColor: 'white',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        fontSize: '16px'
-                      }}
+                      style={{ width: '32px', height: '32px', backgroundColor: '#f0f0f0', border: '2px solid black', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '18px' }}
                     >
                       -
                     </button>
-                    <span style={{ fontSize: '18px', fontWeight: 'bold', minWidth: '30px', textAlign: 'center' }}>
-                      {item.quantity}
-                    </span>
+                    <span style={{ fontSize: '16px', fontWeight: 'bold', minWidth: '30px', textAlign: 'center' }}>{item.quantity}</span>
                     <button
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      style={{
-                        width: '30px',
-                        height: '30px',
-                        borderRadius: '50%',
-                        border: '2px solid black',
-                        backgroundColor: 'white',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        fontSize: '16px'
-                      }}
+                      style={{ width: '32px', height: '32px', backgroundColor: '#f0f0f0', border: '2px solid black', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '18px' }}
                     >
                       +
                     </button>
+                  </div>
+                  <div style={{ textAlign: 'right', minWidth: '80px' }}>
+                    <p style={{ fontSize: '16px', fontWeight: 'bold', color: 'green' }}>₱{(item.product.price * item.quantity).toFixed(2)}</p>
                     <button
                       onClick={() => removeItem(item.id)}
-                      style={{
-                        backgroundColor: 'red',
-                        color: 'white',
-                        padding: '5px 10px',
-                        borderRadius: '5px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        marginLeft: '10px'
-                      }}
+                      style={{ padding: '6px 12px', backgroundColor: 'red', color: 'white', border: '2px solid black', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}
                     >
-                      Remove
+                       Remove
                     </button>
-                  </div>
-                  <div style={{ textAlign: 'right', minWidth: '100px' }}>
-                    <p style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>
-                      ₱{(item.price * item.quantity).toFixed(2)}
-                    </p>
                   </div>
                 </div>
               ))}
             </div>
 
             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '20px', fontWeight: 'bold' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px' }}>
+                <span>Subtotal:</span>
+                <span style={{ fontWeight: 'bold' }}>₱{total.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px' }}>
+                <span>Delivery Fee:</span>
+                <span style={{ fontWeight: 'bold' }}>₱50.00</span>
+              </div>
+              <div style={{ borderTop: '2px solid black', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '20px', fontWeight: 'bold' }}>
                 <span>Total:</span>
-                <span style={{ color: 'green' }}>₱{total.toFixed(2)}</span>
+                <span style={{ color: 'green' }}>₱{(total + 50).toFixed(2)}</span>
               </div>
               <button
                 onClick={() => router.push('/checkout')}
-                style={{
-                  width: '100%',
-                  padding: '15px',
-                  backgroundColor: 'green',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
+                style={{ width: '100%', marginTop: '20px', padding: '15px', backgroundColor: 'green', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '18px' }}
               >
-                Proceed to Checkout
+                Proceed to Checkout →
               </button>
             </div>
           </>
