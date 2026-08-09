@@ -15,6 +15,7 @@ export default function RiderDashboard() {
   const [todayEarnings, setTodayEarnings] = useState(0)
   const [error, setError] = useState('')
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default')
+  const [audioUnlocked, setAudioUnlocked] = useState(false)
   
   const [showRemittancePopup, setShowRemittancePopup] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
@@ -38,6 +39,7 @@ export default function RiderDashboard() {
   useEffect(() => {
     notificationSoundRef.current = new Audio('/notification-sound.wav')
     notificationSoundRef.current.volume = 1.0
+    notificationSoundRef.current.preload = 'auto'
     
     return () => {
       if (notificationSoundRef.current) {
@@ -46,8 +48,30 @@ export default function RiderDashboard() {
     }
   }, [])
 
+  // Unlock audio on first user interaction
+  const unlockAudio = () => {
+    if (!audioUnlocked && notificationSoundRef.current) {
+      notificationSoundRef.current.play().then(() => {
+        notificationSoundRef.current.pause()
+        notificationSoundRef.current.currentTime = 0
+        setAudioUnlocked(true)
+      }).catch(() => {
+        // Ignore if it fails
+      })
+    }
+  }
+
   useEffect(() => {
     checkAuth()
+    
+    // Add click listener to unlock audio
+    document.addEventListener('click', unlockAudio, { once: true })
+    document.addEventListener('touchstart', unlockAudio, { once: true })
+    
+    return () => {
+      document.removeEventListener('click', unlockAudio)
+      document.removeEventListener('touchstart', unlockAudio)
+    }
   }, [router])
 
   useEffect(() => {
@@ -63,8 +87,20 @@ export default function RiderDashboard() {
       const permission = await Notification.requestPermission()
       setNotificationPermission(permission)
       if (permission === 'granted') {
+        // Also unlock audio when permission is granted
+        unlockAudio()
         alert('Notifications enabled! You will hear a sound and feel vibration when new orders arrive.')
       }
+    }
+  }
+
+  const playNotificationSound = () => {
+    if (notificationSoundRef.current && audioUnlocked) {
+      notificationSoundRef.current.currentTime = 0
+      notificationSoundRef.current.volume = 1.0
+      notificationSoundRef.current.play().catch(err => {
+        console.log('Sound play failed:', err)
+      })
     }
   }
 
@@ -80,13 +116,7 @@ export default function RiderDashboard() {
     }
     
     // Play notification sound
-    if (notificationSoundRef.current) {
-      notificationSoundRef.current.currentTime = 0
-      notificationSoundRef.current.volume = 1.0
-      notificationSoundRef.current.play().catch(err => {
-        console.log('Sound play failed:', err)
-      })
-    }
+    playNotificationSound()
     
     // Vibrate phone (Android)
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -482,7 +512,7 @@ export default function RiderDashboard() {
                     
                     {order.serviceType === 'PABILI' && (
                       <div style={{ backgroundColor: '#fff3cd', padding: '8px', borderRadius: '8px', marginBottom: '8px', border: '2px solid #ffc107' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>🛒 What to buy:</p>
+                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}> What to buy:</p>
                         <p style={{ fontSize: '12px', marginBottom: '3px' }}>{order.itemDescription}</p>
                         {order.maxAmount && <p style={{ fontSize: '12px', fontWeight: 'bold' }}>💰 Max: ₱{order.maxAmount.toFixed(2)}</p>}
                       </div>
@@ -592,7 +622,7 @@ export default function RiderDashboard() {
                         fontSize: '15px'
                       }}
                     >
-                      📸 Mark as Delivered (Photo Required)
+                       Mark as Delivered (Photo Required)
                     </button>
                   )}
                 </div>
@@ -623,7 +653,7 @@ export default function RiderDashboard() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid #28a745', maxWidth: '500px', width: '100%' }}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '10px' }}>📱</div>
+              <div style={{ fontSize: '48px', marginBottom: '10px' }}></div>
               <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#28a745', marginBottom: '10px' }}>Contact Admin</h2>
             </div>
             <textarea value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} placeholder="Enter message..." style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #ddd', fontSize: '14px', minHeight: '100px', marginBottom: '15px', boxSizing: 'border-box' }} />
