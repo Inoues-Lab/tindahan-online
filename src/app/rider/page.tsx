@@ -14,6 +14,7 @@ export default function RiderDashboard() {
   const [cashOnHand, setCashOnHand] = useState(0)
   const [todayEarnings, setTodayEarnings] = useState(0)
   const [error, setError] = useState('')
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default')
   
   const [showRemittancePopup, setShowRemittancePopup] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
@@ -27,12 +28,49 @@ export default function RiderDashboard() {
   const [photoPreview, setPhotoPreview] = useState('')
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  const previousOrdersCount = useRef(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const REMITTANCE_LIMIT = 20000
+
+  // Initialize notification sound
+  useEffect(() => {
+    // Create audio element for notification sound
+    audioRef.current = new Audio('/notification-sound.mp3')
+    audioRef.current.volume = 0.5
+  }, [])
 
   useEffect(() => {
     checkAuth()
   }, [router])
+
+  // Request notification permission
+  useEffect(() => {
+    if ('Notification' in window) {
+      Notification.requestPermission().then((permission) => {
+        setNotificationPermission(permission)
+      })
+    }
+  }, [])
+
+  // Send browser notification
+  const sendNotification = (title: string, body: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, {
+        body: body,
+        icon: '/logo.png',
+        badge: '/logo.png',
+        requireInteraction: true
+      })
+    }
+    
+    // Play sound
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+      audioRef.current.play().catch(() => {})
+    }
+  }
 
   const checkAuth = async () => {
     try {
@@ -59,8 +97,20 @@ export default function RiderDashboard() {
       const ordersData = await ordersRes.json()
       
       if (ordersRes.ok) {
-        setPendingOrders(ordersData.pendingOrders || [])
+        const newPendingOrders = ordersData.pendingOrders || []
+        setPendingOrders(newPendingOrders)
         setMyOrders(ordersData.myOrders || [])
+        
+        // Check for new orders
+        const currentCount = newPendingOrders.length
+        if (currentCount > previousOrdersCount.current && currentCount > 0) {
+          const newOrdersCount = currentCount - previousOrdersCount.current
+          sendNotification(
+            '📦 New Order Available!',
+            `${newOrdersCount} new order${newOrdersCount > 1 ? 's' : ''} available for delivery. Tap to view!`
+          )
+        }
+        previousOrdersCount.current = currentCount
         
         const meRes = await fetch('/api/auth/me')
         const meData = await meRes.json()
@@ -95,6 +145,15 @@ export default function RiderDashboard() {
       setLoading(false)
     }
   }
+
+  // Poll for new orders every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchRiderData()
+    }, 10000) // Check every 10 seconds
+    
+    return () => clearInterval(interval)
+  }, [])
 
   const acceptOrder = async (orderId: string) => {
     try {
@@ -227,12 +286,36 @@ export default function RiderDashboard() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: 'black', marginBottom: '10px' }}>
-          Rider Dashboard 🏍️
-        </h1>
-        <p style={{ fontSize: '18px', color: 'gray', marginBottom: '30px' }}>
-          Accept deliveries and earn money
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div>
+            <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: 'black', marginBottom: '10px' }}>
+              Rider Dashboard 🏍️
+            </h1>
+            <p style={{ fontSize: '18px', color: 'gray', marginBottom: '30px' }}>
+              Accept deliveries and earn money
+            </p>
+          </div>
+          
+          {/* Notification Permission Button */}
+          {notificationPermission !== 'granted' && (
+            <button
+              onClick={() => Notification.requestPermission().then((perm) => setNotificationPermission(perm))}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: notificationPermission === 'denied' ? 'red' : 'blue',
+                color: 'white',
+                border: '2px solid black',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '14px',
+                boxShadow: '3px 3px 0px black'
+              }}
+            >
+              🔔 {notificationPermission === 'denied' ? 'Enable Notifications' : 'Allow Notifications'}
+            </button>
+          )}
+        </div>
 
         {error && (
           <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px' }}>
@@ -264,11 +347,46 @@ export default function RiderDashboard() {
         </div>
 
         <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '30px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>📦 Available Orders ({pendingOrders.length})</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold' }}>
+              📦 Available Orders {pendingOrders.length > 0 && (
+                <span style={{ 
+                  display: 'inline-block',
+                  padding: '5px 15px', 
+                  backgroundColor: 'red',
+                  color: 'white',
+                  borderRadius: '20px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  marginLeft: '10px',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  {pendingOrders.length}
+                </span>
+              )}
+            </h2>
+            {pendingOrders.length > 0 && (
+              <button
+                onClick={fetchRiderData}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: 'blue',
+                  color: 'white',
+                  border: '2px solid black',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                🔄 Refresh
+              </button>
+            )}
+          </div>
           {pendingOrders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
               <p style={{ fontSize: '18px', color: 'gray' }}>No orders available right now</p>
-              <p style={{ fontSize: '14px', color: 'gray' }}>Check back soon!</p>
+              <p style={{ fontSize: '14px', color: 'gray' }}>Check back soon! We'll notify you when orders arrive.</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gap: '15px' }}>
@@ -278,7 +396,6 @@ export default function RiderDashboard() {
                     <div>
                       <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>Order #{order.id.slice(0, 8).toUpperCase()}</h3>
                       
-                      {/* SERVICE TYPE BADGE */}
                       {order.serviceType && order.serviceType !== 'GROCERY' && (
                         <span style={{ 
                           display: 'inline-block',
@@ -299,7 +416,6 @@ export default function RiderDashboard() {
                       <p style={{ color: 'gray', marginBottom: '5px' }}>{order.deliveryAddress}</p>
                       <p style={{ color: 'gray', fontSize: '14px' }}>Contact: {order.contactNumber}</p>
                       
-                      {/* PABILI DETAILS */}
                       {order.serviceType === 'PABILI' && (
                         <div style={{ backgroundColor: '#fff3cd', padding: '10px', borderRadius: '8px', marginBottom: '10px', border: '2px solid #ffc107' }}>
                           <p style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '5px' }}>🛒 What to buy:</p>
@@ -309,7 +425,6 @@ export default function RiderDashboard() {
                         </div>
                       )}
                       
-                      {/* PADALA DETAILS */}
                       {order.serviceType === 'PADALA' && (
                         <div style={{ backgroundColor: '#d1ecf1', padding: '10px', borderRadius: '8px', marginBottom: '10px', border: '2px solid #17a2b8' }}>
                           <p style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '5px' }}> Package:</p>
@@ -319,7 +434,6 @@ export default function RiderDashboard() {
                         </div>
                       )}
                       
-                      {/* GROCERY ITEMS */}
                       {!order.serviceType || order.serviceType === 'GROCERY' ? (
                         <p style={{ color: 'gray', fontSize: '14px' }}>
                           Items: {order.items?.map((item: any) => `${item.product.name} x${item.quantity}`).join(', ')}
@@ -367,7 +481,6 @@ export default function RiderDashboard() {
                     <div>
                       <h3 style={{ fontSize: '18px', fontWeight: 'bold' }}>Order #{order.id.slice(0, 8).toUpperCase()}</h3>
                       
-                      {/* SERVICE TYPE BADGE */}
                       {order.serviceType && order.serviceType !== 'GROCERY' && (
                         <span style={{ 
                           display: 'inline-block',
@@ -440,11 +553,11 @@ export default function RiderDashboard() {
             </div>
             <div style={{ backgroundColor: '#fff3cd', padding: '20px', borderRadius: '12px', border: '2px solid #ffc107', marginBottom: '25px' }}>
               <p style={{ fontSize: '16px', color: '#856404', marginBottom: '10px', textAlign: 'center', fontWeight: 'bold' }}> Action Required</p>
-              <p style={{ fontSize: '18px', color: '#856404', lineHeight: '1.6', textAlign: 'center' }}>You have reached the remittance limit of <strong>₱{remittanceData.limit.toLocaleString()}.00</strong></p>
+              <p style={{ fontSize: '18px', color: '#856404', lineHeight: '1.6', textAlign: 'center' }}>You have reached the remittance limit of <strong>{remittanceData.limit.toLocaleString()}.00</strong></p>
               <p style={{ fontSize: '20px', color: '#d9534f', marginTop: '10px', fontWeight: 'bold', textAlign: 'center' }}>Current Cash on Hand: ₱{remittanceData.cashOnHand.toFixed(2)}</p>
             </div>
             <div style={{ backgroundColor: '#e8f5e9', padding: '20px', borderRadius: '12px', border: '2px solid #4caf50', marginBottom: '25px' }}>
-              <p style={{ fontSize: '16px', color: '#2e7d32', marginBottom: '10px', fontWeight: 'bold' }}>🔔 Important Notice:</p>
+              <p style={{ fontSize: '16px', color: '#2e7d32', marginBottom: '10px', fontWeight: 'bold' }}> Important Notice:</p>
               <p style={{ fontSize: '15px', color: '#2e7d32', lineHeight: '1.6' }}>For your safety and security, please remit your cash on hand to the admin before accepting new orders. The admin is waiting for your remittance to process your earnings and ensure smooth operations.</p>
             </div>
             <div style={{ display: 'flex', gap: '15px' }}>
@@ -499,6 +612,19 @@ export default function RiderDashboard() {
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.1);
+            opacity: 0.8;
+          }
+        }
+      `}</style>
     </main>
   )
 }
