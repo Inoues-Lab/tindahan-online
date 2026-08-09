@@ -140,15 +140,18 @@ model Delivery {
 }
 
 model RiderProfile {
-  id           String     @id @default(uuid())
-  userId       String     @unique
-  user         User       @relation(fields: [userId], references: [id])
-  vehicleType  String     @default("MOTORCYCLE")
-  maxLoadKg    Float      @default(15.0)
-  status       String     @default("ONLINE")
-  deliveries   Delivery[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id              String     @id @default(uuid())
+  userId          String     @unique
+  user            User       @relation(fields: [userId], references: [id])
+  vehicleType     String     @default("MOTORCYCLE")
+  maxLoadKg       Float      @default(15.0)
+  status          String     @default("PENDING")
+  licenseUrl      String?
+  orCrUrl         String?
+  authLetterUrl   String?
+  deliveries      Delivery[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 }
 
 model Cart {
@@ -197,14 +200,16 @@ model MerchantProfile {
 }
 
 model MerchantApplication {
-  id             String         @id @default(uuid())
-  userId         String
-  user           User           @relation(fields: [userId], references: [id])
-  storeName      String
-  businessType   String
-  contactNumber  String
-  status         String         @default("PENDING")
-  adminNotes     String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                String         @id @default(uuid())
+  userId            String
+  user              User           @relation(fields: [userId], references: [id])
+  storeName         String
+  businessType      String
+  contactNumber     String
+  birUrl            String?
+  businessPermitUrl String?
+  status            String         @default("PENDING")
+  adminNotes        String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 }
