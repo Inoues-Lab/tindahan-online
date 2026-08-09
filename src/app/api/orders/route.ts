@@ -4,101 +4,76 @@ import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
+    console.log(' [API] Fetching rider orders...')
+    
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
+    console.log('🔵 [API] User ID:', userId)
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (!user || user.role !== 'RIDER') {
+      return NextResponse.json({ error: 'Rider access required' }, { status: 403 })
     }
 
-    if (user.role === 'ADMIN') {
-      const orders = await prisma.order.findMany({
-        include: { customer: true, items: { include: { product: true } }, delivery: true },
-        orderBy: { createdAt: 'desc' }
-      })
-      return NextResponse.json({ orders })
-    }
+    // Find the RiderProfile for this user
+    const riderProfile = await prisma.riderProfile.findUnique({
+      where: { userId }
+    })
+    
+    console.log('🔵 [API] RiderProfile:', riderProfile?.id)
 
-    const orders = await prisma.order.findMany({
-      where: { customerId: userId },
-      include: { items: { include: { product: true } }, delivery: true },
+    // PENDING orders = Orders with status PENDING and delivery UNASSIGNED
+    const pendingOrders = await prisma.order.findMany({
+      where: {
+        status: 'PENDING',
+        delivery: {
+          status: 'UNASSIGNED'
+        }
+      },
+      include: {
+        customer: true,
+        items: { include: { product: true } },
+        delivery: true
+      },
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json({ orders })
+    console.log(' [API] Pending orders count:', pendingOrders.length)
+
+    // MY ORDERS = All orders assigned to this rider (ACCEPTED, IN_PROGRESS, COMPLETED, etc.)
+    let myOrders = []
+    
+    if (riderProfile) {
+      myOrders = await prisma.order.findMany({
+        where: {
+          delivery: {
+            riderId: riderProfile.id
+          }
+        },
+        include: {
+          customer: true,
+          items: { include: { product: true } },
+          delivery: true
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    } else {
+      console.log('🟡 [API] No rider profile found, myOrders will be empty')
+    }
+    
+    console.log('🔵 [API] My orders count:', myOrders.length)
+    console.log('🔵 [API] My orders:', myOrders.map(o => ({ id: o.id, status: o.status })))
+
+    return NextResponse.json({
+      pendingOrders,
+      myOrders
+    })
   } catch (error) {
-    console.error('Error fetching orders:', error)
+    console.error('Error fetching rider orders:', error)
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const cookieStore = await cookies()
-    const userId = cookieStore.get('userId')?.value
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const body = await request.json()
-    const { items, deliveryAddress, contactNumber, paymentMethod, totalAmount, deliveryFee, serviceType } = body
-
-    if (!items || items.length === 0) {
-      return NextResponse.json({ error: 'No items in order' }, { status: 400 })
-    }
-
-    const productTotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
-    const platformIncome = productTotal * 0.05
-    const riderPayout = (deliveryFee || 50) * 0.80
-
-    const order = await prisma.order.create({
-      data: {
-        customerId: userId,
-        status: 'PENDING',
-        serviceType: serviceType || 'GROCERY',
-        totalAmount,
-        deliveryFee: deliveryFee || 50,
-        riderPayout,
-        platformIncome,
-        deliveryAddress,
-        contactNumber,
-        paymentMethod: paymentMethod || 'COD',
-        items: {
-          create: items.map((item: any) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price
-          }))
-        }
-      }
-    })
-
-    await prisma.delivery.create({
-      data: {
-        orderId: order.id,
-        status: 'UNASSIGNED'
-      }
-    })
-
-    const cart = await prisma.cart.findUnique({ where: { userId } })
-    if (cart) {
-      await prisma.cartItem.deleteMany({ where: { cartId: cart.id } })
-    }
-
-    return NextResponse.json({ success: true, order })
-  } catch (error) {
-    console.error('Error creating order:', error)
-    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
   }
 }
