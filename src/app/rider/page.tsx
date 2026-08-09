@@ -28,26 +28,26 @@ export default function RiderDashboard() {
   const [photoPreview, setPhotoPreview] = useState('')
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const previousOrdersCount = useRef(0)
 
   const REMITTANCE_LIMIT = 20000
 
   useEffect(() => {
+    audioRef.current = new Audio('/notification-sound.mp3')
+    audioRef.current.volume = 1.0
+  }, [])
+
+  useEffect(() => {
     checkAuth()
   }, [router])
-
-  // Request notification permission
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      // Don't auto-request, let user click button
-    }
-  }, [])
 
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
       const permission = await Notification.requestPermission()
       setNotificationPermission(permission)
       if (permission === 'granted') {
-        alert('Notifications enabled! You\'ll be alerted when new orders arrive.')
+        alert('Notifications enabled!')
       }
     }
   }
@@ -61,6 +61,60 @@ export default function RiderDashboard() {
         requireInteraction: true
       })
     }
+    
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200])
+    }
+    
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+      audioRef.current.volume = 1.0
+      audioRef.current.play().catch(() => {})
+    }
+    
+    const alertDiv = document.createElement('div')
+    alertDiv.style.cssText = `
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      border: 3px solid white;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      z-index: 9999;
+      max-width: 90%;
+      width: 400px;
+      text-align: center;
+      animation: slideDown 0.5s ease-out;
+    `
+    alertDiv.innerHTML = `
+      <div style="font-size: 32px; margin-bottom: 10px;"></div>
+      <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${title}</div>
+      <div style="font-size: 14px;">${body}</div>
+    `
+    
+    document.body.appendChild(alertDiv)
+    
+    setTimeout(() => {
+      alertDiv.style.animation = 'slideUp 0.5s ease-out'
+      setTimeout(() => alertDiv.remove(), 500)
+    }, 5000)
+    
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes slideDown {
+        from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      }
+      @keyframes slideUp {
+        from { transform: translateX(-50%) translateY(0); opacity: 1; }
+        to { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+      }
+    `
+    document.head.appendChild(style)
   }
 
   const checkAuth = async () => {
@@ -94,6 +148,16 @@ export default function RiderDashboard() {
         const newPendingOrders = ordersData.pendingOrders || []
         setPendingOrders(newPendingOrders)
         setMyOrders(ordersData.myOrders || [])
+        
+        const currentCount = newPendingOrders.length
+        if (currentCount > previousOrdersCount.current && currentCount > 0) {
+          const newOrdersCount = currentCount - previousOrdersCount.current
+          sendNotification(
+            ' New Order Available!',
+            `${newOrdersCount} new order${newOrdersCount > 1 ? 's' : ''} available!`
+          )
+        }
+        previousOrdersCount.current = currentCount
         
         const meRes = await fetch('/api/auth/me')
         const meData = await meRes.json()
@@ -129,11 +193,10 @@ export default function RiderDashboard() {
     }
   }
 
-  // Poll for new orders every 10 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchRiderData()
-    }, 10000)
+    }, 5000)
     
     return () => clearInterval(interval)
   }, [])
@@ -178,12 +241,12 @@ export default function RiderDashboard() {
     setSendingMessage(true)
     try {
       await new Promise(resolve => setTimeout(resolve, 1000))
-      alert('Message sent to admin! They will contact you soon.')
+      alert('Message sent to admin!')
       setShowContactModal(false)
       setShowRemittancePopup(false)
       setContactMessage('')
     } catch (error) {
-      alert('Failed to send message. Please try again.')
+      alert('Failed to send message')
     } finally {
       setSendingMessage(false)
     }
@@ -210,7 +273,7 @@ export default function RiderDashboard() {
 
   const handleMarkDelivered = async () => {
     if (!photoFile) {
-      alert('Please take a photo as proof of delivery')
+      alert('Please take a photo')
       return
     }
 
@@ -227,7 +290,7 @@ export default function RiderDashboard() {
       const uploadData = await uploadRes.json()
 
       if (!uploadRes.ok) {
-        alert(uploadData.error || 'Failed to upload photo')
+        alert(uploadData.error || 'Failed to upload')
         return
       }
 
@@ -242,15 +305,15 @@ export default function RiderDashboard() {
       })
 
       if (statusRes.ok) {
-        alert('Order marked as delivered!')
+        alert('Order delivered!')
         setShowPhotoModal(false)
         fetchRiderData()
       } else {
         const data = await statusRes.json()
-        alert(data.error || 'Failed to update status')
+        alert(data.error || 'Failed')
       }
     } catch (error) {
-      alert('Error marking as delivered')
+      alert('Error')
     } finally {
       setUploading(false)
     }
@@ -269,16 +332,14 @@ export default function RiderDashboard() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
-        {/* Header Section */}
         <div style={{ marginBottom: '20px' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>
-            Rider Dashboard 🏍️
+            Rider Dashboard 
           </h1>
           <p style={{ fontSize: '16px', color: 'gray', marginBottom: '15px' }}>
             Accept deliveries and earn money
           </p>
           
-          {/* Notification Button - Only show if not granted */}
           {notificationPermission !== 'granted' && (
             <button
               onClick={requestNotificationPermission}
@@ -311,35 +372,33 @@ export default function RiderDashboard() {
           </div>
         )}
 
-        {/* Earnings Section */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>💰 Rider Earnings</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}> Rider Earnings</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
             <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Income</p>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{todayEarnings.toFixed(2)}</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>{todayEarnings.toFixed(2)}</p>
               <p style={{ fontSize: '11px', color: 'gray' }}>From completed deliveries</p>
             </div>
             <div style={{ padding: '15px', backgroundColor: cashOnHand >= REMITTANCE_LIMIT ? '#fee' : '#e3f2fd', borderRadius: '8px', border: `2px solid ${cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'blue'}` }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Cash on Hand</p>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', color: cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'blue' }}>₱{cashOnHand.toFixed(2)}</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'blue' }}>{cashOnHand.toFixed(2)}</p>
               <p style={{ fontSize: '11px', color: cashOnHand >= REMITTANCE_LIMIT ? 'red' : 'gray' }}>
                 {cashOnHand >= REMITTANCE_LIMIT ? '⚠️ Limit!' : 'To remit to admin'}
               </p>
             </div>
             <div style={{ padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Remittance Limit</p>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'orange' }}>₱{REMITTANCE_LIMIT.toLocaleString()}.00</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'orange' }}>{REMITTANCE_LIMIT.toLocaleString()}.00</p>
               <p style={{ fontSize: '11px', color: 'gray' }}>Max cash before remitting</p>
             </div>
           </div>
         </div>
 
-        {/* Available Orders Section */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>
-              📦 Available Orders {pendingOrders.length > 0 && (
+               Available Orders {pendingOrders.length > 0 && (
                 <span style={{ 
                   display: 'inline-block',
                   padding: '4px 12px', 
@@ -368,13 +427,13 @@ export default function RiderDashboard() {
                   fontSize: '14px'
                 }}
               >
-                🔄 Refresh
+                 Refresh
               </button>
             )}
           </div>
           {pendingOrders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-              <p style={{ fontSize: '16px', color: 'gray', marginBottom: '5px' }}>No orders available right now</p>
+              <p style={{ fontSize: '16px', color: 'gray', marginBottom: '5px' }}>No orders available</p>
               <p style={{ fontSize: '13px', color: 'gray' }}>Check back soon!</p>
             </div>
           ) : (
@@ -396,7 +455,7 @@ export default function RiderDashboard() {
                         marginBottom: '5px',
                         marginRight: '5px'
                       }}>
-                        {order.serviceType === 'PABILI' ? '🛒 PABILI' : '📦 PADALA'}
+                        {order.serviceType === 'PABILI' ? ' PABILI' : ' PADALA'}
                       </span>
                     )}
                     
@@ -406,9 +465,9 @@ export default function RiderDashboard() {
                     
                     {order.serviceType === 'PABILI' && (
                       <div style={{ backgroundColor: '#fff3cd', padding: '8px', borderRadius: '8px', marginBottom: '8px', border: '2px solid #ffc107' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>🛒 What to buy:</p>
+                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}> What to buy:</p>
                         <p style={{ fontSize: '12px', marginBottom: '3px' }}>{order.itemDescription}</p>
-                        {order.maxAmount && <p style={{ fontSize: '12px', fontWeight: 'bold' }}>💰 Max: ₱{order.maxAmount.toFixed(2)}</p>}
+                        {order.maxAmount && <p style={{ fontSize: '12px', fontWeight: 'bold' }}> Max: {order.maxAmount.toFixed(2)}</p>}
                       </div>
                     )}
                     
@@ -433,7 +492,7 @@ export default function RiderDashboard() {
                       <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>{order.totalAmount?.toFixed(2)}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '12px', color: 'blue', fontWeight: 'bold' }}>You earn: ₱{order.riderPayout?.toFixed(2)}</p>
+                      <p style={{ fontSize: '12px', color: 'blue', fontWeight: 'bold' }}>You earn: {order.riderPayout?.toFixed(2)}</p>
                     </div>
                   </div>
                   <button
@@ -458,7 +517,6 @@ export default function RiderDashboard() {
           )}
         </div>
 
-        {/* My Orders Section */}
         {myOrders.length > 0 && (
           <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}> My Orders ({myOrders.length})</h2>
@@ -479,7 +537,7 @@ export default function RiderDashboard() {
                         fontWeight: 'bold',
                         marginBottom: '5px'
                       }}>
-                        {order.serviceType === 'PABILI' ? '🛒 PABILI' : '📦 PADALA'}
+                        {order.serviceType === 'PABILI' ? ' PABILI' : ' PADALA'}
                       </span>
                     )}
                     
@@ -498,7 +556,7 @@ export default function RiderDashboard() {
                       <p style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>{order.totalAmount?.toFixed(2)}</p>
                     </div>
                     <div>
-                      <p style={{ fontSize: '12px', color: 'blue', fontWeight: 'bold' }}>You earn: ₱{order.riderPayout?.toFixed(2)}</p>
+                      <p style={{ fontSize: '12px', color: 'blue', fontWeight: 'bold' }}>You earn: {order.riderPayout?.toFixed(2)}</p>
                     </div>
                   </div>
                   
@@ -527,8 +585,6 @@ export default function RiderDashboard() {
         )}
       </div>
 
-      {/* Modals remain the same - just copy from previous version */}
-      {/* Remittance Limit Popup */}
       {showRemittancePopup && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid #ff4444', maxWidth: '500px', width: '100%', boxShadow: '0px 10px 40px rgba(0,0,0,0.3)' }}>
@@ -538,15 +594,14 @@ export default function RiderDashboard() {
             </div>
             <div style={{ backgroundColor: '#fff3cd', padding: '15px', borderRadius: '12px', border: '2px solid #ffc107', marginBottom: '20px' }}>
               <p style={{ fontSize: '14px', color: '#856404', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}> Action Required</p>
-              <p style={{ fontSize: '16px', color: '#856404', textAlign: 'center' }}>You have reached the remittance limit of <strong>₱{remittanceData.limit.toLocaleString()}.00</strong></p>
-              <p style={{ fontSize: '18px', color: '#d9534f', marginTop: '8px', fontWeight: 'bold', textAlign: 'center' }}>Current Cash: ₱{remittanceData.cashOnHand.toFixed(2)}</p>
+              <p style={{ fontSize: '16px', color: '#856404', textAlign: 'center' }}>Limit: <strong>{remittanceData.limit.toLocaleString()}.00</strong></p>
+              <p style={{ fontSize: '18px', color: '#d9534f', marginTop: '8px', fontWeight: 'bold', textAlign: 'center' }}>Current: {remittanceData.cashOnHand.toFixed(2)}</p>
             </div>
             <button onClick={() => setShowRemittancePopup(false)} style={{ width: '100%', padding: '12px', backgroundColor: '#6c757d', color: 'white', border: '2px solid #495057', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}>I Understand</button>
           </div>
         </div>
       )}
 
-      {/* Contact Admin Modal */}
       {showContactModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid #28a745', maxWidth: '500px', width: '100%' }}>
@@ -554,7 +609,7 @@ export default function RiderDashboard() {
               <div style={{ fontSize: '48px', marginBottom: '10px' }}>📱</div>
               <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#28a745', marginBottom: '10px' }}>Contact Admin</h2>
             </div>
-            <textarea value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} placeholder="Enter your message..." style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #ddd', fontSize: '14px', minHeight: '100px', marginBottom: '15px', boxSizing: 'border-box' }} />
+            <textarea value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} placeholder="Enter message..." style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #ddd', fontSize: '14px', minHeight: '100px', marginBottom: '15px', boxSizing: 'border-box' }} />
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => { setShowContactModal(false); setContactMessage('') }} style={{ flex: 1, padding: '12px', backgroundColor: '#6c757d', color: 'white', border: '2px solid #495057', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
               <button onClick={sendMessageToAdmin} disabled={sendingMessage || !contactMessage.trim()} style={{ flex: 1, padding: '12px', backgroundColor: (!contactMessage.trim() || sendingMessage) ? '#ccc' : '#28a745', color: 'white', border: '2px solid #1e7e34', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: (!contactMessage.trim() || sendingMessage) ? 'not-allowed' : 'pointer' }}>{sendingMessage ? 'Sending...' : 'Send'}</button>
@@ -563,14 +618,13 @@ export default function RiderDashboard() {
         </div>
       )}
 
-      {/* Photo Upload Modal */}
       {showPhotoModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '3px solid black', maxWidth: '500px', width: '100%' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>📸 Proof of Delivery</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}> Proof of Delivery</h2>
             <p style={{ fontSize: '12px', marginBottom: '15px', textAlign: 'center', color: 'gray' }}>Order #{selectedOrder?.id.slice(0, 8).toUpperCase()}</p>
             <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelect} style={{ display: 'none' }} />
-            <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '12px', backgroundColor: photoFile ? '#e8f5e9' : '#f0f0f0', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', marginBottom: '15px' }}>{photoFile ? '✅ Photo Selected' : '📷 Take Photo'}</button>
+            <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '12px', backgroundColor: photoFile ? '#e8f5e9' : '#f0f0f0', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', marginBottom: '15px' }}>{photoFile ? ' Photo Selected' : ' Take Photo'}</button>
             {photoPreview && (<img src={photoPreview} alt="Proof" style={{ width: '100%', borderRadius: '8px', border: '2px solid black', marginBottom: '15px' }} />)}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowPhotoModal(false)} style={{ flex: 1, padding: '12px', backgroundColor: 'gray', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>Cancel</button>
