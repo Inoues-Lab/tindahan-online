@@ -10,23 +10,31 @@ export default function Header() {
   const [cartCount, setCartCount] = useState(0)
 
   useEffect(() => {
+    // Fetch User
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => setUser(data.user))
       .catch(() => setUser(null))
     
+    // Fetch Cart Count (Safe)
     fetchCartCount()
   }, [])
 
   const fetchCartCount = async () => {
     try {
       const res = await fetch('/api/cart')
-      const data = await res.json()
-      if (res.ok) {
-        setCartCount(data.items?.length || 0)
+      
+      // If API doesn't exist (404) or fails, just set to 0
+      if (!res.ok) {
+        setCartCount(0)
+        return
       }
+      
+      const data = await res.json()
+      setCartCount(data.items?.length || data.count || 0)
     } catch (error) {
-      console.error('Error fetching cart:', error)
+      // Silently fail - cart count is not critical
+      setCartCount(0)
     }
   }
 
@@ -96,7 +104,7 @@ export default function Header() {
                       <span style={{ 
                         position: 'absolute',
                         top: '-8px',
-                        right: '-8px',
+                        right: '-12px',
                         backgroundColor: 'red',
                         color: 'white',
                         borderRadius: '50%',
