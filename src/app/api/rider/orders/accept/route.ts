@@ -17,32 +17,48 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { orderId } = body
+    const { orderId, status, proofUrl } = body
 
-    if (!orderId) {
-      return NextResponse.json({ error: 'Order ID required' }, { status: 400 })
+    if (!orderId || !status) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const rider = await prisma.user.findUnique({ where: { id: userId } })
-    const REMITTANCE_LIMIT = 20000
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { delivery: true }
+    })
 
-    if (rider && rider.cashOnHand >= REMITTANCE_LIMIT) {
-      return NextResponse.json({
-        error: 'REMITTANCE_LIMIT_REACHED',
-        cashOnHand: rider.cashOnHand,
-        remittanceLimit: REMITTANCE_LIMIT
-      }, { status: 403 })
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
+
+    // Find rider profile to verify assignment
+    const riderProfile = await prisma.riderProfile.findUnique({
+      where: { userId }
+    })
+
+    if (!riderProfile || order.delivery?.riderId !== riderProfile.id) {
+      return NextResponse.json({ error: 'Not assigned to this rider' }, { status: 403 })
+    }
+
+    const amountToRemit = (order.totalAmount || order.deliveryFee || 0) - (order.riderPayout || 0)
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        cashOnHand: { increment: amountToRemit }
+      }
+    })
 
     await prisma.order.update({
       where: { id: orderId },
       data: {
-        status: 'ACCEPTED',
+        status: 'COMPLETED',
         delivery: {
           update: {
-            status: 'ASSIGNED',
-            riderId: userId,
-            acceptedAt: new Date()
+            status: 'COMPLETED',
+            completedAt: new Date(),
+            proofUrl: proofUrl || null
           }
         }
       }
@@ -50,7 +66,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error accepting order:', error)
-    return NextResponse.json({ error: 'Failed to accept order' }, { status: 500 })
+    console.error('Error updating order status:', error)
+    return NextResponse.json({ 
+      error: 'Failed to update status',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
