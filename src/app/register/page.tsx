@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -14,8 +14,17 @@ export default function RegisterPage() {
     password: '',
     phone: '',
     address: '',
-    role: 'CUSTOMER' // Default role
+    role: 'CUSTOMER'
   })
+
+  // Read role from URL without using useSearchParams()
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const role = params.get('role')
+    if (role === 'RIDER' || role === 'MERCHANT') {
+      setFormData(prev => ({ ...prev, role }))
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
