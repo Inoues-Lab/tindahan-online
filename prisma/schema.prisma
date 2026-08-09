@@ -7,159 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  phone        String?
-  address      String?   // ← Add this line here
-  role         Role     @default(CUSTOMER)
-  createdAt    DateTime @default(now())
-
-  riderProfile    RiderProfile?
-  orders          Order[]
-  cashOnHand      Float         @default(0)
-  remittanceLimit Float         @default(2000)
-  remittances     Remittance[]
-}
-
-model RiderProfile {
-  id     String @id @default(uuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id])
-
-  vehicleType VehicleType @default(MOTORCYCLE)
-  maxLoadKg   Float       @default(15.0)
-  plateNumber String?
-
-  status RiderStatus @default(OFFLINE)
-  rating Float       @default(5.0)
-
-  deliveries Delivery[]
-}
-
-model Product {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  price       Float
-  stock       Int      @default(0)
-  image       String?
-  weightKg    Float
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  orderItems OrderItem[]
-}
-
-model OrderItem {
-  id      String @id @default(uuid())
-  orderId String
-  order   Order  @relation(fields: [orderId], references: [id])
-
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-
-  quantity Int
-  price    Float
-}
-
-model Delivery {
-  id      String @id @default(uuid())
-  orderId String @unique
-  order   Order  @relation(fields: [orderId], references: [id])
-
-  riderId String?
-  rider   RiderProfile? @relation(fields: [riderId], references: [id])
-
-  acceptedAt  DateTime?
-  completedAt DateTime?
-  status      DeliveryStatus @default(UNASSIGNED)
-  proofUrl    String?   // ADD THIS LINE
-}
-
-model Remittance {
-  id          String   @id @default(cuid())
-  riderId     String
-  rider       User     @relation(fields: [riderId], references: [id])
-  amount      Float
-  status      String   @default("COMPLETED")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-// Add this enum at the top with your other enums
-enum ServiceType {
-  GROCERY
-  PABILI
-  PADALA
-}
-
-// Update the Order model - add these fields:
-model Order {
-  id         String @id @default(uuid())
-  customerId String
-  customer   User   @relation(fields: [customerId], references: [id])
-
-  status      OrderStatus @default(PENDING)
-  serviceType ServiceType @default(GROCERY)  // NEW
-  
-  // GROCERY fields
-  totalAmount Float?
-  deliveryFee Float?
-  riderPayout Float?
-  platformIncome Float @default(0)
-  requiredLoadKg Float?
-  
-  // Common fields
-  deliveryAddress String?
-  contactNumber   String?
-  
-  // PABILI fields
-  itemDescription String?
-  maxAmount       Float?
-  storeLocation   String?
-  receiptUrl      String?
-  
-  // PADALA fields
-  senderName      String?
-  senderAddress   String?
-  senderContact   String?
-  receiverName    String?
-  receiverAddress String?
-  receiverContact String?
-  packageDescription String?
-  
-  createdAt DateTime @default(now())
-
-  items         OrderItem[]
-  delivery      Delivery?
-  paymentMethod String      @default("COD")
-  isRemitted    Boolean     @default(false)
-}
-enum Role {
+enum UserRole {
+  ADMIN
   CUSTOMER
   RIDER
-  ADMIN
-}
-
-enum VehicleType {
-  MOTORCYCLE
-  TRICYCLE
-  VAN
-}
-
-enum RiderStatus {
-  OFFLINE
-  ONLINE
-  ON_DELIVERY
 }
 
 enum OrderStatus {
   PENDING
   ACCEPTED
-  PICKING_UP
-  OUT_FOR_DELIVERY
+  IN_PROGRESS
   COMPLETED
   CANCELLED
 }
@@ -168,5 +25,155 @@ enum DeliveryStatus {
   UNASSIGNED
   ASSIGNED
   IN_PROGRESS
+  DELIVERED
   COMPLETED
+}
+
+enum ServiceType {
+  GROCERY
+  PABILI
+  PADALA
+}
+
+model User {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String
+  phone      String?
+  address    String?
+  role       UserRole @default(CUSTOMER)
+  cashOnHand Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  orders       Order[]
+  cart         Cart?
+  riderProfile RiderProfile?
+  remittances  Remittance[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  stock       Int      @default(0)
+  imageUrl    String?
+  weightKg    Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+}
+
+model Order {
+  id         String @id @default(uuid())
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id])
+
+  status      OrderStatus @default(PENDING)
+  serviceType ServiceType @default(GROCERY)
+
+  totalAmount    Float?
+  deliveryFee    Float?
+  riderPayout    Float?
+  platformIncome Float  @default(0)
+  requiredLoadKg Float?
+
+  deliveryAddress String?
+  contactNumber   String?
+
+  itemDescription String?
+  maxAmount       Float?
+  storeLocation   String?
+  receiptUrl      String?
+
+  senderName         String?
+  senderAddress      String?
+  senderContact      String?
+  receiverName       String?
+  receiverAddress    String?
+  receiverContact    String?
+  packageDescription String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items         OrderItem[]
+  delivery      Delivery?
+  paymentMethod String      @default("COD")
+  isRemitted    Boolean     @default(false)
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Delivery {
+  id          String         @id @default(uuid())
+  orderId     String         @unique
+  order       Order          @relation(fields: [orderId], references: [id])
+  riderId     String?
+  rider       RiderProfile?  @relation(fields: [riderId], references: [id])
+  status      DeliveryStatus @default(UNASSIGNED)
+  proofUrl    String?
+  acceptedAt  DateTime?
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model RiderProfile {
+  id          String     @id @default(uuid())
+  userId      String     @unique
+  user        User       @relation(fields: [userId], references: [id])
+  vehicleType String     @default("MOTORCYCLE")
+  maxLoadKg   Float      @default(15.0)
+  status      String     @default("ONLINE")
+  deliveries  Delivery[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+}
+
+model Remittance {
+  id        String   @id @default(uuid())
+  riderId   String
+  rider     User     @relation(fields: [riderId], references: [id])
+  amount    Float
+  status    String   @default("COMPLETED")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
