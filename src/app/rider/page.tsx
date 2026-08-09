@@ -51,9 +51,10 @@ export default function RiderDashboard() {
   // Unlock audio on first user interaction
   const unlockAudio = () => {
     if (!audioUnlocked && notificationSoundRef.current) {
-      notificationSoundRef.current.play().then(() => {
-        notificationSoundRef.current.pause()
-        notificationSoundRef.current.currentTime = 0
+      const audio = notificationSoundRef.current
+      audio.play().then(() => {
+        audio.pause()
+        audio.currentTime = 0
         setAudioUnlocked(true)
       }).catch(() => {
         // Ignore if it fails
@@ -72,7 +73,7 @@ export default function RiderDashboard() {
       document.removeEventListener('click', unlockAudio)
       document.removeEventListener('touchstart', unlockAudio)
     }
-  }, [router])
+  }, [router, audioUnlocked])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -87,7 +88,6 @@ export default function RiderDashboard() {
       const permission = await Notification.requestPermission()
       setNotificationPermission(permission)
       if (permission === 'granted') {
-        // Also unlock audio when permission is granted
         unlockAudio()
         alert('Notifications enabled! You will hear a sound and feel vibration when new orders arrive.')
       }
@@ -105,7 +105,6 @@ export default function RiderDashboard() {
   }
 
   const sendNotification = (title: string, body: string) => {
-    // Browser notification
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, {
         body: body,
@@ -115,15 +114,12 @@ export default function RiderDashboard() {
       })
     }
     
-    // Play notification sound
     playNotificationSound()
     
-    // Vibrate phone (Android)
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([300, 100, 300, 100, 300])
     }
     
-    // Show on-screen banner
     const alertDiv = document.createElement('div')
     alertDiv.style.cssText = `
       position: fixed;
@@ -420,7 +416,7 @@ export default function RiderDashboard() {
         )}
 
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>💰 Rider Earnings</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}> Rider Earnings</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
             <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Income</p>
@@ -445,7 +441,7 @@ export default function RiderDashboard() {
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>
-              📦 Available Orders {pendingOrders.length > 0 && (
+               Available Orders {pendingOrders.length > 0 && (
                 <span style={{ 
                   display: 'inline-block',
                   padding: '4px 12px', 
@@ -474,7 +470,7 @@ export default function RiderDashboard() {
                   fontSize: '14px'
                 }}
               >
-                🔄 Refresh
+                 Refresh
               </button>
             )}
           </div>
@@ -502,7 +498,7 @@ export default function RiderDashboard() {
                         marginBottom: '5px',
                         marginRight: '5px'
                       }}>
-                        {order.serviceType === 'PABILI' ? '🛒 PABILI' : '📦 PADALA'}
+                        {order.serviceType === 'PABILI' ? '🛒 PABILI' : ' PADALA'}
                       </span>
                     )}
                     
@@ -512,7 +508,7 @@ export default function RiderDashboard() {
                     
                     {order.serviceType === 'PABILI' && (
                       <div style={{ backgroundColor: '#fff3cd', padding: '8px', borderRadius: '8px', marginBottom: '8px', border: '2px solid #ffc107' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}> What to buy:</p>
+                        <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>🛒 What to buy:</p>
                         <p style={{ fontSize: '12px', marginBottom: '3px' }}>{order.itemDescription}</p>
                         {order.maxAmount && <p style={{ fontSize: '12px', fontWeight: 'bold' }}>💰 Max: ₱{order.maxAmount.toFixed(2)}</p>}
                       </div>
@@ -622,7 +618,7 @@ export default function RiderDashboard() {
                         fontSize: '15px'
                       }}
                     >
-                       Mark as Delivered (Photo Required)
+                      📸 Mark as Delivered (Photo Required)
                     </button>
                   )}
                 </div>
