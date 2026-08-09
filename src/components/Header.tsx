@@ -7,13 +7,28 @@ import { useRouter } from 'next/navigation'
 export default function Header() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [cartCount, setCartCount] = useState(0)
 
   useEffect(() => {
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => setUser(data.user))
       .catch(() => setUser(null))
+    
+    fetchCartCount()
   }, [])
+
+  const fetchCartCount = async () => {
+    try {
+      const res = await fetch('/api/cart')
+      const data = await res.json()
+      if (res.ok) {
+        setCartCount(data.items?.length || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error)
+    }
+  }
 
   const handleLogout = () => {
     document.cookie = 'userId=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
@@ -26,7 +41,7 @@ export default function Header() {
     <header style={{ 
       backgroundColor: 'white', 
       borderBottom: '3px solid black', 
-      padding: '15px 20px',
+      padding: '12px 15px',
       position: 'sticky',
       top: 0,
       zIndex: 100
@@ -36,23 +51,32 @@ export default function Header() {
         margin: '0 auto', 
         display: 'flex', 
         justifyContent: 'space-between', 
-        alignItems: 'center' 
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '10px'
       }}>
         <div 
           onClick={() => router.push('/')}
           style={{ 
-            fontSize: '24px', 
+            fontSize: '20px', 
             fontWeight: 'bold', 
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px'
+            gap: '8px',
+            flex: '1 1 auto'
           }}
         >
-           Tindahan Online
+          🛒 Tindahan Online
         </div>
 
-        <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        <nav style={{ 
+          display: 'flex', 
+          gap: '8px', 
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          flex: '0 0 auto'
+        }}>
           {user ? (
             <>
               {user.role === 'CUSTOMER' && (
@@ -61,54 +85,74 @@ export default function Header() {
                     textDecoration: 'none', 
                     color: 'black', 
                     fontWeight: 'bold',
-                    fontSize: '16px',
-                    position: 'relative'
+                    fontSize: '14px',
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}>
                     Cart 🛒
-                    {/* Cart badge would go here */}
+                    {cartCount > 0 && (
+                      <span style={{ 
+                        position: 'absolute',
+                        top: '-8px',
+                        right: '-8px',
+                        backgroundColor: 'red',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '11px',
+                        fontWeight: 'bold'
+                      }}>
+                        {cartCount}
+                      </span>
+                    )}
                   </a>
                   <a href="/orders/my-orders" style={{ 
                     textDecoration: 'none', 
                     color: 'black', 
                     fontWeight: 'bold',
-                    fontSize: '16px'
+                    fontSize: '14px'
                   }}>
-                    My Orders 
+                    My Orders 📦
                   </a>
                   <a href="/" style={{ 
                     textDecoration: 'none', 
                     color: 'black', 
                     fontWeight: 'bold',
-                    fontSize: '16px'
+                    fontSize: '14px'
                   }}>
                     Shop
                   </a>
                   
-                  {/* PABILI and PADALA Buttons */}
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <a href="/pabili" style={{ 
-                      padding: '10px 20px', 
+                      padding: '8px 12px', 
                       backgroundColor: '#ffc107',
                       color: 'black', 
-                      borderRadius: '8px', 
+                      borderRadius: '6px', 
                       border: '2px solid black', 
                       fontWeight: 'bold', 
                       textDecoration: 'none',
-                      fontSize: '14px',
-                      boxShadow: '2px 2px 0px black'
+                      fontSize: '12px',
+                      whiteSpace: 'nowrap'
                     }}>
-                      🛒 PABILI
+                       PABILI
                     </a>
                     <a href="/padala" style={{ 
-                      padding: '10px 20px', 
+                      padding: '8px 12px', 
                       backgroundColor: '#17a2b8',
                       color: 'white', 
-                      borderRadius: '8px', 
+                      borderRadius: '6px', 
                       border: '2px solid black', 
                       fontWeight: 'bold', 
                       textDecoration: 'none',
-                      fontSize: '14px',
-                      boxShadow: '2px 2px 0px black'
+                      fontSize: '12px',
+                      whiteSpace: 'nowrap'
                     }}>
                       📦 PADALA
                     </a>
@@ -121,7 +165,7 @@ export default function Header() {
                   textDecoration: 'none', 
                   color: 'black', 
                   fontWeight: 'bold',
-                  fontSize: '16px'
+                  fontSize: '14px'
                 }}>
                   Rider
                 </a>
@@ -132,7 +176,7 @@ export default function Header() {
                   textDecoration: 'none', 
                   color: 'black', 
                   fontWeight: 'bold',
-                  fontSize: '16px'
+                  fontSize: '14px'
                 }}>
                   Admin
                 </a>
@@ -141,15 +185,15 @@ export default function Header() {
               <button
                 onClick={handleLogout}
                 style={{
-                  padding: '10px 20px',
+                  padding: '8px 16px',
                   backgroundColor: 'red',
                   color: 'white',
                   border: '2px solid black',
                   borderRadius: '8px',
                   fontWeight: 'bold',
                   cursor: 'pointer',
-                  fontSize: '16px',
-                  boxShadow: '2px 2px 0px black'
+                  fontSize: '14px',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 Logout
@@ -159,15 +203,14 @@ export default function Header() {
             <button
               onClick={() => router.push('/login')}
               style={{
-                padding: '10px 20px',
+                padding: '8px 16px',
                 backgroundColor: 'blue',
                 color: 'white',
                 border: '2px solid black',
                 borderRadius: '8px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontSize: '16px',
-                boxShadow: '2px 2px 0px black'
+                fontSize: '14px'
               }}
             >
               Login
