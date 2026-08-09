@@ -8,33 +8,44 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, email, password, phone, address, role } = body
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({ where: { email } })
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    })
+
     if (existingUser) {
-      return NextResponse.json({ error: 'Email already registered' }, { status: 400 })
+      return NextResponse.json({ error: 'User already exists' }, { status: 400 })
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Create user with address
+    // Create user with 'password' field (not passwordHash)
     const user = await prisma.user.create({
       data: {
         name,
         email,
-        passwordHash,
+        password: hashedPassword, // Changed from passwordHash
         phone: phone || null,
         address: address || null,
         role: role || 'CUSTOMER'
       }
     })
 
-    return NextResponse.json({ 
-      success: true, 
-      user: { id: user.id, name: user.name, email: user.email, role: user.role }
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
     })
   } catch (error) {
     console.error('Registration error:', error)
-    return NextResponse.json({ error: 'Registration failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to register' }, { status: 500 })
   }
 }
