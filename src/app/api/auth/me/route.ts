@@ -11,8 +11,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    // UPDATED: Include riderProfile and merchantProfile relations
     const user = await prisma.user.findUnique({
       where: { id: userId },
+      include: {
+        riderProfile: true,
+        merchantProfile: true
+      },
       select: {
         id: true,
         name: true,
@@ -20,7 +25,9 @@ export async function GET() {
         role: true,
         phone: true,
         address: true,
-        cashOnHand: true
+        cashOnHand: true,
+        riderProfile: true,
+        merchantProfile: true
       }
     })
 

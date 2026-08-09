@@ -34,20 +34,16 @@ export default function RiderDashboard() {
 
   const REMITTANCE_LIMIT = 20000
 
-  // Initialize notification sound with base64 fallback
+  // Initialize notification sound
   useEffect(() => {
-    // Try to load the wav file, fallback to base64 beep
-    const audio = new Audio('/notification-sound.wav')
-    audio.volume = 1.0
-    audio.preload = 'auto'
+    notificationSoundRef.current = new Audio('/notification-sound.wav')
+    notificationSoundRef.current.volume = 1.0
+    notificationSoundRef.current.preload = 'auto'
     
-    // If the file fails to load, use base64 beep
-    audio.onerror = () => {
+    notificationSoundRef.current.onerror = () => {
       console.log('WAV file failed, using base64 beep')
       notificationSoundRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGS57OihUBELTKXh8bllHAU2j9Xvz3kpBSh+zPDajzsKFFqz6OyrWBUIQ5zd8sFuJAUuhM/z2oc2CBhku+zoo1ER')
     }
-    
-    notificationSoundRef.current = audio
     
     return () => {
       if (notificationSoundRef.current) {
@@ -56,33 +52,19 @@ export default function RiderDashboard() {
     }
   }, [])
 
-  // Test sound function
-  const testSound = () => {
-    if (notificationSoundRef.current) {
-      const audio = notificationSoundRef.current
-      audio.currentTime = 0
-      audio.volume = 1.0
-      audio.play().then(() => {
-        console.log('✅ Sound played successfully!')
-        alert(' Sound is working! You should hear a beep.')
-      }).catch(err => {
-        console.error('❌ Sound failed:', err)
-        alert('❌ Sound failed. Please check your browser settings.')
-      })
-    }
-  }
-
   useEffect(() => {
     checkAuth()
   }, [router])
 
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchRiderData()
+      if (user?.riderProfile?.status === 'APPROVED') {
+        fetchRiderData()
+      }
     }, 5000)
     
     return () => clearInterval(interval)
-  }, [])
+  }, [user])
 
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
@@ -175,7 +157,6 @@ export default function RiderDashboard() {
       const data = await response.json()
       
       if (!data.user || data.user.role !== 'RIDER') {
-        alert('Access denied. Riders only.')
         router.push('/')
         return
       }
@@ -185,9 +166,15 @@ export default function RiderDashboard() {
       if ('Notification' in window) {
         setNotificationPermission(Notification.permission)
       }
-      fetchRiderData()
+      
+      // Only fetch orders if approved
+      if (data.user.riderProfile?.status === 'APPROVED') {
+        fetchRiderData()
+      }
     } catch (error) {
       router.push('/login')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -240,33 +227,18 @@ export default function RiderDashboard() {
       }
     } catch (error) {
       setError('Error loading orders')
-    } finally {
-      setLoading(false)
     }
   }
 
   const acceptOrder = async (orderId: string) => {
-    console.log('🟢 [Frontend] Accepting order:', orderId)
-    
-    if (!orderId) {
-      console.error('🔴 [Frontend] Order ID is undefined!')
-      alert('Error: Order ID is missing')
-      return
-    }
-
     try {
-      const body = JSON.stringify({ orderId })
-      console.log('🟢 [Frontend] Sending body:', body)
-      
       const response = await fetch('/api/rider/orders/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: body
+        body: JSON.stringify({ orderId })
       })
       
-      console.log('🟢 [Frontend] Response status:', response.status)
       const data = await response.json()
-      console.log('🟢 [Frontend] Response data:', data)
       
       if (response.ok) {
         alert('Order accepted!')
@@ -281,7 +253,6 @@ export default function RiderDashboard() {
         alert(data.error || 'Failed to accept order')
       }
     } catch (error) {
-      console.error('🔴 [Frontend] Error accepting order:', error)
       alert('Error accepting order')
     }
   }
@@ -386,13 +357,63 @@ export default function RiderDashboard() {
     )
   }
 
+  // --- NEW: Check Rider Status ---
+  const riderStatus = user?.riderProfile?.status || 'PENDING'
+
+  if (riderStatus === 'PENDING') {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <Header />
+        <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px', textAlign: 'center' }}>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid #ffc107', boxShadow: '4px 4px 0px black' }}>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}></div>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>Application Under Review</h1>
+            <p style={{ color: 'gray', marginBottom: '20px' }}>
+              Thank you for submitting your requirements. Our admin team is currently reviewing your documents.
+            </p>
+            <p style={{ color: 'gray', fontSize: '14px' }}>
+              You will receive an email notification once your account is approved.
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#ffc107', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              Check Status Again
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  if (riderStatus === 'REJECTED') {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <Header />
+        <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px', textAlign: 'center' }}>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid red', boxShadow: '4px 4px 0px black' }}>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}>❌</div>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', color: 'red' }}>Application Rejected</h1>
+            <p style={{ color: 'gray', marginBottom: '20px' }}>
+              Unfortunately, your application did not meet our requirements at this time.
+            </p>
+            <p style={{ color: 'gray', fontSize: '14px' }}>
+              Please contact support if you believe this is an error or if you wish to re-apply with updated documents.
+            </p>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  // --- Normal Dashboard for APPROVED Riders ---
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
         <div style={{ marginBottom: '20px' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>
-            Rider Dashboard 🏍️
+            Rider Dashboard ️
           </h1>
           <p style={{ fontSize: '16px', color: 'gray', marginBottom: '15px' }}>
             Accept deliveries and earn money
@@ -422,7 +443,13 @@ export default function RiderDashboard() {
             )}
             
             <button
-              onClick={testSound}
+              onClick={() => {
+                if (notificationSoundRef.current) {
+                  notificationSoundRef.current.currentTime = 0
+                  notificationSoundRef.current.play().catch(err => console.log(err))
+                  alert('Sound is working!')
+                }
+              }}
               style={{
                 padding: '12px 20px',
                 backgroundColor: '#28a745',
@@ -450,7 +477,7 @@ export default function RiderDashboard() {
         )}
 
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}> Rider Earnings</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>💰 Rider Earnings</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
             <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Income</p>
@@ -672,7 +699,7 @@ export default function RiderDashboard() {
             <div style={{ backgroundColor: '#fff3cd', padding: '15px', borderRadius: '12px', border: '2px solid #ffc107', marginBottom: '20px' }}>
               <p style={{ fontSize: '14px', color: '#856404', marginBottom: '8px', textAlign: 'center', fontWeight: 'bold' }}>📢 Action Required</p>
               <p style={{ fontSize: '16px', color: '#856404', textAlign: 'center' }}>Limit: <strong>₱{remittanceData.limit.toLocaleString()}.00</strong></p>
-              <p style={{ fontSize: '18px', color: '#d9534f', marginTop: '8px', fontWeight: 'bold', textAlign: 'center' }}>Current: ₱{remittanceData.cashOnHand.toFixed(2)}</p>
+              <p style={{ fontSize: '18px', color: '#d9534f', marginTop: '8px', fontWeight: 'bold', textAlign: 'center' }}>Current: {remittanceData.cashOnHand.toFixed(2)}</p>
             </div>
             <button onClick={() => setShowRemittancePopup(false)} style={{ width: '100%', padding: '12px', backgroundColor: '#6c757d', color: 'white', border: '2px solid #495057', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}>I Understand</button>
           </div>
