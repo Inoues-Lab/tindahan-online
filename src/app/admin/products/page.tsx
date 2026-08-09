@@ -50,12 +50,11 @@ export default function AdminProductsPage() {
     }
   }
 
-   const fetchProducts = async () => {
+  const fetchProducts = async () => {
     try {
       const res = await fetch('/api/products')
       const data = await res.json()
       if (res.ok) {
-        // The API returns { products: [...] }, so we extract the array
         setProducts(data.products || [])
       }
     } catch (error) {
@@ -63,7 +62,6 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false)
     }
-  }
   }
 
   const openAddModal = () => {
@@ -168,7 +166,7 @@ export default function AdminProductsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
-               Product Management
+              Product Management
             </h1>
             <p style={{ fontSize: '16px', color: 'gray' }}>
               Manage your inventory ({products.length} products)
@@ -188,7 +186,7 @@ export default function AdminProductsPage() {
               whiteSpace: 'nowrap'
             }}
           >
-            ➕ Add New Product
+            Add New Product
           </button>
         </div>
 
@@ -197,7 +195,7 @@ export default function AdminProductsPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="🔍 Search products..."
+            placeholder="Search products..."
             style={{
               width: '100%',
               padding: '12px 15px',
@@ -291,7 +289,7 @@ export default function AdminProductsPage() {
                             marginRight: '8px'
                           }}
                         >
-                          ✏️ Edit
+                          Edit
                         </button>
                         <button
                           onClick={() => handleDelete(product.id)}
@@ -306,7 +304,7 @@ export default function AdminProductsPage() {
                             fontSize: '12px'
                           }}
                         >
-                          🗑️ Delete
+                          Delete
                         </button>
                       </td>
                     </tr>
@@ -323,7 +321,7 @@ export default function AdminProductsPage() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid black', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-              {editingProduct ? '✏️ Edit Product' : '➕ Add New Product'}
+              {editingProduct ? 'Edit Product' : 'Add New Product'}
             </h2>
 
             <form onSubmit={handleSubmit}>
@@ -417,7 +415,7 @@ export default function AdminProductsPage() {
                     fontSize: '16px'
                   }}
                 >
-                  {editingProduct ? '💾 Update Product' : '✅ Add Product'}
+                  {editingProduct ? 'Update Product' : 'Add Product'}
                 </button>
                 <button
                   type="button"
@@ -434,7 +432,7 @@ export default function AdminProductsPage() {
                     fontSize: '16px'
                   }}
                 >
-                  ❌ Cancel
+                  Cancel
                 </button>
               </div>
             </form>
