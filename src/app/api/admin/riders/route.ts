@@ -12,13 +12,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Just find many, no include needed for basic fields
     const riders = await prisma.user.findMany({
-      where: { role: 'RIDER' },
-      include: {
-        phone: true,
-        cashOnHand: true,
-        createdAt: true
-      }
+      where: { role: 'RIDER' }
     })
 
     return NextResponse.json({ riders })
