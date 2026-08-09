@@ -1,0 +1,35 @@
+{
+  "name": "Tindahan Online Rider",
+  "short_name": "Tindahan Rider",
+  "description": "Delivery rider app for Tindahan Online - Accept deliveries and earn money",
+  "start_url": "/rider",
+  "display": "standalone",
+  "background_color": "#f9f9f9",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "shopping"],
+  "shortcuts": [
+    {
+      "name": "View Orders",
+      "short_name": "Orders",
+      "description": "View available orders",
+      "url": "/rider",
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+    }
+  ]
+}

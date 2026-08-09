@@ -1,3 +1,7 @@
+import PWAInstall from '@/app/pwa-install'
+
+// Then add it before closing </main> tag:
+// <PWAInstall />
 // src/app/rider/page.tsx
 'use client'
 
