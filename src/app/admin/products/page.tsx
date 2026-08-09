@@ -50,18 +50,20 @@ export default function AdminProductsPage() {
     }
   }
 
-  const fetchProducts = async () => {
+   const fetchProducts = async () => {
     try {
       const res = await fetch('/api/products')
       const data = await res.json()
       if (res.ok) {
-        setProducts(data)
+        // The API returns { products: [...] }, so we extract the array
+        setProducts(data.products || [])
       }
     } catch (error) {
       console.error('Error fetching products:', error)
     } finally {
       setLoading(false)
     }
+  }
   }
 
   const openAddModal = () => {
@@ -145,10 +147,10 @@ export default function AdminProductsPage() {
     }
   }
 
-  const filteredProducts = products.filter(product =>
+  const filteredProducts = Array.isArray(products) ? products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ) : []
 
   if (loading) {
     return (
