@@ -178,6 +178,23 @@ export default function AdminDashboard() {
           >
             💸 Process Remittances
           </button>
+                    <button
+            onClick={() => router.push('/admin/merchants')}
+            style={{
+              padding: '20px',
+              backgroundColor: '#ffc107', // Yellow/Gold for merchants
+              color: 'black',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              fontSize: '18px',
+              boxShadow: '4px 4px 0px black',
+              gridColumn: '1 / -1' // Make it full width
+            }}
+          >
+            🏪 Manage Merchants
+          </button>
         </div>
       </div>
     </main>
