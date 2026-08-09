@@ -9,53 +9,41 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { email, password } = body
 
-    console.log('Login attempt for:', email)
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Missing email or password' }, { status: 400 })
+    }
 
-    // Find user
     const user = await prisma.user.findUnique({
       where: { email }
     })
 
     if (!user) {
-      console.log('User not found')
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    // Check password
-    const isValidPassword = await bcrypt.compare(password, user.passwordHash)
+    const isValid = await bcrypt.compare(password, user.password)
 
-    if (!isValidPassword) {
-      console.log('Invalid password')
+    if (!isValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    // Set cookies
     const cookieStore = await cookies()
-    
-    console.log('Setting cookies for user:', user.id, 'role:', user.role)
-    
     cookieStore.set('userId', user.id, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      sameSite: 'lax'
     })
-    
     cookieStore.set('userRole', user.role, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+      sameSite: 'lax'
     })
-
-    console.log('Cookies set successfully')
 
     return NextResponse.json({
-      success: true,
       user: {
         id: user.id,
-        email: user.email,
         name: user.name,
+        email: user.email,
         role: user.role
       }
     })
