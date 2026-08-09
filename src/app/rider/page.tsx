@@ -15,7 +15,6 @@ export default function RiderDashboard() {
   const [todayEarnings, setTodayEarnings] = useState(0)
   const [error, setError] = useState('')
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default')
-  const [audioUnlocked, setAudioUnlocked] = useState(false)
   
   const [showRemittancePopup, setShowRemittancePopup] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
@@ -35,11 +34,20 @@ export default function RiderDashboard() {
 
   const REMITTANCE_LIMIT = 20000
 
-  // Initialize notification sound
+  // Initialize notification sound with base64 fallback
   useEffect(() => {
-    notificationSoundRef.current = new Audio('/notification-sound.wav')
-    notificationSoundRef.current.volume = 1.0
-    notificationSoundRef.current.preload = 'auto'
+    // Try to load the wav file, fallback to base64 beep
+    const audio = new Audio('/notification-sound.wav')
+    audio.volume = 1.0
+    audio.preload = 'auto'
+    
+    // If the file fails to load, use base64 beep
+    audio.onerror = () => {
+      console.log('WAV file failed, using base64 beep')
+      notificationSoundRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGS57OihUBELTKXh8bllHAU2j9Xvz3kpBSh+zPDajzsKFFqz6OyrWBUIQ5zd8sFuJAUuhM/z2oc2CBhku+zoo1ER')
+    }
+    
+    notificationSoundRef.current = audio
     
     return () => {
       if (notificationSoundRef.current) {
@@ -48,32 +56,25 @@ export default function RiderDashboard() {
     }
   }, [])
 
-  // Unlock audio on first user interaction
-  const unlockAudio = () => {
-    if (!audioUnlocked && notificationSoundRef.current) {
+  // Test sound function
+  const testSound = () => {
+    if (notificationSoundRef.current) {
       const audio = notificationSoundRef.current
+      audio.currentTime = 0
+      audio.volume = 1.0
       audio.play().then(() => {
-        audio.pause()
-        audio.currentTime = 0
-        setAudioUnlocked(true)
-      }).catch(() => {
-        // Ignore if it fails
+        console.log('✅ Sound played successfully!')
+        alert(' Sound is working! You should hear a beep.')
+      }).catch(err => {
+        console.error('❌ Sound failed:', err)
+        alert('❌ Sound failed. Please check your browser settings.')
       })
     }
   }
 
   useEffect(() => {
     checkAuth()
-    
-    // Add click listener to unlock audio
-    document.addEventListener('click', unlockAudio, { once: true })
-    document.addEventListener('touchstart', unlockAudio, { once: true })
-    
-    return () => {
-      document.removeEventListener('click', unlockAudio)
-      document.removeEventListener('touchstart', unlockAudio)
-    }
-  }, [router, audioUnlocked])
+  }, [router])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -88,17 +89,17 @@ export default function RiderDashboard() {
       const permission = await Notification.requestPermission()
       setNotificationPermission(permission)
       if (permission === 'granted') {
-        unlockAudio()
-        alert('Notifications enabled! You will hear a sound and feel vibration when new orders arrive.')
+        alert('Notifications enabled!')
       }
     }
   }
 
   const playNotificationSound = () => {
-    if (notificationSoundRef.current && audioUnlocked) {
-      notificationSoundRef.current.currentTime = 0
-      notificationSoundRef.current.volume = 1.0
-      notificationSoundRef.current.play().catch(err => {
+    if (notificationSoundRef.current) {
+      const audio = notificationSoundRef.current
+      audio.currentTime = 0
+      audio.volume = 1.0
+      audio.play().catch(err => {
         console.log('Sound play failed:', err)
       })
     }
@@ -383,30 +384,49 @@ export default function RiderDashboard() {
             Accept deliveries and earn money
           </p>
           
-          {notificationPermission !== 'granted' && (
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {notificationPermission !== 'granted' && (
+              <button
+                onClick={requestNotificationPermission}
+                style={{
+                  padding: '12px 20px',
+                  backgroundColor: notificationPermission === 'denied' ? '#dc3545' : '#007bff',
+                  color: 'white',
+                  border: '2px solid black',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  boxShadow: '3px 3px 0px black',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                🔔 {notificationPermission === 'denied' ? 'Enable Notifications' : 'Allow Notifications'}
+              </button>
+            )}
+            
             <button
-              onClick={requestNotificationPermission}
+              onClick={testSound}
               style={{
                 padding: '12px 20px',
-                backgroundColor: notificationPermission === 'denied' ? '#dc3545' : '#007bff',
+                backgroundColor: '#28a745',
                 color: 'white',
                 border: '2px solid black',
                 borderRadius: '8px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 fontSize: '14px',
-                width: '100%',
-                maxWidth: '300px',
                 boxShadow: '3px 3px 0px black',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
                 gap: '8px'
               }}
             >
-              🔔 {notificationPermission === 'denied' ? 'Enable Notifications' : 'Allow Notifications'}
+              🔊 Test Sound
             </button>
-          )}
+          </div>
         </div>
 
         {error && (
@@ -649,7 +669,7 @@ export default function RiderDashboard() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid #28a745', maxWidth: '500px', width: '100%' }}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '10px' }}></div>
+              <div style={{ fontSize: '48px', marginBottom: '10px' }}>📱</div>
               <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#28a745', marginBottom: '10px' }}>Contact Admin</h2>
             </div>
             <textarea value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} placeholder="Enter message..." style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #ddd', fontSize: '14px', minHeight: '100px', marginBottom: '15px', boxSizing: 'border-box' }} />
@@ -667,7 +687,7 @@ export default function RiderDashboard() {
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>📸 Proof of Delivery</h2>
             <p style={{ fontSize: '12px', marginBottom: '15px', textAlign: 'center', color: 'gray' }}>Order #{selectedOrder?.id.slice(0, 8).toUpperCase()}</p>
             <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelect} style={{ display: 'none' }} />
-            <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '12px', backgroundColor: photoFile ? '#e8f5e9' : '#f0f0f0', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', marginBottom: '15px' }}>{photoFile ? '✅ Photo Selected' : '📷 Take Photo'}</button>
+            <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '12px', backgroundColor: photoFile ? '#e8f5e9' : '#f0f0f0', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', marginBottom: '15px' }}>{photoFile ? '✅ Photo Selected' : ' Take Photo'}</button>
             {photoPreview && (<img src={photoPreview} alt="Proof" style={{ width: '100%', borderRadius: '8px', border: '2px solid black', marginBottom: '15px' }} />)}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowPhotoModal(false)} style={{ flex: 1, padding: '12px', backgroundColor: 'gray', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>Cancel</button>
