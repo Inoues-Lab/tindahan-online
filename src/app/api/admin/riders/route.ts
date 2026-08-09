@@ -17,12 +17,50 @@ export async function GET() {
     }
 
     const riders = await prisma.user.findMany({
-      where: { role: 'RIDER' }
+      where: { role: 'RIDER' },
+      include: { riderProfile: true },
+      orderBy: { createdAt: 'desc' }
     })
 
     return NextResponse.json({ riders })
   } catch (error) {
-    console.error('Error fetching riders:', error)
+    console.error('Error:', error)
     return NextResponse.json({ error: 'Failed to fetch riders' }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { userId: riderId, action } = body
+
+    if (!riderId || !action) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    await prisma.riderProfile.update({
+      where: { userId: riderId },
+      data: { status: action }
+    })
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `Rider ${action.toLowerCase()} successfully!` 
+    })
+  } catch (error) {
+    console.error('Error:', error)
+    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 })
   }
 }
