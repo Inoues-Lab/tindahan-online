@@ -1,4 +1,3 @@
-// src/app/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -11,7 +10,7 @@ interface Product {
   description: string
   price: number
   stock: number
-  imageUrl: string
+  imageUrl?: string
   weightKg: number
 }
 
@@ -20,46 +19,40 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [cart, setCart] = useState<any[]>([])
-  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => setUser(data.user))
-      .catch(() => setUser(null))
-  }, [])
+  const [error, setError] = useState('')
 
   useEffect(() => {
     fetchProducts()
-    fetchCart()
   }, [])
 
   const fetchProducts = async () => {
     try {
       const res = await fetch('/api/products')
       const data = await res.json()
+      
       if (res.ok) {
-        setProducts(data)
-        setFilteredProducts(data)
+        // Handle different response formats
+        let productsArray = []
+        if (Array.isArray(data)) {
+          productsArray = data
+        } else if (data.products && Array.isArray(data.products)) {
+          productsArray = data.products
+        } else if (data.items && Array.isArray(data.items)) {
+          productsArray = data.items
+        }
+        
+        setProducts(productsArray)
+        setFilteredProducts(productsArray)
+        setError('')
+      } else {
+        setError(data.error || 'Failed to load products')
       }
     } catch (error) {
       console.error('Error fetching products:', error)
+      setError('Failed to load products')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchCart = async () => {
-    try {
-      const res = await fetch('/api/cart')
-      const data = await res.json()
-      if (res.ok) {
-        setCart(data.items || [])
-      }
-    } catch (error) {
-      console.error('Error fetching cart:', error)
     }
   }
 
@@ -88,7 +81,6 @@ export default function HomePage() {
       
       if (res.ok) {
         alert('Added to cart!')
-        fetchCart()
       } else {
         const data = await res.json()
         alert(data.error || 'Failed to add to cart')
@@ -103,7 +95,7 @@ export default function HomePage() {
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
         <Header />
         <div style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <p>Loading...</p>
+          <p>Loading products...</p>
         </div>
       </main>
     )
@@ -121,6 +113,18 @@ export default function HomePage() {
             Delivered to your door within the day
           </p>
         </div>
+
+        {error && (
+          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px' }}>
+            <strong style={{ color: 'red' }}>Error:</strong> {error}
+            <button 
+              onClick={fetchProducts}
+              style={{ marginLeft: '10px', padding: '5px 10px', backgroundColor: 'blue', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         <div style={{ marginBottom: '20px' }}>
           <input
@@ -142,7 +146,9 @@ export default function HomePage() {
 
         {filteredProducts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'white', borderRadius: '12px', border: '3px solid black' }}>
-            <p style={{ fontSize: '18px', color: 'gray' }}>No products found</p>
+            <p style={{ fontSize: '18px', color: 'gray' }}>
+              {error ? 'Failed to load products' : 'No products found'}
+            </p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '15px' }}>
