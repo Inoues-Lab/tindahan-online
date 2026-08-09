@@ -50,9 +50,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    await prisma.riderProfile.update({
+    // Update rider profile status
+    await prisma.riderProfile.upsert({
       where: { userId: riderId },
-      data: { status: action }
+      update: { status: action },
+      create: { userId: riderId, status: action }
     })
 
     return NextResponse.json({ 

@@ -65,7 +65,7 @@ export default function AdminRidersPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
-              🏍️ Manage Riders
+              ️ Manage Riders
             </h1>
             <p style={{ fontSize: '16px', color: 'gray' }}>
               Approve rider applications and verify documents
@@ -93,85 +93,93 @@ export default function AdminRidersPage() {
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '15px' }}>
-            {riders.map((rider) => (
-              <div key={rider.id} style={{ 
-                backgroundColor: 'white', 
-                padding: '20px', 
-                borderRadius: '12px', 
-                border: '3px solid black',
-                boxShadow: rider.riderProfile?.status === 'PENDING' ? '4px 4px 0px black' : 'none'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                      <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{rider.name}</h3>
-                      <span style={{ 
-                        padding: '4px 12px', 
-                        borderRadius: '20px', 
-                        fontSize: '12px', 
-                        fontWeight: 'bold',
-                        backgroundColor: rider.riderProfile?.status === 'APPROVED' ? '#e8f5e9' : rider.riderProfile?.status === 'REJECTED' ? '#fee' : '#fff3cd',
-                        color: rider.riderProfile?.status === 'APPROVED' ? 'green' : rider.riderProfile?.status === 'REJECTED' ? 'red' : '#856404',
-                        border: `1px solid ${rider.riderProfile?.status === 'APPROVED' ? 'green' : rider.riderProfile?.status === 'REJECTED' ? 'red' : '#ffc107'}`
-                      }}>
-                        {rider.riderProfile?.status || 'PENDING'}
-                      </span>
+            {riders.map((rider) => {
+              const riderStatus = rider.riderProfile?.status || 'PENDING'
+              const isPending = riderStatus === 'PENDING' || riderStatus === 'ONLINE'
+              
+              return (
+                <div key={rider.id} style={{ 
+                  backgroundColor: 'white', 
+                  padding: '20px', 
+                  borderRadius: '12px', 
+                  border: '3px solid black',
+                  boxShadow: isPending ? '4px 4px 0px black' : 'none'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                        <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{rider.name}</h3>
+                        <span style={{ 
+                          padding: '4px 12px', 
+                          borderRadius: '20px', 
+                          fontSize: '12px', 
+                          fontWeight: 'bold',
+                          backgroundColor: riderStatus === 'APPROVED' ? '#e8f5e9' : riderStatus === 'REJECTED' ? '#fee' : '#fff3cd',
+                          color: riderStatus === 'APPROVED' ? 'green' : riderStatus === 'REJECTED' ? 'red' : '#856404',
+                          border: `1px solid ${riderStatus === 'APPROVED' ? 'green' : riderStatus === 'REJECTED' ? 'red' : '#ffc107'}`
+                        }}>
+                          {riderStatus}
+                        </span>
+                      </div>
+                      <p style={{ margin: '5px 0', color: 'gray' }}>{rider.email}</p>
+                      <p style={{ margin: '5px 0', color: 'gray' }}>Phone: {rider.phone || 'N/A'}</p>
+                      
+                      {rider.riderProfile && (
+                        <div style={{ marginTop: '15px', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                          {rider.riderProfile.licenseUrl && (
+                            <a href={rider.riderProfile.licenseUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}>📄 View License</a>
+                          )}
+                          {rider.riderProfile.orCrUrl && (
+                            <a href={rider.riderProfile.orCrUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}>📄 View OR/CR</a>
+                          )}
+                          {rider.riderProfile.authLetterUrl && (
+                            <a href={rider.riderProfile.authLetterUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}> View Auth Letter</a>
+                          )}
+                          {!rider.riderProfile.licenseUrl && !rider.riderProfile.orCrUrl && !rider.riderProfile.authLetterUrl && (
+                            <p style={{ color: 'gray', fontSize: '14px' }}>No documents uploaded yet</p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p style={{ margin: '5px 0', color: 'gray' }}>{rider.email}</p>
-                    <p style={{ margin: '5px 0', color: 'gray' }}>Phone: {rider.phone || 'N/A'}</p>
-                    
-                    {rider.riderProfile && (
-                      <div style={{ marginTop: '15px', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                        {rider.riderProfile.licenseUrl && (
-                          <a href={rider.riderProfile.licenseUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}>📄 View License</a>
-                        )}
-                        {rider.riderProfile.orCrUrl && (
-                          <a href={rider.riderProfile.orCrUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}>📄 View OR/CR</a>
-                        )}
-                        {rider.riderProfile.authLetterUrl && (
-                          <a href={rider.riderProfile.authLetterUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}>📄 View Auth Letter</a>
-                        )}
+
+                    {isPending && (
+                      <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                        <button
+                          onClick={() => handleAction(rider.id, 'APPROVE')}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: 'green',
+                            color: 'white',
+                            border: '2px solid black',
+                            borderRadius: '8px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            minWidth: '120px'
+                          }}
+                        >
+                          ✅ Approve
+                        </button>
+                        <button
+                          onClick={() => handleAction(rider.id, 'REJECT')}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: 'red',
+                            color: 'white',
+                            border: '2px solid black',
+                            borderRadius: '8px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            minWidth: '120px'
+                          }}
+                        >
+                          ❌ Reject
+                        </button>
                       </div>
                     )}
                   </div>
-
-                  {rider.riderProfile?.status === 'PENDING' && (
-                    <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                      <button
-                        onClick={() => handleAction(rider.id, 'APPROVE')}
-                        style={{
-                          padding: '10px 20px',
-                          backgroundColor: 'green',
-                          color: 'white',
-                          border: '2px solid black',
-                          borderRadius: '8px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          minWidth: '120px'
-                        }}
-                      >
-                        ✅ Approve
-                      </button>
-                      <button
-                        onClick={() => handleAction(rider.id, 'REJECT')}
-                        style={{
-                          padding: '10px 20px',
-                          backgroundColor: 'red',
-                          color: 'white',
-                          border: '2px solid black',
-                          borderRadius: '8px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          minWidth: '120px'
-                        }}
-                      >
-                        ❌ Reject
-                      </button>
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

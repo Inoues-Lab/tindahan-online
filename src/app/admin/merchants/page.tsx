@@ -56,7 +56,7 @@ export default function AdminMerchantsPage() {
       const data = await res.json()
       if (res.ok) {
         alert(data.message)
-        fetchApplications() // Refresh list
+        fetchApplications()
       } else {
         alert(data.error)
       }
@@ -147,8 +147,21 @@ export default function AdminMerchantsPage() {
                       <strong>Contact:</strong> {app.contactNumber}
                     </p>
                     <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f0f8ff', borderRadius: '8px' }}>
-                      <p style={{ margin: '2px 0', fontSize: '14px' }}><strong>Applicant:</strong> {app.user.name}</p>
-                      <p style={{ margin: '2px 0', fontSize: '14px' }}><strong>Email:</strong> {app.user.email}</p>
+                      <p style={{ margin: '2px 0', fontSize: '14px' }}><strong>Applicant:</strong> {app.user?.name || 'Unknown'}</p>
+                      <p style={{ margin: '2px 0', fontSize: '14px' }}><strong>Email:</strong> {app.user?.email || 'Unknown'}</p>
+                    </div>
+                    
+                    {/* Document Links */}
+                    <div style={{ marginTop: '15px', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                      {app.birUrl && (
+                        <a href={app.birUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}>📄 View BIR</a>
+                      )}
+                      {app.businessPermitUrl && (
+                        <a href={app.businessPermitUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}> View Business Permit</a>
+                      )}
+                      {!app.birUrl && !app.businessPermitUrl && (
+                        <p style={{ color: 'gray', fontSize: '14px' }}>No documents uploaded</p>
+                      )}
                     </div>
                   </div>
 
@@ -182,7 +195,7 @@ export default function AdminMerchantsPage() {
                           minWidth: '120px'
                         }}
                       >
-                        ❌ Reject
+                         Reject
                       </button>
                     </div>
                   )}
