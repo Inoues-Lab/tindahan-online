@@ -123,7 +123,7 @@ export default function AdminDashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
             <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Income</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>₱{incomeData.todayIncome?.toFixed(2) || '0.00'}</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>{incomeData.todayIncome?.toFixed(2) || '0.00'}</p>
               <p style={{ fontSize: '11px', color: 'gray' }}>{incomeData.todayOrders || 0} orders today</p>
             </div>
             <div style={{ padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '2px solid blue' }}>
@@ -133,7 +133,7 @@ export default function AdminDashboard() {
             </div>
             <div style={{ padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Revenue</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'orange' }}>₱{incomeData.todayRevenue?.toFixed(2) || '0.00'}</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'orange' }}>{incomeData.todayRevenue?.toFixed(2) || '0.00'}</p>
               <p style={{ fontSize: '11px', color: 'gray' }}>Gross sales</p>
             </div>
             <div style={{ padding: '15px', backgroundColor: '#f3e5f5', borderRadius: '8px', border: '2px solid purple' }}>
@@ -176,13 +176,13 @@ export default function AdminDashboard() {
               boxShadow: '4px 4px 0px black'
             }}
           >
-            💸 Process Remittances
+             Process Remittances
           </button>
-                    <button
+          <button
             onClick={() => router.push('/admin/merchants')}
             style={{
               padding: '20px',
-              backgroundColor: '#ffc107', // Yellow/Gold for merchants
+              backgroundColor: '#ffc107',
               color: 'black',
               border: '3px solid black',
               borderRadius: '12px',
@@ -190,10 +190,28 @@ export default function AdminDashboard() {
               cursor: 'pointer',
               fontSize: '18px',
               boxShadow: '4px 4px 0px black',
-              gridColumn: '1 / -1' // Make it full width
+              gridColumn: '1 / -1'
             }}
           >
             🏪 Manage Merchants
+          </button>
+          {/* NEW BUTTON: Manage Riders */}
+          <button
+            onClick={() => router.push('/admin/riders')}
+            style={{
+              padding: '20px',
+              backgroundColor: '#17a2b8', // Cyan/Blue for riders
+              color: 'white',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              fontSize: '18px',
+              boxShadow: '4px 4px 0px black',
+              gridColumn: '1 / -1'
+            }}
+          >
+            🏍️ Manage Riders
           </button>
         </div>
       </div>
