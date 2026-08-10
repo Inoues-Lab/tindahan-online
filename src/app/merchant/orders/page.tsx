@@ -6,10 +6,9 @@ import Header from '@/components/Header'
 
 export default function MerchantOrdersPage() {
   const router = useRouter()
+  const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
-  const [orders, setOrders] = useState<any[]>([])
-  const [error, setError] = useState('')
 
   useEffect(() => {
     checkAuth()
@@ -19,12 +18,10 @@ export default function MerchantOrdersPage() {
     try {
       const res = await fetch('/api/auth/me')
       const data = await res.json()
-      
       if (!data.user || data.user.role !== 'MERCHANT') {
         router.push('/')
         return
       }
-      
       setUser(data.user)
       fetchOrders()
     } catch (error) {
@@ -34,18 +31,47 @@ export default function MerchantOrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('/api/orders')
+      const res = await fetch('/api/merchant/orders')
       const data = await res.json()
       if (res.ok) {
-        // For now, show all orders. Later we'll filter by merchant products
         setOrders(data.orders || [])
-      } else {
-        setError(data.error)
       }
     } catch (error) {
-      setError('Failed to load orders')
+      console.error('Error:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    if (!confirm(`Are you sure you want to mark this order as ${newStatus}?`)) return
+
+    try {
+      const res = await fetch('/api/merchant/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status: newStatus })
+      })
+
+      if (res.ok) {
+        alert(`Order marked as ${newStatus}!`)
+        fetchOrders() // Refresh list
+      } else {
+        alert('Failed to update order')
+      }
+    } catch (error) {
+      alert('Error updating order')
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PENDING': return { bg: '#fff3cd', text: '#856404', border: '#ffc107' }
+      case 'CONFIRMED': return { bg: '#d1ecf1', text: '#0c5460', border: '#17a2b8' }
+      case 'PREPARING': return { bg: '#e2e3e5', text: '#383d41', border: '#6c757d' }
+      case 'READY_FOR_PICKUP': return { bg: '#d4edda', text: '#155724', border: '#28a745' }
+      case 'COMPLETED': return { bg: '#d4edda', text: '#155724', border: '#28a745' }
+      default: return { bg: '#f8f9fa', text: '#333', border: '#ddd' }
     }
   }
 
@@ -53,7 +79,7 @@ export default function MerchantOrdersPage() {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
         <Header />
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading orders...</div>
       </main>
     )
   }
@@ -61,99 +87,91 @@ export default function MerchantOrdersPage() {
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <div>
-            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
-               Merchant Orders
-            </h1>
-            <p style={{ fontSize: '16px', color: 'gray' }}>
-              View and manage customer orders
-            </p>
-          </div>
-          <button
-            onClick={() => router.push('/merchant/dashboard')}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: 'gray',
-              color: 'white',
-              border: '2px solid black',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            ← Back
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>📦 Manage Orders</h1>
+          <button onClick={() => router.push('/merchant/dashboard')} style={{ padding: '10px 20px', backgroundColor: 'gray', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+            ← Back to Dashboard
           </button>
         </div>
 
-        {error && (
-          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', color: 'red' }}>
-            {error}
-          </div>
-        )}
-
         {orders.length === 0 ? (
           <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
-            <p style={{ fontSize: '18px', color: 'gray' }}>No orders yet</p>
+            <p style={{ fontSize: '18px', color: 'gray' }}>No orders yet.</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: '15px' }}>
-            {orders.map((order) => (
-              <div key={order.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Order #{order.id.slice(0, 8).toUpperCase()}</h3>
-                      <span style={{ 
-                        padding: '4px 12px', 
-                        borderRadius: '20px', 
-                        fontSize: '12px', 
-                        fontWeight: 'bold',
-                        backgroundColor: order.status === 'COMPLETED' ? '#e8f5e9' : order.status === 'PENDING' ? '#fff3cd' : '#e3f2fd',
-                        color: order.status === 'COMPLETED' ? 'green' : order.status === 'PENDING' ? '#856404' : 'blue',
-                        border: `1px solid ${order.status === 'COMPLETED' ? 'green' : order.status === 'PENDING' ? '#ffc107' : 'blue'}`
-                      }}>
-                        {order.status}
-                      </span>
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {orders.map((order) => {
+              const statusStyle = getStatusColor(order.status)
+              return (
+                <div key={order.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0' }}>Order #{order.id.slice(0, 8).toUpperCase()}</h2>
+                      <p style={{ fontSize: '14px', color: 'gray', margin: 0 }}>{new Date(order.createdAt).toLocaleString()}</p>
                     </div>
-                    <p style={{ margin: '5px 0', color: 'gray', fontSize: '14px' }}>
-                      <strong>Customer:</strong> {order.customer?.name || 'Unknown'}
-                    </p>
-                    <p style={{ margin: '5px 0', color: 'gray', fontSize: '14px' }}>
-                      <strong>Address:</strong> {order.deliveryAddress}
-                    </p>
-                    <p style={{ margin: '5px 0', color: 'gray', fontSize: '14px' }}>
-                      <strong>Contact:</strong> {order.contactNumber}
-                    </p>
-                    <p style={{ margin: '5px 0', color: 'gray', fontSize: '14px' }}>
-                      <strong>Date:</strong> {new Date(order.createdAt).toLocaleDateString()}
-                    </p>
-                    
-                    {order.items && order.items.length > 0 && (
-                      <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                        <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>Items:</p>
-                        {order.items.map((item: any, idx: number) => (
-                          <p key={idx} style={{ margin: '3px 0', fontSize: '14px' }}>
-                            • {item.product?.name || 'Product'} x{item.quantity} - ₱{(item.price * item.quantity).toFixed(2)}
-                          </p>
-                        ))}
+                    <div style={{ 
+                      padding: '6px 12px', 
+                      backgroundColor: statusStyle.bg, 
+                      color: statusStyle.text, 
+                      border: `2px solid ${statusStyle.border}`,
+                      borderRadius: '20px', 
+                      fontWeight: 'bold',
+                      fontSize: '14px'
+                    }}>
+                      {order.status.replace('_', ' ')}
+                    </div>
+                  </div>
+
+                  {/* Customer Info */}
+                  <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '15px', border: '1px solid #ddd' }}>
+                    <p style={{ margin: '5px 0', fontSize: '14px' }}><strong> Address:</strong> {order.deliveryAddress}</p>
+                    <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>📞 Contact:</strong> {order.contactNumber}</p>
+                    <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>💳 Payment:</strong> {order.paymentMethod}</p>
+                  </div>
+
+                  {/* Items */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '10px' }}>Items:</h3>
+                    {order.items.map((item: any, idx: number) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                        <span style={{ fontSize: '14px' }}>{item.product?.name} <span style={{ color: 'gray' }}>(x{item.quantity})</span></span>
+                        <span style={{ fontWeight: 'bold' }}>₱{(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontWeight: 'bold', fontSize: '18px' }}>
+                      <span>Total:</span>
+                      <span style={{ color: 'green' }}>₱{order.totalAmount?.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {order.status === 'PENDING' && (
+                      <button onClick={() => handleStatusUpdate(order.id, 'CONFIRMED')} style={{ flex: 1, padding: '12px', backgroundColor: '#17a2b8', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                        ✅ Confirm Order
+                      </button>
+                    )}
+                    {order.status === 'CONFIRMED' && (
+                      <button onClick={() => handleStatusUpdate(order.id, 'PREPARING')} style={{ flex: 1, padding: '12px', backgroundColor: '#6c757d', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                        🔨 Start Preparing
+                      </button>
+                    )}
+                    {order.status === 'PREPARING' && (
+                      <button onClick={() => handleStatusUpdate(order.id, 'READY_FOR_PICKUP')} style={{ flex: 1, padding: '12px', backgroundColor: '#28a745', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                        📦 Ready for Pickup
+                      </button>
+                    )}
+                    {['READY_FOR_PICKUP', 'COMPLETED', 'CANCELLED'].includes(order.status) && (
+                      <div style={{ padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px', fontWeight: 'bold', textAlign: 'center', width: '100%' }}>
+                        No actions available (Status: {order.status})
                       </div>
                     )}
                   </div>
-                  
-                  <div style={{ textAlign: 'right', minWidth: '150px' }}>
-                    <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Total Amount</p>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green', marginBottom: '10px' }}>
-                      ₱{order.totalAmount?.toFixed(2) || '0.00'}
-                    </p>
-                    <p style={{ fontSize: '12px', color: 'gray' }}>
-                      Payment: {order.paymentMethod || 'COD'}
-                    </p>
-                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
