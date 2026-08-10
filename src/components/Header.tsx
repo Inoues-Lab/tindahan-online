@@ -8,9 +8,9 @@ export default function Header() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [cartCount, setCartCount] = useState(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
-    // Fetch user info
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => {
@@ -18,7 +18,6 @@ export default function Header() {
       })
       .catch(() => {})
 
-    // Fetch cart count
     fetch('/api/cart')
       .then(res => res.json())
       .then(data => {
@@ -39,81 +38,246 @@ export default function Header() {
   return (
     <header style={{ 
       backgroundColor: 'white', 
-      padding: '15px 30px', 
-      borderBottom: '2px solid black', 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center',
+      borderBottom: '2px solid black',
       position: 'sticky',
       top: 0,
-      zIndex: 100
+      zIndex: 1000,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
     }}>
-      <Link href="/" style={{ fontSize: '24px', fontWeight: 'bold', textDecoration: 'none', color: 'black' }}>
-        🛒 Tindahan Online
-      </Link>
+      <div style={{ 
+        maxWidth: '1200px', 
+        margin: '0 auto', 
+        padding: '12px 16px',
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center'
+      }}>
+        <Link href="/" style={{ 
+          fontSize: '20px', 
+          fontWeight: 'bold', 
+          textDecoration: 'none', 
+          color: 'black',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          🛒 Tindahan
+        </Link>
 
-      <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        {/* Desktop Navigation */}
+        <nav style={{ 
+          display: { xs: 'none', md: 'flex' },
+          gap: '16px', 
+          alignItems: 'center',
+          '@media (max-width: 768px)': {
+            display: 'none'
+          }
+        }}>
+          {user && (
+            <>
+              <Link href="/cart" style={{ 
+                textDecoration: 'none', 
+                color: 'black', 
+                fontWeight: 'bold',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                Cart 
+                {cartCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-12px',
+                    backgroundColor: 'red',
+                    color: 'white',
+                    borderRadius: '50%',
+                    padding: '2px 6px',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    border: '1px solid black',
+                    minWidth: '18px',
+                    textAlign: 'center'
+                  }}>
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+              
+              <Link href="/orders" style={{ 
+                textDecoration: 'none', 
+                color: 'black', 
+                fontWeight: 'bold',
+                fontSize: '14px'
+              }}>
+                📦 Orders
+              </Link>
+              
+              <Link href="/products" style={{ 
+                textDecoration: 'none', 
+                color: 'black', 
+                fontWeight: 'bold',
+                fontSize: '14px'
+              }}>
+                🛍️ Shop
+              </Link>
+
+              <button 
+                onClick={handleLogout}
+                style={{ 
+                  padding: '8px 16px', 
+                  backgroundColor: 'red', 
+                  color: 'white', 
+                  border: '2px solid black', 
+                  borderRadius: '8px', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Logout
+              </button>
+            </>
+          )}
+
+          {!user && (
+            <Link href="/login" style={{ 
+              padding: '8px 16px', 
+              backgroundColor: 'blue', 
+              color: 'white', 
+              borderRadius: '8px', 
+              textDecoration: 'none', 
+              fontWeight: 'bold',
+              fontSize: '14px',
+              border: '2px solid black'
+            }}>
+              Login
+            </Link>
+          )}
+        </nav>
+
+        {/* Mobile Menu Button */}
         {user && (
-          <>
-            <Link href="/cart" style={{ textDecoration: 'none', color: 'black', fontWeight: 'bold', position: 'relative' }}>
-              Cart 
+          <button 
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            style={{
+              display: 'none',
+              '@media (max-width: 768px)': {
+                display: 'block'
+              },
+              background: 'none',
+              border: '2px solid black',
+              borderRadius: '8px',
+              padding: '8px 12px',
+              cursor: 'pointer',
+              fontSize: '20px'
+            }}
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
+        )}
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && user && (
+        <div style={{
+          display: 'none',
+          '@media (max-width: 768px)': {
+            display: 'block'
+          },
+          backgroundColor: '#f9f9f9',
+          borderTop: '2px solid black',
+          padding: '16px'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Link 
+              href="/cart" 
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ 
+                textDecoration: 'none', 
+                color: 'black', 
+                fontWeight: 'bold',
+                padding: '12px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '2px solid black',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <span>🛒 Cart</span>
               {cartCount > 0 && (
                 <span style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  right: '-15px',
                   backgroundColor: 'red',
                   color: 'white',
                   borderRadius: '50%',
-                  padding: '2px 6px',
-                  fontSize: '12px',
+                  padding: '4px 10px',
+                  fontSize: '14px',
                   fontWeight: 'bold',
-                  border: '1px solid black'
+                  border: '1px solid black',
+                  minWidth: '24px',
+                  textAlign: 'center'
                 }}>
                   {cartCount}
                 </span>
               )}
             </Link>
             
-            <Link href="/orders" style={{ textDecoration: 'none', color: 'black', fontWeight: 'bold' }}>
-              My Orders 📦
+            <Link 
+              href="/orders" 
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ 
+                textDecoration: 'none', 
+                color: 'black', 
+                fontWeight: 'bold',
+                padding: '12px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '2px solid black'
+              }}
+            >
+              📦 My Orders
             </Link>
             
-            <Link href="/products" style={{ textDecoration: 'none', color: 'black', fontWeight: 'bold' }}>
-              Shop
+            <Link 
+              href="/products" 
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ 
+                textDecoration: 'none', 
+                color: 'black', 
+                fontWeight: 'bold',
+                padding: '12px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '2px solid black'
+              }}
+            >
+              🛍️ Shop Products
             </Link>
 
-            {/* Keep your custom buttons if you have them */}
-            <Link href="/pabili" style={{ padding: '8px 16px', backgroundColor: '#ffc107', color: 'black', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold', border: '2px solid black' }}>
-              PABILI
-            </Link>
-            <Link href="/padala" style={{ padding: '8px 16px', backgroundColor: '#17a2b8', color: 'white', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold', border: '2px solid black' }}>
-              PADALA
-            </Link>
-          </>
-        )}
-
-        {user ? (
-          <button 
-            onClick={handleLogout}
-            style={{ 
-              padding: '8px 16px', 
-              backgroundColor: 'red', 
-              color: 'white', 
-              border: '2px solid black', 
-              borderRadius: '8px', 
-              fontWeight: 'bold', 
-              cursor: 'pointer' 
-            }}
-          >
-            Logout
-          </button>
-        ) : (
-          <Link href="/login" style={{ padding: '8px 16px', backgroundColor: 'blue', color: 'white', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold', border: '2px solid black' }}>
-            Login
-          </Link>
-        )}
-      </nav>
+            <button 
+              onClick={() => {
+                handleLogout()
+                setMobileMenuOpen(false)
+              }}
+              style={{ 
+                padding: '12px', 
+                backgroundColor: 'red', 
+                color: 'white', 
+                border: '2px solid black', 
+                borderRadius: '8px', 
+                fontWeight: 'bold', 
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   )
 }
