@@ -16,8 +16,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Merchant access required' }, { status: 403 })
     }
 
-    // Ensure merchant profile exists
-    await prisma.merchantProfile.upsert({
+    // 1. Get or create the merchant profile
+    const merchantProfile = await prisma.merchantProfile.upsert({
       where: { userId },
       update: {},
       create: {
@@ -28,8 +28,9 @@ export async function GET() {
       }
     })
 
+    // 2. Use merchantProfile.id, NOT userId!
     const products = await prisma.product.findMany({
-      where: { merchantId: userId },
+      where: { merchantId: merchantProfile.id },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -57,14 +58,12 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, description, price, stock, weightKg, imageUrl } = body
 
-    console.log('Creating product with data:', { name, price, stock, merchantId: userId })
-
     if (!name || price === undefined || stock === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Ensure merchant profile exists before creating product
-    await prisma.merchantProfile.upsert({
+    // 1. Get or create the merchant profile
+    const merchantProfile = await prisma.merchantProfile.upsert({
       where: { userId },
       update: {},
       create: {
@@ -75,6 +74,9 @@ export async function POST(request: Request) {
       }
     })
 
+    console.log('🚀 SUPER FORCE DEPLOYMENT: Merchant Profile ID is', merchantProfile.id)
+
+    // 2. Use merchantProfile.id, NOT userId!
     const product = await prisma.product.create({
       data: {
         name,
@@ -83,11 +85,11 @@ export async function POST(request: Request) {
         stock: parseInt(stock),
         weightKg: parseFloat(weightKg) || 1.0,
         imageUrl: imageUrl || null,
-        merchantId: userId
+        merchantId: merchantProfile.id 
       }
     })
 
-    console.log('Product created:', product)
+    console.log('Product created successfully:', product.id)
     return NextResponse.json({ success: true, product })
   } catch (error) {
     console.error('POST Error:', error)
@@ -112,6 +114,11 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Merchant access required' }, { status: 403 })
     }
 
+    const merchantProfile = await prisma.merchantProfile.findUnique({ where: { userId } })
+    if (!merchantProfile) {
+      return NextResponse.json({ error: 'Merchant profile not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { id, name, description, price, stock, weightKg, imageUrl } = body
 
@@ -120,7 +127,7 @@ export async function PUT(request: Request) {
     }
 
     const existingProduct = await prisma.product.findUnique({ where: { id } })
-    if (!existingProduct || existingProduct.merchantId !== userId) {
+    if (!existingProduct || existingProduct.merchantId !== merchantProfile.id) {
       return NextResponse.json({ error: 'Product not found or not yours' }, { status: 404 })
     }
 
@@ -157,6 +164,11 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Merchant access required' }, { status: 403 })
     }
 
+    const merchantProfile = await prisma.merchantProfile.findUnique({ where: { userId } })
+    if (!merchantProfile) {
+      return NextResponse.json({ error: 'Merchant profile not found' }, { status: 404 })
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -165,7 +177,7 @@ export async function DELETE(request: Request) {
     }
 
     const existingProduct = await prisma.product.findUnique({ where: { id } })
-    if (!existingProduct || existingProduct.merchantId !== userId) {
+    if (!existingProduct || existingProduct.merchantId !== merchantProfile.id) {
       return NextResponse.json({ error: 'Product not found or not yours' }, { status: 404 })
     }
 
