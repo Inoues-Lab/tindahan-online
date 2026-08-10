@@ -23,8 +23,8 @@ export async function GET() {
 
     return NextResponse.json({ products })
   } catch (error) {
-    console.error('Error:', error)
-    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
+    console.error('GET Error:', error)
+    return NextResponse.json({ error: 'Failed to fetch products', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 })
   }
 }
 
@@ -45,7 +45,9 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, description, price, stock, weightKg, imageUrl } = body
 
-    if (!name || !price || stock === undefined) {
+    console.log('Creating product with data:', { name, price, stock, merchantId: userId })
+
+    if (!name || price === undefined || stock === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -61,10 +63,15 @@ export async function POST(request: Request) {
       }
     })
 
+    console.log('Product created:', product)
     return NextResponse.json({ success: true, product })
   } catch (error) {
-    console.error('Error:', error)
-    return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
+    console.error('POST Error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to create product', 
+      details: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    }, { status: 500 })
   }
 }
 
@@ -89,7 +96,6 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
     }
 
-    // Verify product belongs to this merchant
     const existingProduct = await prisma.product.findUnique({ where: { id } })
     if (!existingProduct || existingProduct.merchantId !== userId) {
       return NextResponse.json({ error: 'Product not found or not yours' }, { status: 404 })
@@ -109,8 +115,8 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true, product })
   } catch (error) {
-    console.error('Error:', error)
-    return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
+    console.error('PUT Error:', error)
+    return NextResponse.json({ error: 'Failed to update product', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 })
   }
 }
 
@@ -135,7 +141,6 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
     }
 
-    // Verify product belongs to this merchant
     const existingProduct = await prisma.product.findUnique({ where: { id } })
     if (!existingProduct || existingProduct.merchantId !== userId) {
       return NextResponse.json({ error: 'Product not found or not yours' }, { status: 404 })
@@ -145,7 +150,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error:', error)
-    return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 })
+    console.error('DELETE Error:', error)
+    return NextResponse.json({ error: 'Failed to delete product', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 })
   }
 }
