@@ -15,36 +15,42 @@ export default function HomePage() {
       .then(data => {
         if (data.user) {
           setUser(data.user)
+          
+          // SMART REDIRECT: If Merchant, go to Dashboard immediately
+          if (data.user.role === 'MERCHANT') {
+            router.push('/merchant/dashboard')
+          } 
+          // If Admin, go to Admin Dashboard (if you have one)
+          else if (data.user.role === 'ADMIN') {
+             // router.push('/admin') 
+          }
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [router])
 
-  const handleMerchantClick = () => {
-    if (user) {
-      // User is logged in - go straight to apply
-      router.push('/merchant/apply')
-    } else {
-      // User is NOT logged in - go to register first
-      router.push('/register?role=MERCHANT')
-    }
+  const handleShopClick = () => {
+    if (user) router.push('/products')
+    else router.push('/register?role=CUSTOMER')
   }
 
   const handleRiderClick = () => {
-    if (user) {
-      router.push('/rider/apply')
-    } else {
-      router.push('/register?role=RIDER')
-    }
+    if (user) router.push('/rider/apply') // or rider dashboard
+    else router.push('/register?role=RIDER')
   }
 
-  const handleShopClick = () => {
-    if (user) {
-      router.push('/products')
-    } else {
-      router.push('/register?role=CUSTOMER')
-    }
+  const handleMerchantClick = () => {
+    if (user) router.push('/merchant/apply')
+    else router.push('/register?role=MERCHANT')
+  }
+
+  if (loading) {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <div style={{ textAlign: 'center', padding: '100px' }}>Loading...</div>
+      </main>
+    )
   }
 
   return (
@@ -65,89 +71,36 @@ export default function HomePage() {
         </p>
         
         <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button
-            onClick={handleShopClick}
-            style={{
-              padding: '20px 40px',
-              backgroundColor: 'white',
-              color: '#667eea',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              fontSize: '20px',
-              cursor: 'pointer',
-              boxShadow: '4px 4px 0px black'
-            }}
-          >
+          <button onClick={handleShopClick} style={{ padding: '20px 40px', backgroundColor: 'white', color: '#667eea', border: '3px solid black', borderRadius: '12px', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer', boxShadow: '4px 4px 0px black' }}>
             🛒 Shop Now
           </button>
           
-          <button
-            onClick={handleRiderClick}
-            style={{
-              padding: '20px 40px',
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              fontSize: '20px',
-              cursor: 'pointer',
-              boxShadow: '4px 4px 0px black'
-            }}
-          >
+          <button onClick={handleRiderClick} style={{ padding: '20px 40px', backgroundColor: '#28a745', color: 'white', border: '3px solid black', borderRadius: '12px', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer', boxShadow: '4px 4px 0px black' }}>
             🏍️ Become a Rider
           </button>
           
-          <button
-            onClick={handleMerchantClick}
-            style={{
-              padding: '20px 40px',
-              backgroundColor: '#ffc107',
-              color: 'black',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              fontSize: '20px',
-              cursor: 'pointer',
-              boxShadow: '4px 4px 0px black'
-            }}
-          >
+          <button onClick={handleMerchantClick} style={{ padding: '20px 40px', backgroundColor: '#ffc107', color: 'black', border: '3px solid black', borderRadius: '12px', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer', boxShadow: '4px 4px 0px black' }}>
             🏪 Partner Merchant
           </button>
         </div>
       </div>
 
       <div style={{ padding: '60px 20px', maxWidth: '1200px', margin: '0 auto' }}>
-        <h2 style={{ fontSize: '36px', fontWeight: 'bold', textAlign: 'center', marginBottom: '50px' }}>
-          Why Choose Tindahan Online?
-        </h2>
-        
+        <h2 style={{ fontSize: '36px', fontWeight: 'bold', textAlign: 'center', marginBottom: '50px' }}>Why Choose Tindahan Online?</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
             <div style={{ fontSize: '60px', marginBottom: '20px' }}></div>
             <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Same-Day Delivery</h3>
-            <p style={{ color: 'gray', fontSize: '16px' }}>Order before 2 PM and get your groceries delivered the same day!</p>
           </div>
-
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
             <div style={{ fontSize: '60px', marginBottom: '20px' }}>💰</div>
             <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Best Prices</h3>
-            <p style={{ color: 'gray', fontSize: '16px' }}>Competitive prices with transparent pricing. No hidden fees!</p>
           </div>
-
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
             <div style={{ fontSize: '60px', marginBottom: '20px' }}>🛡️</div>
             <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Secure & Safe</h3>
-            <p style={{ color: 'gray', fontSize: '16px' }}>Verified riders and merchants. Your safety is our priority!</p>
           </div>
         </div>
-      </div>
-
-      <div style={{ backgroundColor: '#2c3e50', color: 'white', padding: '40px 20px', textAlign: 'center' }}>
-        <p style={{ fontSize: '14px', color: '#95a5a6' }}>
-          © 2024 Tindahan Online. All rights reserved.
-        </p>
       </div>
     </main>
   )
