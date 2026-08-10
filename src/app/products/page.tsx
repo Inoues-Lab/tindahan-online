@@ -71,19 +71,13 @@ export default function ProductsPage() {
       <div style={{ 
         maxWidth: '1200px', 
         margin: '0 auto', 
-        padding: '16px',
-        '@media (min-width: 768px)': {
-          padding: '20px'
-        }
+        padding: '16px'
       }}>
         <div style={{ marginBottom: '24px' }}>
           <h1 style={{ 
             fontSize: '24px', 
             fontWeight: 'bold', 
-            marginBottom: '8px',
-            '@media (min-width: 768px)': {
-              fontSize: '32px'
-            }
+            marginBottom: '8px'
           }}>
             🛒 Shop Products
           </h1>
@@ -123,15 +117,8 @@ export default function ProductsPage() {
         ) : (
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: '1fr',
-            gap: '16px',
-            '@media (min-width: 640px)': {
-              gridTemplateColumns: 'repeat(2, 1fr)'
-            },
-            '@media (min-width: 1024px)': {
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '20px'
-            }
+            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+            gap: '16px'
           }}>
             {filteredProducts.map((product) => (
               <div key={product.id} style={{ 
@@ -167,7 +154,7 @@ export default function ProductsPage() {
                     justifyContent: 'center',
                     fontSize: '48px'
                   }}>
-                    
+                    📦
                   </div>
                 )}
                 
