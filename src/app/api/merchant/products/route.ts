@@ -55,6 +55,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // FIXED: Removed userId because it doesn't exist in the Product model
     const product = await prisma.product.create({
       data: {
         name,
@@ -62,8 +63,7 @@ export async function POST(request: Request) {
         price: parseFloat(price),
         stock: parseInt(stock),
         imageUrl: imageUrl || '',
-        merchantId: merchant.id,
-        userId: userId // Also link to user for backwards compatibility
+        merchantId: merchant.id
       }
     })
 
