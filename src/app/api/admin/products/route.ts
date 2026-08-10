@@ -16,7 +16,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Merchant access required' }, { status: 403 })
     }
 
-    // Ensure merchant profile exists and get its ID
+    // 1. Get or create the merchant profile
     const merchantProfile = await prisma.merchantProfile.upsert({
       where: { userId },
       update: {},
@@ -28,6 +28,7 @@ export async function GET() {
       }
     })
 
+    // 2. Use merchantProfile.id, NOT userId!
     const products = await prisma.product.findMany({
       where: { merchantId: merchantProfile.id },
       orderBy: { createdAt: 'desc' }
@@ -57,13 +58,11 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, description, price, stock, weightKg, imageUrl } = body
 
-    console.log('Creating product with data:', { name, price, stock, userId })
-
     if (!name || price === undefined || stock === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Ensure merchant profile exists and get its actual ID
+    // 1. Get or create the merchant profile
     const merchantProfile = await prisma.merchantProfile.upsert({
       where: { userId },
       update: {},
@@ -75,8 +74,9 @@ export async function POST(request: Request) {
       }
     })
 
-    console.log('Merchant Profile ID:', merchantProfile.id)
+    console.log('Creating product with Merchant Profile ID:', merchantProfile.id)
 
+    // 2. Use merchantProfile.id, NOT userId!
     const product = await prisma.product.create({
       data: {
         name,
@@ -85,11 +85,11 @@ export async function POST(request: Request) {
         stock: parseInt(stock),
         weightKg: parseFloat(weightKg) || 1.0,
         imageUrl: imageUrl || null,
-        merchantId: merchantProfile.id  // Use the profile's ID, not user's ID!
+        merchantId: merchantProfile.id 
       }
     })
 
-    console.log('Product created:', product)
+    console.log('Product created successfully:', product.id)
     return NextResponse.json({ success: true, product })
   } catch (error) {
     console.error('POST Error:', error)
