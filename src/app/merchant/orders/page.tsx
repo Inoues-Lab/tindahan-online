@@ -43,7 +43,6 @@ export default function MerchantOrdersPage() {
     }
   }
 
-  // FIXED: Use the correct status names that exist in your database schema
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     if (!confirm(`Are you sure you want to mark this order as ${newStatus}?`)) return
 
@@ -56,7 +55,7 @@ export default function MerchantOrdersPage() {
 
       if (res.ok) {
         alert(`Order updated to ${newStatus}!`)
-        fetchOrders() // Refresh list
+        fetchOrders()
       } else {
         const data = await res.json()
         alert(data.error || 'Failed to update order')
@@ -71,6 +70,9 @@ export default function MerchantOrdersPage() {
       case 'PENDING': return { bg: '#fff3cd', text: '#856404', border: '#ffc107' }
       case 'ACCEPTED': return { bg: '#d1ecf1', text: '#0c5460', border: '#17a2b8' }
       case 'IN_PROGRESS': return { bg: '#e2e3e5', text: '#383d41', border: '#6c757d' }
+      case 'READY_FOR_PICKUP': return { bg: '#fff3cd', text: '#856404', border: '#ffc107' }
+      case 'OUT_FOR_DELIVERY': return { bg: '#d1ecf1', text: '#0c5460', border: '#17a2b8' }
+      case 'DELIVERED': return { bg: '#d4edda', text: '#155724', border: '#28a745' }
       case 'COMPLETED': return { bg: '#d4edda', text: '#155724', border: '#28a745' }
       case 'CANCELLED': return { bg: '#f8d7da', text: '#721c24', border: '#dc3545' }
       default: return { bg: '#f8f9fa', text: '#333', border: '#ddd' }
@@ -107,7 +109,6 @@ export default function MerchantOrdersPage() {
               const statusStyle = getStatusColor(order.status)
               return (
                 <div key={order.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-                  {/* Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
                       <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0' }}>Order #{order.id.slice(0, 8).toUpperCase()}</h2>
@@ -126,14 +127,12 @@ export default function MerchantOrdersPage() {
                     </div>
                   </div>
 
-                  {/* Customer Info */}
                   <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '15px', border: '1px solid #ddd' }}>
                     <p style={{ margin: '5px 0', fontSize: '14px' }}><strong> Address:</strong> {order.deliveryAddress}</p>
                     <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>📞 Contact:</strong> {order.contactNumber}</p>
                     <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>💳 Payment:</strong> {order.paymentMethod}</p>
                   </div>
 
-                  {/* Items */}
                   <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '10px' }}>Items:</h3>
                     {order.items.map((item: any, idx: number) => (
@@ -148,7 +147,6 @@ export default function MerchantOrdersPage() {
                     </div>
                   </div>
 
-                  {/* Action Buttons - FIXED TO USE CORRECT STATUS NAMES */}
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     {order.status === 'PENDING' && (
                       <button onClick={() => handleStatusUpdate(order.id, 'ACCEPTED')} style={{ flex: 1, padding: '12px', backgroundColor: '#17a2b8', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
@@ -163,14 +161,14 @@ export default function MerchantOrdersPage() {
                     )}
                     
                     {order.status === 'IN_PROGRESS' && (
-                      <button onClick={() => handleStatusUpdate(order.id, 'COMPLETED')} style={{ flex: 1, padding: '12px', backgroundColor: '#28a745', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                        📦 Mark as Completed
+                      <button onClick={() => handleStatusUpdate(order.id, 'READY_FOR_PICKUP')} style={{ flex: 1, padding: '12px', backgroundColor: '#ffc107', color: 'black', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                        📦 Mark as Ready for Pickup
                       </button>
                     )}
                     
-                    {['COMPLETED', 'CANCELLED'].includes(order.status) && (
+                    {['READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED', 'CANCELLED'].includes(order.status) && (
                       <div style={{ padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px', fontWeight: 'bold', textAlign: 'center', width: '100%', border: '2px solid black' }}>
-                        Order is {order.status}
+                        Order is {order.status.replace('_', ' ')} {order.status === 'DELIVERED' ? '✅' : order.status === 'READY_FOR_PICKUP' ? '(Waiting for Rider)' : ''}
                       </div>
                     )}
                   </div>

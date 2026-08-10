@@ -8,26 +8,21 @@ datasource db {
 }
 
 enum UserRole {
-  ADMIN
   CUSTOMER
-  RIDER
   MERCHANT
+  RIDER
+  ADMIN
 }
 
 enum OrderStatus {
   PENDING
   ACCEPTED
   IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum DeliveryStatus {
-  UNASSIGNED
-  ASSIGNED
-  IN_PROGRESS
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
   DELIVERED
   COMPLETED
+  CANCELLED
 }
 
 enum ServiceType {
@@ -36,180 +31,140 @@ enum ServiceType {
   PADALA
 }
 
+enum PaymentMethod {
+  COD
+  GCASH
+}
+
 model User {
-  id             String             @id @default(uuid())
-  name           String
-  email          String             @unique
-  password       String
-  phone          String?
-  address        String?
-  role           UserRole           @default(CUSTOMER)
-  cashOnHand     Float              @default(0)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  
-  orders         Order[]
-  cart           Cart?
-  riderProfile   RiderProfile?
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  phone         String?
+  address       String?
+  role          UserRole  @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   merchantProfile MerchantProfile?
-  merchantApplications MerchantApplication[]
-  remittances    Remittance[]
+  riderProfile    RiderProfile?
+  orders          Order[]
+  cart            Cart?
+}
+
+model MerchantProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeName   String?
+  businessType String?
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products    Product[]
+}
+
+model RiderProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String   @default("PENDING")
+  vehicleType String?
+  plateNumber String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deliveries  Order[]
 }
 
 model Product {
-  id          String      @id @default(uuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
   price       Float
-  stock       Int         @default(0)
+  stock       Int      @default(0)
   imageUrl    String?
-  weightKg    Float       @default(0)
-  merchantId  String?
-  merchant    MerchantProfile? @relation(fields: [merchantId], references: [id])
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
+  merchantId  String
+  merchant    MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   orderItems  OrderItem[]
-  cartItems   CartItem[]
 }
 
 model Order {
-  id                String        @id @default(uuid())
-  customerId        String
-  customer          User          @relation(fields: [customerId], references: [id])
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
   
-  status            OrderStatus   @default(PENDING)
-  serviceType       ServiceType   @default(GROCERY)
+  riderId         String?
+  rider           RiderProfile? @relation(fields: [riderId], references: [id])
   
-  totalAmount       Float?
-  deliveryFee       Float?
-  riderPayout       Float?
-  platformIncome    Float         @default(0)
-  requiredLoadKg    Float?
+  status          OrderStatus   @default(PENDING)
+  serviceType     ServiceType   @default(GROCERY)
+  paymentMethod   PaymentMethod @default(COD)
   
-  deliveryAddress   String?
-  contactNumber     String?
+  deliveryAddress String
+  contactNumber   String
+  totalAmount     Float
+  deliveryFee     Float         @default(50.0)
   
-  itemDescription   String?
-  maxAmount         Float?
-  storeLocation     String?
-  receiptUrl        String?
+  itemDescription String?
+  storeLocation   String?
+  maxAmount       Float?
+  specialInstructions String?
   
-  senderName        String?
-  senderAddress     String?
-  senderContact     String?
-  receiverName      String?
-  receiverAddress   String?
-  receiverContact   String?
   packageDescription String?
+  senderName         String?
+  senderContact      String?
+  receiverName       String?
+  receiverContact    String?
   
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  items             OrderItem[]
-  delivery          Delivery?
-  paymentMethod     String        @default("COD")
-  isRemitted        Boolean       @default(false)
+  items         OrderItem[]
+  delivery      Delivery?
 }
 
 model OrderItem {
-  id        String  @id @default(uuid())
+  id        String  @id @default(cuid())
   orderId   String
-  order     Order   @relation(fields: [orderId], references: [id])
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String
   product   Product @relation(fields: [productId], references: [id])
   quantity  Int
   price     Float
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Delivery {
-  id          String           @id @default(uuid())
-  orderId     String           @unique
-  order       Order            @relation(fields: [orderId], references: [id])
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   riderId     String?
-  rider       RiderProfile?    @relation(fields: [riderId], references: [id])
-  status      DeliveryStatus   @default(UNASSIGNED)
   proofUrl    String?
-  acceptedAt  DateTime?
   completedAt DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-}
-
-model RiderProfile {
-  id              String     @id @default(uuid())
-  userId          String     @unique
-  user            User       @relation(fields: [userId], references: [id])
-  vehicleType     String     @default("MOTORCYCLE")
-  maxLoadKg       Float      @default(15.0)
-  status          String     @default("PENDING")
-  licenseUrl      String?
-  orCrUrl         String?
-  authLetterUrl   String?
-  deliveries      Delivery[]
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Cart {
-  id        String      @id @default(uuid())
-  userId    String      @unique
-  user      User        @relation(fields: [userId], references: [id])
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     CartItem[]
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
+  id        String  @id @default(cuid())
   cartId    String
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)  // FIXED: references [id] not [cart]
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  quantity  Int
+  quantity  Int     @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@unique([cartId, productId])
-}
-
-model Remittance {
-  id        String   @id @default(uuid())
-  riderId   String
-  rider     User     @relation(fields: [riderId], references: [id])
-  amount    Float
-  status    String   @default("COMPLETED")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model MerchantProfile {
-  id             String             @id @default(uuid())
-  userId         String             @unique
-  user           User               @relation(fields: [userId], references: [id])
-  storeName      String
-  businessType   String             @default("General")
-  status         String             @default("APPROVED") 
-  commissionRate Float              @default(0.20)
-  products       Product[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-}
-
-model MerchantApplication {
-  id                String         @id @default(uuid())
-  userId            String
-  user              User           @relation(fields: [userId], references: [id])
-  storeName         String
-  businessType      String
-  contactNumber     String
-  birUrl            String?
-  businessPermitUrl String?
-  status            String         @default("PENDING")
-  adminNotes        String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
 }

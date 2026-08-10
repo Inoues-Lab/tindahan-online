@@ -4,76 +4,91 @@ import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
-    console.log('🔵 [API] Fetching rider orders...')
-    
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
-    console.log(' [API] User ID:', userId)
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user || user.role !== 'RIDER') {
-      return NextResponse.json({ error: 'Rider access required' }, { status: 403 })
-    }
-
-    // Find the RiderProfile for this user
-    const riderProfile = await prisma.riderProfile.findUnique({
-      where: { userId }
+    const rider = await prisma.riderProfile.findUnique({ 
+      where: { userId },
+      select: { id: true }
     })
-    
-    console.log(' [API] RiderProfile:', riderProfile?.id)
 
-    // PENDING orders = Orders with status PENDING and delivery UNASSIGNED
-    const pendingOrders = await prisma.order.findMany({
-      where: {
-        status: 'PENDING',
-        delivery: {
-          status: 'UNASSIGNED'
-        }
+    if (!rider) return NextResponse.json({ error: 'Rider profile not found' }, { status: 404 })
+
+    const availableOrders = await prisma.order.findMany({
+      where: { 
+        status: 'READY_FOR_PICKUP',
+        riderId: null
       },
-      include: {
-        customer: true,
-        items: { include: { product: true } },
-        delivery: true
+      include: { 
+        items: { 
+          include: { product: true } 
+        } 
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    console.log('🔵 [API] Pending orders count:', pendingOrders.length)
-
-    // MY ORDERS = All orders assigned to this rider (ACCEPTED, IN_PROGRESS, COMPLETED, etc.)
-    let myOrders: any[] = []
-    
-    if (riderProfile) {
-      myOrders = await prisma.order.findMany({
-        where: {
-          delivery: {
-            riderId: riderProfile.id
-          }
-        },
-        include: {
-          customer: true,
-          items: { include: { product: true } },
-          delivery: true
-        },
-        orderBy: { createdAt: 'desc' }
-      })
-    } else {
-      console.log('🟡 [API] No rider profile found, myOrders will be empty')
-    }
-    
-    console.log('🔵 [API] My orders count:', myOrders.length)
-    console.log(' [API] My orders:', myOrders.map((o: any) => ({ id: o.id, status: o.status })))
-
-    return NextResponse.json({
-      pendingOrders,
-      myOrders
+    const myOrders = await prisma.order.findMany({
+      where: { 
+        riderId: rider.id,
+        status: { 
+          in: ['OUT_FOR_DELIVERY', 'ACCEPTED', 'READY_FOR_PICKUP'] 
+        }
+      },
+      include: { 
+        items: { 
+          include: { product: true } 
+        } 
+      },
+      orderBy: { createdAt: 'desc' }
     })
+
+    return NextResponse.json({ availableOrders, myOrders })
   } catch (error) {
     console.error('Error fetching rider orders:', error)
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const rider = await prisma.riderProfile.findUnique({ 
+      where: { userId },
+      select: { id: true }
+    })
+
+    if (!rider) return NextResponse.json({ error: 'Rider profile not found' }, { status: 404 })
+
+    const body = await request.json()
+    const { orderId, action } = body
+
+    let updateData: any = {}
+
+    if (action === 'ACCEPT') {
+      updateData = { 
+        status: 'OUT_FOR_DELIVERY', 
+        riderId: rider.id 
+      }
+    } else if (action === 'DELIVER') {
+      updateData = { 
+        status: 'DELIVERED' 
+      }
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: updateData
+    })
+
+    return NextResponse.json({ success: true, order: updatedOrder })
+  } catch (error) {
+    console.error('Error updating order:', error)
+    return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
   }
 }
