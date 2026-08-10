@@ -29,7 +29,6 @@ export default function MerchantDashboard() {
       setUser(data.user)
       setMerchantProfile(data.user.merchantProfile)
       
-      // Fetch merchant's products
       fetchProducts()
     } catch (error) {
       router.push('/')
@@ -38,12 +37,10 @@ export default function MerchantDashboard() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/products')
+      const res = await fetch('/api/merchant/products')
       const data = await res.json()
       if (res.ok) {
-        // Filter products that belong to this merchant
-        const myProducts = (data.products || []).filter((p: any) => p.merchantId === user?.id)
-        setProducts(myProducts)
+        setProducts(data.products || [])
       }
     } catch (error) {
       console.error('Error fetching products:', error)
@@ -67,14 +64,13 @@ export default function MerchantDashboard() {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         <div style={{ marginBottom: '30px' }}>
           <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px' }}>
-            🏪 Merchant Dashboard
+             Merchant Dashboard
           </h1>
           <p style={{ fontSize: '18px', color: 'gray' }}>
             Welcome back, {user?.name}!
           </p>
         </div>
 
-        {/* Store Info */}
         {merchantProfile && (
           <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '15px' }}>📋 Store Information</h2>
@@ -109,9 +105,8 @@ export default function MerchantDashboard() {
           </div>
         )}
 
-        {/* Stats */}
         <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '15px' }}>📊 Quick Stats</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '15px' }}> Quick Stats</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
             <div style={{ padding: '20px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '2px solid blue', textAlign: 'center' }}>
               <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>My Products</p>
@@ -128,7 +123,6 @@ export default function MerchantDashboard() {
           </div>
         </div>
 
-        {/* My Products */}
         <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0 }}>📦 My Products</h2>
@@ -169,7 +163,6 @@ export default function MerchantDashboard() {
           )}
         </div>
 
-        {/* Quick Actions */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
           <button
             onClick={() => router.push('/merchant/products')}

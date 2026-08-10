@@ -81,7 +81,7 @@ export default function AdminMerchantsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
-              🏪 Merchant Applications
+               Merchant Applications
             </h1>
             <p style={{ fontSize: '16px', color: 'gray' }}>
               Review and approve new store partners
@@ -151,7 +151,6 @@ export default function AdminMerchantsPage() {
                       <p style={{ margin: '2px 0', fontSize: '14px' }}><strong>Email:</strong> {app.user?.email || 'Unknown'}</p>
                     </div>
                     
-                    {/* Document Links */}
                     <div style={{ marginTop: '15px', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                       {app.birUrl && (
                         <a href={app.birUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}>📄 View BIR</a>
@@ -195,7 +194,7 @@ export default function AdminMerchantsPage() {
                           minWidth: '120px'
                         }}
                       >
-                         Reject
+                        ❌ Reject
                       </button>
                     </div>
                   )}
