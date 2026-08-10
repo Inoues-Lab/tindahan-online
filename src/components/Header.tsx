@@ -1,8 +1,8 @@
-// src/components/Header.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function Header() {
   const router = useRouter()
@@ -10,222 +10,110 @@ export default function Header() {
   const [cartCount, setCartCount] = useState(0)
 
   useEffect(() => {
-    // Fetch User
+    // Fetch user info
     fetch('/api/auth/me')
       .then(res => res.json())
-      .then(data => setUser(data.user))
-      .catch(() => setUser(null))
-    
-    // Fetch Cart Count (Safe)
-    fetchCartCount()
+      .then(data => {
+        if (data.user) setUser(data.user)
+      })
+      .catch(() => {})
+
+    // Fetch cart count
+    fetch('/api/cart')
+      .then(res => res.json())
+      .then(data => {
+        if (data.cartItems) {
+          const count = data.cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0)
+          setCartCount(count)
+        }
+      })
+      .catch(() => {})
   }, [])
 
-  const fetchCartCount = async () => {
-    try {
-      const res = await fetch('/api/cart')
-      
-      // If API doesn't exist (404) or fails, just set to 0
-      if (!res.ok) {
-        setCartCount(0)
-        return
-      }
-      
-      const data = await res.json()
-      setCartCount(data.items?.length || data.count || 0)
-    } catch (error) {
-      // Silently fail - cart count is not critical
-      setCartCount(0)
-    }
-  }
-
-  const handleLogout = () => {
-    document.cookie = 'userId=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-    document.cookie = 'userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/')
-    window.location.reload()
+    router.refresh()
   }
 
   return (
     <header style={{ 
       backgroundColor: 'white', 
-      borderBottom: '3px solid black', 
-      padding: '12px 15px',
+      padding: '15px 30px', 
+      borderBottom: '2px solid black', 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center',
       position: 'sticky',
       top: 0,
       zIndex: 100
     }}>
-      <div style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '10px'
-      }}>
-        <div 
-          onClick={() => router.push('/')}
-          style={{ 
-            fontSize: '20px', 
-            fontWeight: 'bold', 
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            flex: '1 1 auto'
-          }}
-        >
-          🛒 Tindahan Online
-        </div>
+      <Link href="/" style={{ fontSize: '24px', fontWeight: 'bold', textDecoration: 'none', color: 'black' }}>
+        🛒 Tindahan Online
+      </Link>
 
-        <nav style={{ 
-          display: 'flex', 
-          gap: '8px', 
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          flex: '0 0 auto'
-        }}>
-          {user ? (
-            <>
-              {user.role === 'CUSTOMER' && (
-                <>
-                  <a href="/cart" style={{ 
-                    textDecoration: 'none', 
-                    color: 'black', 
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    Cart 🛒
-                    {cartCount > 0 && (
-                      <span style={{ 
-                        position: 'absolute',
-                        top: '-8px',
-                        right: '-12px',
-                        backgroundColor: 'red',
-                        color: 'white',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '11px',
-                        fontWeight: 'bold'
-                      }}>
-                        {cartCount}
-                      </span>
-                    )}
-                  </a>
-                  <a href="/orders/my-orders" style={{ 
-                    textDecoration: 'none', 
-                    color: 'black', 
-                    fontWeight: 'bold',
-                    fontSize: '14px'
-                  }}>
-                    My Orders 📦
-                  </a>
-                  <a href="/" style={{ 
-                    textDecoration: 'none', 
-                    color: 'black', 
-                    fontWeight: 'bold',
-                    fontSize: '14px'
-                  }}>
-                    Shop
-                  </a>
-                  
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <a href="/pabili" style={{ 
-                      padding: '8px 12px', 
-                      backgroundColor: '#ffc107',
-                      color: 'black', 
-                      borderRadius: '6px', 
-                      border: '2px solid black', 
-                      fontWeight: 'bold', 
-                      textDecoration: 'none',
-                      fontSize: '12px',
-                      whiteSpace: 'nowrap'
-                    }}>
-                       PABILI
-                    </a>
-                    <a href="/padala" style={{ 
-                      padding: '8px 12px', 
-                      backgroundColor: '#17a2b8',
-                      color: 'white', 
-                      borderRadius: '6px', 
-                      border: '2px solid black', 
-                      fontWeight: 'bold', 
-                      textDecoration: 'none',
-                      fontSize: '12px',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      📦 PADALA
-                    </a>
-                  </div>
-                </>
-              )}
-              
-              {user.role === 'RIDER' && (
-                <a href="/rider" style={{ 
-                  textDecoration: 'none', 
-                  color: 'black', 
-                  fontWeight: 'bold',
-                  fontSize: '14px'
-                }}>
-                  Rider
-                </a>
-              )}
-              
-              {user.role === 'ADMIN' && (
-                <a href="/admin" style={{ 
-                  textDecoration: 'none', 
-                  color: 'black', 
-                  fontWeight: 'bold',
-                  fontSize: '14px'
-                }}>
-                  Admin
-                </a>
-              )}
-              
-              <button
-                onClick={handleLogout}
-                style={{
-                  padding: '8px 16px',
+      <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        {user && (
+          <>
+            <Link href="/cart" style={{ textDecoration: 'none', color: 'black', fontWeight: 'bold', position: 'relative' }}>
+              Cart 
+              {cartCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-10px',
+                  right: '-15px',
                   backgroundColor: 'red',
                   color: 'white',
-                  border: '2px solid black',
-                  borderRadius: '8px',
+                  borderRadius: '50%',
+                  padding: '2px 6px',
+                  fontSize: '12px',
                   fontWeight: 'bold',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => router.push('/login')}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'blue',
-                color: 'white',
-                border: '2px solid black',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              Login
-            </button>
-          )}
-        </nav>
-      </div>
+                  border: '1px solid black'
+                }}>
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+            
+            <Link href="/orders" style={{ textDecoration: 'none', color: 'black', fontWeight: 'bold' }}>
+              My Orders 📦
+            </Link>
+            
+            <Link href="/products" style={{ textDecoration: 'none', color: 'black', fontWeight: 'bold' }}>
+              Shop
+            </Link>
+
+            {/* Keep your custom buttons if you have them */}
+            <Link href="/pabili" style={{ padding: '8px 16px', backgroundColor: '#ffc107', color: 'black', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold', border: '2px solid black' }}>
+              PABILI
+            </Link>
+            <Link href="/padala" style={{ padding: '8px 16px', backgroundColor: '#17a2b8', color: 'white', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold', border: '2px solid black' }}>
+              PADALA
+            </Link>
+          </>
+        )}
+
+        {user ? (
+          <button 
+            onClick={handleLogout}
+            style={{ 
+              padding: '8px 16px', 
+              backgroundColor: 'red', 
+              color: 'white', 
+              border: '2px solid black', 
+              borderRadius: '8px', 
+              fontWeight: 'bold', 
+              cursor: 'pointer' 
+            }}
+          >
+            Logout
+          </button>
+        ) : (
+          <Link href="/login" style={{ padding: '8px 16px', backgroundColor: 'blue', color: 'white', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold', border: '2px solid black' }}>
+            Login
+          </Link>
+        )}
+      </nav>
     </header>
   )
 }

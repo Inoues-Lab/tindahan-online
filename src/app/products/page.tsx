@@ -21,7 +21,6 @@ export default function ProductsPage() {
       const res = await fetch('/api/products')
       const data = await res.json()
       if (res.ok) {
-        // Only show products from APPROVED merchants
         const approvedProducts = data.products.filter((p: any) => 
           p.merchant?.status === 'APPROVED' || p.merchant?.status === undefined
         )
@@ -56,8 +55,7 @@ export default function ProductsPage() {
       })
 
       if (res.ok) {
-        alert('✅ Added to cart!')
-        fetchCartCount()
+        window.location.reload()
       } else {
         const data = await res.json()
         alert(data.error || 'Failed to add to cart')
@@ -88,14 +86,13 @@ export default function ProductsPage() {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         <div style={{ marginBottom: '30px' }}>
           <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px' }}>
-             Shop Products
+            🛒 Shop Products
           </h1>
           <p style={{ fontSize: '16px', color: 'gray' }}>
             Fresh groceries delivered to your door!
           </p>
         </div>
 
-        {/* Search Bar */}
         <div style={{ marginBottom: '30px' }}>
           <input
             type="text"
@@ -113,7 +110,6 @@ export default function ProductsPage() {
           />
         </div>
 
-        {/* Products Grid */}
         {filteredProducts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'white', borderRadius: '12px', border: '3px solid black' }}>
             <p style={{ fontSize: '18px', color: 'gray' }}>No products found</p>
@@ -147,7 +143,7 @@ export default function ProductsPage() {
                     justifyContent: 'center',
                     fontSize: '48px'
                   }}>
-                    
+                    📦
                   </div>
                 )}
                 
@@ -161,7 +157,7 @@ export default function ProductsPage() {
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                   <span style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>
-                    ₱{product.price.toFixed(2)}
+                    {product.price.toFixed(2)}
                   </span>
                   <span style={{ fontSize: '14px', color: 'gray' }}>
                     Stock: {product.stock}
