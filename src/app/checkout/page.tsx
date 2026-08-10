@@ -1,4 +1,3 @@
-// src/app/checkout/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -16,12 +15,19 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState('')
   const [contactNumber, setContactNumber] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('COD')
-  
-  // New state for address confirmation popup
   const [showAddressPopup, setShowAddressPopup] = useState(false)
   const [registeredAddress, setRegisteredAddress] = useState('')
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
+    // Detect screen size
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => {
@@ -33,7 +39,6 @@ export default function CheckoutPage() {
         setRegisteredAddress(data.user.address || '')
         setContactNumber(data.user.phone || '')
         
-        // Show popup if user has a registered address
         if (data.user.address) {
           setShowAddressPopup(true)
         }
@@ -41,6 +46,8 @@ export default function CheckoutPage() {
         fetchCart()
       })
       .catch(() => router.push('/login'))
+      
+    return () => window.removeEventListener('resize', checkMobile)
   }, [router])
 
   const fetchCart = async () => {
@@ -127,51 +134,114 @@ export default function CheckoutPage() {
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '20px' }}>
+      <div style={{ 
+        maxWidth: '900px', 
+        margin: '0 auto', 
+        padding: isMobile ? '12px' : '20px' 
+      }}>
+        <h1 style={{ 
+          fontSize: isMobile ? '24px' : '28px', 
+          fontWeight: 'bold', 
+          marginBottom: '20px' 
+        }}>
           🛒 Checkout
         </h1>
 
         {cartItems.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', backgroundColor: 'white', borderRadius: '12px', border: '3px solid black' }}>
             <p style={{ fontSize: '18px', color: 'gray' }}>No items in cart</p>
-            <button onClick={() => router.push('/')} style={{ marginTop: '20px', padding: '12px 24px', backgroundColor: 'blue', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+            <button 
+              onClick={() => router.push('/')} 
+              style={{ 
+                marginTop: '20px', 
+                padding: '12px 24px', 
+                backgroundColor: 'blue', 
+                color: 'white', 
+                border: '2px solid black', 
+                borderRadius: '8px', 
+                fontWeight: 'bold', 
+                cursor: 'pointer' 
+              }}
+            >
               Go Shopping
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '20px' }}>
+          <div style={{ 
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '20px'
+          }}>
             {/* Delivery Details */}
-            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>📍 Delivery Details</h2>
+            <div style={{ 
+              flex: isMobile ? 'none' : '1',
+              backgroundColor: 'white', 
+              padding: isMobile ? '16px' : '20px', 
+              borderRadius: '12px', 
+              border: '3px solid black' 
+            }}>
+              <h2 style={{ 
+                fontSize: isMobile ? '18px' : '20px', 
+                fontWeight: 'bold', 
+                marginBottom: '15px' 
+              }}>
+                📍 Delivery Details
+              </h2>
               
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Delivery Address</label>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', fontSize: '14px' }}>
+                  Delivery Address
+                </label>
                 <textarea
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Enter your complete address"
-                  style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', minHeight: '80px', boxSizing: 'border-box' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px', 
+                    border: '2px solid black', 
+                    borderRadius: '8px', 
+                    fontSize: '16px', 
+                    minHeight: '80px', 
+                    boxSizing: 'border-box' 
+                  }}
                 />
               </div>
 
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Contact Number</label>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', fontSize: '14px' }}>
+                  Contact Number
+                </label>
                 <input
                   type="tel"
                   value={contactNumber}
                   onChange={(e) => setContactNumber(e.target.value)}
                   placeholder="09XXXXXXXXX"
-                  style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px', 
+                    border: '2px solid black', 
+                    borderRadius: '8px', 
+                    fontSize: '16px', 
+                    boxSizing: 'border-box' 
+                  }}
                 />
               </div>
 
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Payment Method</label>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', fontSize: '14px' }}>
+                  Payment Method
+                </label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px', 
+                    border: '2px solid black', 
+                    borderRadius: '8px', 
+                    fontSize: '16px' 
+                  }}
                 >
                   <option value="COD">💵 Cash on Delivery (COD)</option>
                   <option value="GCASH">📱 GCash</option>
@@ -180,17 +250,47 @@ export default function CheckoutPage() {
             </div>
 
             {/* Order Summary */}
-            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', height: 'fit-content' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>📋 Order Summary</h2>
+            <div style={{ 
+              flex: isMobile ? 'none' : '0 0 350px',
+              backgroundColor: 'white', 
+              padding: isMobile ? '16px' : '20px', 
+              borderRadius: '12px', 
+              border: '3px solid black' 
+            }}>
+              <h2 style={{ 
+                fontSize: isMobile ? '18px' : '20px', 
+                fontWeight: 'bold', 
+                marginBottom: '15px' 
+              }}>
+                📋 Order Summary
+              </h2>
               
-              <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '15px' }}>
+              <div style={{ 
+                maxHeight: isMobile ? '250px' : '300px', 
+                overflowY: 'auto', 
+                marginBottom: '15px' 
+              }}>
                 {cartItems.map((item) => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
+                  <div 
+                    key={item.id} 
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      padding: '10px 0', 
+                      borderBottom: '1px solid #eee' 
+                    }}
+                  >
                     <div>
-                      <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>{item.product.name}</p>
-                      <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>x{item.quantity}</p>
+                      <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>
+                        {item.product.name}
+                      </p>
+                      <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>
+                        x{item.quantity}
+                      </p>
                     </div>
-                    <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>₱{(item.product.price * item.quantity).toFixed(2)}</p>
+                    <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>
+                      ₱{(item.product.price * item.quantity).toFixed(2)}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -202,11 +302,19 @@ export default function CheckoutPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
                   <span>Delivery Fee:</span>
-                  <span>{deliveryFee.toFixed(2)}</span>
+                  <span>₱{deliveryFee.toFixed(2)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', borderTop: '2px solid black', paddingTop: '10px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  fontSize: isMobile ? '16px' : '18px', 
+                  fontWeight: 'bold', 
+                  borderTop: '2px solid black', 
+                  paddingTop: '10px',
+                  color: 'green'
+                }}>
                   <span>Total:</span>
-                  <span style={{ color: 'green' }}>₱{(subtotal + deliveryFee).toFixed(2)}</span>
+                  <span>{(subtotal + deliveryFee).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -216,17 +324,17 @@ export default function CheckoutPage() {
                 style={{
                   width: '100%',
                   marginTop: '20px',
-                  padding: '15px',
+                  padding: isMobile ? '16px' : '15px',
                   backgroundColor: placingOrder ? 'gray' : 'green',
                   color: 'white',
                   border: '2px solid black',
                   borderRadius: '8px',
                   fontWeight: 'bold',
                   cursor: placingOrder ? 'not-allowed' : 'pointer',
-                  fontSize: '16px'
+                  fontSize: isMobile ? '18px' : '16px'
                 }}
               >
-                {placingOrder ? 'Placing Order...' : 'Place Order'}
+                {placingOrder ? 'Placing Order...' : '✅ Place Order'}
               </button>
 
               <button
@@ -234,14 +342,14 @@ export default function CheckoutPage() {
                 style={{
                   width: '100%',
                   marginTop: '10px',
-                  padding: '12px',
+                  padding: isMobile ? '14px' : '12px',
                   backgroundColor: 'white',
                   color: 'black',
                   border: '2px solid black',
                   borderRadius: '8px',
                   fontWeight: 'bold',
                   cursor: 'pointer',
-                  fontSize: '14px'
+                  fontSize: isMobile ? '16px' : '14px'
                 }}
               >
                 ← Back to Cart
@@ -253,32 +361,73 @@ export default function CheckoutPage() {
 
       {/* Address Confirmation Popup */}
       {showAddressPopup && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid black', maxWidth: '500px', width: '100%', boxShadow: '0px 10px 40px rgba(0,0,0,0.3)' }}>
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.7)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          zIndex: 1000, 
+          padding: isMobile ? '16px' : '20px' 
+        }}>
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: isMobile ? '20px' : '30px', 
+            borderRadius: '16px', 
+            border: '4px solid black', 
+            maxWidth: '500px', 
+            width: '100%', 
+            boxShadow: '0px 10px 40px rgba(0,0,0,0.3)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '10px' }}></div>
-              <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: 'black', marginBottom: '10px' }}>Use Registered Address?</h2>
-              <p style={{ fontSize: '14px', color: 'gray' }}>Would you like to use your saved address?</p>
+              <div style={{ fontSize: '48px', marginBottom: '10px' }}>🏠</div>
+              <h2 style={{ 
+                fontSize: isMobile ? '20px' : '22px', 
+                fontWeight: 'bold', 
+                color: 'black', 
+                marginBottom: '10px' 
+              }}>
+                Use Registered Address?
+              </h2>
+              <p style={{ fontSize: '14px', color: 'gray' }}>
+                Would you like to use your saved address?
+              </p>
             </div>
             
-            <div style={{ backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '8px', border: '2px solid #ddd', marginBottom: '20px' }}>
+            <div style={{ 
+              backgroundColor: '#f0f0f0', 
+              padding: '15px', 
+              borderRadius: '8px', 
+              border: '2px solid #ddd', 
+              marginBottom: '20px' 
+            }}>
               <p style={{ fontSize: '14px', color: 'black', margin: 0, lineHeight: '1.5' }}>
                 {registeredAddress}
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '10px' 
+            }}>
               <button
                 onClick={useRegisteredAddress}
                 style={{
                   flex: 1,
-                  padding: '12px',
+                  padding: isMobile ? '14px' : '12px',
                   backgroundColor: 'green',
                   color: 'white',
                   border: '2px solid black',
                   borderRadius: '8px',
                   fontWeight: 'bold',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   cursor: 'pointer'
                 }}
               >
@@ -288,13 +437,13 @@ export default function CheckoutPage() {
                 onClick={useNewAddress}
                 style={{
                   flex: 1,
-                  padding: '12px',
+                  padding: isMobile ? '14px' : '12px',
                   backgroundColor: 'white',
                   color: 'black',
                   border: '2px solid black',
                   borderRadius: '8px',
                   fontWeight: 'bold',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   cursor: 'pointer'
                 }}
               >
