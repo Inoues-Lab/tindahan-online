@@ -11,15 +11,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Please login to apply' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } })
+    const user = await prisma.user.findUnique({ 
+      where: { id: userId },
+      include: { merchantProfile: true }
+    })
+    
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Allow CUSTOMER, RIDER, or MERCHANT to apply (not just ADMIN)
-    // But not if they're already a merchant
-    if (user.role === 'MERCHANT') {
-      return NextResponse.json({ error: 'You are already a merchant' }, { status: 400 })
+    // Only block if user role is already MERCHANT AND has an approved profile
+    if (user.role === 'MERCHANT' && user.merchantProfile?.status === 'APPROVED') {
+      return NextResponse.json({ error: 'You are already an approved merchant' }, { status: 400 })
     }
 
     const body = await request.json()
@@ -29,19 +32,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Check if already applied
+    // Check if already has a PENDING application
     const existingApp = await prisma.merchantApplication.findFirst({
       where: { userId, status: 'PENDING' }
     })
-    
-    const existingProfile = await prisma.merchantProfile.findUnique({
-      where: { userId }
-    })
 
-    if (existingApp || existingProfile) {
-      return NextResponse.json({ error: 'You have already applied or are a merchant' }, { status: 400 })
+    if (existingApp) {
+      return NextResponse.json({ error: 'You already have a pending application' }, { status: 400 })
     }
 
+    // Create the application
     await prisma.merchantApplication.create({
       data: {
         userId,
@@ -56,6 +56,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, message: 'Application submitted!' })
   } catch (error) {
     console.error('Merchant Apply Error:', error)
-    return NextResponse.json({ error: 'Failed to submit application' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to submit application', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 })
   }
 }
