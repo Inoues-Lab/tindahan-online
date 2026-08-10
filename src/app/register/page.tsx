@@ -41,25 +41,13 @@ export default function RegisterPage() {
       const data = await res.json()
 
       if (res.ok) {
-        // Auto login after register
-        const loginRes = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password
-          })
-        })
-
-        if (loginRes.ok) {
-          // Redirect based on role
-          if (formData.role === 'RIDER') {
-            router.push('/rider/apply')
-          } else if (formData.role === 'MERCHANT') {
-            router.push('/merchant/apply')
-          } else {
-            router.push('/')
-          }
+        // Redirect based on selected role to the apply page
+        if (formData.role === 'RIDER') {
+          router.push('/rider/apply')
+        } else if (formData.role === 'MERCHANT') {
+          router.push('/merchant/apply')
+        } else {
+          router.push('/')
         }
       } else {
         setError(data.error || 'Registration failed')
@@ -144,16 +132,21 @@ export default function RegisterPage() {
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>I am a:</label>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>I want to be a:</label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
             >
-              <option value="CUSTOMER">Customer</option>
-              <option value="RIDER">Rider</option>
-              <option value="MERCHANT">Merchant</option>
+              <option value="CUSTOMER">Customer (Shop & Order)</option>
+              <option value="RIDER">Rider (Deliver Orders)</option>
+              <option value="MERCHANT">Merchant (Sell Products)</option>
             </select>
+            <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>
+              {formData.role === 'CUSTOMER' && 'You can start shopping immediately!'}
+              {formData.role === 'RIDER' && 'You will need to submit requirements for approval.'}
+              {formData.role === 'MERCHANT' && 'You will need to submit documents for approval.'}
+            </p>
           </div>
 
           <button
