@@ -16,6 +16,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Merchant access required' }, { status: 403 })
     }
 
+    // Ensure merchant profile exists
+    await prisma.merchantProfile.upsert({
+      where: { userId },
+      update: {},
+      create: {
+        userId,
+        storeName: user.name + "'s Store",
+        businessType: 'General',
+        status: 'APPROVED'
+      }
+    })
+
     const products = await prisma.product.findMany({
       where: { merchantId: userId },
       orderBy: { createdAt: 'desc' }
@@ -51,6 +63,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Ensure merchant profile exists before creating product
+    await prisma.merchantProfile.upsert({
+      where: { userId },
+      update: {},
+      create: {
+        userId,
+        storeName: user.name + "'s Store",
+        businessType: 'General',
+        status: 'APPROVED'
+      }
+    })
+
     const product = await prisma.product.create({
       data: {
         name,
@@ -69,8 +93,7 @@ export async function POST(request: Request) {
     console.error('POST Error:', error)
     return NextResponse.json({ 
       error: 'Failed to create product', 
-      details: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }
