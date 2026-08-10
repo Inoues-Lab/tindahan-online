@@ -12,7 +12,7 @@ export default function Header() {
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    // 1. Check if user is logged in
+    // Check if user is logged in
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => {
@@ -20,7 +20,7 @@ export default function Header() {
       })
       .catch(() => {})
 
-    // 2. Fetch Cart Count (Robust check)
+    // Fetch Cart Count (Robust check)
     fetch('/api/cart')
       .then(res => res.json())
       .then(data => {
@@ -33,7 +33,7 @@ export default function Header() {
       })
       .catch((err) => console.error('Cart fetch error:', err))
 
-    // 3. Detect Screen Size for Responsiveness
+    // Detect Screen Size for Responsiveness
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
@@ -119,7 +119,7 @@ export default function Header() {
                 )}
               </Link>
               
-              <Link href="/orders" style={{ textDecoration: 'none', color: 'black', fontWeight: 'bold' }}>
+              <Link href="/orders/my-orders" style={{ textDecoration: 'none', color: 'black', fontWeight: 'bold' }}>
                 📦 Orders
               </Link>
               
@@ -238,7 +238,7 @@ export default function Header() {
           </Link>
           
           <Link 
-            href="/orders" 
+            href="/orders/my-orders" 
             onClick={() => setMobileMenuOpen(false)}
             style={{ 
               textDecoration: 'none', 
