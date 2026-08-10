@@ -16,7 +16,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    // Fetch all applications with user details
+    // Fetch ALL applications (PENDING, APPROVED, REJECTED)
     const applications = await prisma.merchantApplication.findMany({
       include: {
         user: {
@@ -31,10 +31,11 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     })
 
+    console.log('Found applications:', applications.length)
     return NextResponse.json({ applications })
   } catch (error) {
     console.error('Error fetching applications:', error)
-    return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch applications', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 })
   }
 }
 
@@ -53,14 +54,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { applicationId, action } = body // action: 'APPROVE' or 'REJECT'
+    const { applicationId, action } = body
 
     if (!applicationId || !action) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     const application = await prisma.merchantApplication.findUnique({
-      where: { id: applicationId }
+      where: { id: applicationId },
+      include: { user: true }
     })
 
     if (!application) {
@@ -68,9 +70,15 @@ export async function POST(request: Request) {
     }
 
     if (action === 'APPROVE') {
-      // 1. Create Merchant Profile
-      await prisma.merchantProfile.create({
-        data: {
+      // 1. Create or Update Merchant Profile
+      await prisma.merchantProfile.upsert({
+        where: { userId: application.userId },
+        update: {
+          storeName: application.storeName,
+          businessType: application.businessType,
+          status: 'APPROVED'
+        },
+        create: {
           userId: application.userId,
           storeName: application.storeName,
           businessType: application.businessType,
@@ -105,6 +113,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
     console.error('Error processing application:', error)
-    return NextResponse.json({ error: 'Failed to process application' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to process application', details: error instanceof Error ? error.message : 'Unknown' }, { status: 500 })
   }
 }
