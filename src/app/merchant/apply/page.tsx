@@ -6,46 +6,94 @@ import Header from '@/components/Header'
 
 export default function MerchantApplyPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [existingApplication, setExistingApplication] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
   
   const [formData, setFormData] = useState({
     storeName: '',
     businessType: 'Sari-Sari Store',
-    contactNumber: ''
+    contactNumber: '',
+    birUrl: '',
+    businessPermitUrl: ''
   })
   
-  const [files, setFiles] = useState({
-    bir: null as File | null,
-    permit: null as File | null
-  })
+  const [birFile, setBirFile] = useState<File | null>(null)
+  const [birPreview, setBirPreview] = useState('')
+  const [permitFile, setPermitFile] = useState<File | null>(null)
+  const [permitPreview, setPermitPreview] = useState('')
   
-  const [previews, setPreviews] = useState({ bir: '', permit: '' })
   const birInputRef = useRef<HTMLInputElement>(null)
   const permitInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.user) router.push('/login')
-        else {
-          setUser(data.user)
-          setFormData(prev => ({ ...prev, contactNumber: data.user.phone || '' }))
-        }
-      })
-      .catch(() => router.push('/login'))
-      .finally(() => setLoading(false))
+    checkAuth()
+    // Load saved form data from localStorage
+    const savedData = localStorage.getItem('merchantApplicationDraft')
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData)
+        setFormData(prev => ({ ...prev, ...parsed }))
+      } catch (e) {
+        console.error('Failed to load saved data')
+      }
+    }
   }, [router])
 
-  const handleFileChange = (type: 'bir' | 'permit', e: React.ChangeEvent<HTMLInputElement>) => {
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/me')
+      const data = await res.json()
+      
+      if (!data.user) {
+        router.push('/login')
+        return
+      }
+      
+      setUser(data.user)
+      
+      // Check if they already have an application
+      const appRes = await fetch('/api/merchant/apply/check')
+      const appData = await appRes.json()
+      if (appRes.ok && appData.application) {
+        setExistingApplication(appData.application)
+        if (appData.application.status === 'APPROVED') {
+          router.push('/merchant/dashboard')
+          return
+        }
+      }
+    } catch (error) {
+      router.push('/login')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    if (formData.storeName || formData.contactNumber) {
+      localStorage.setItem('merchantApplicationDraft', JSON.stringify(formData))
+    }
+  }, [formData])
+
+  const handleBirChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setFiles(prev => ({ ...prev, [type]: file }))
+      setBirFile(file)
       const reader = new FileReader()
-      reader.onloadend = () => setPreviews(prev => ({ ...prev, [type]: reader.result as string }))
+      reader.onloadend = () => setBirPreview(reader.result as string)
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handlePermitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setPermitFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => setPermitPreview(reader.result as string)
       reader.readAsDataURL(file)
     }
   }
@@ -65,8 +113,15 @@ export default function MerchantApplyPage() {
     setMessage('')
 
     try {
-      const birUrl = await uploadFile(files.bir)
-      const permitUrl = await uploadFile(files.permit)
+      let birUrl = formData.birUrl
+      let businessPermitUrl = formData.businessPermitUrl
+      
+      if (birFile) {
+        birUrl = await uploadFile(birFile) || ''
+      }
+      if (permitFile) {
+        businessPermitUrl = await uploadFile(permitFile) || ''
+      }
 
       const res = await fetch('/api/merchant/apply', {
         method: 'POST',
@@ -74,16 +129,25 @@ export default function MerchantApplyPage() {
         body: JSON.stringify({
           ...formData,
           birUrl,
-          businessPermitUrl: permitUrl
+          businessPermitUrl
         })
       })
-      
+
       const data = await res.json()
       if (res.ok) {
-        setMessage('✅ Application submitted! Wait for admin approval.')
-        setFormData({ storeName: '', businessType: 'Sari-Sari Store', contactNumber: '' })
-        setFiles({ bir: null, permit: null })
-        setPreviews({ bir: '', permit: '' })
+        setMessage('✅ Application submitted successfully! You will be notified once approved.')
+        localStorage.removeItem('merchantApplicationDraft')
+        setFormData({
+          storeName: '',
+          businessType: 'Sari-Sari Store',
+          contactNumber: '',
+          birUrl: '',
+          businessPermitUrl: ''
+        })
+        setBirFile(null)
+        setPermitFile(null)
+        setBirPreview('')
+        setPermitPreview('')
       } else {
         setMessage(`❌ ${data.error}`)
       }
@@ -103,14 +167,94 @@ export default function MerchantApplyPage() {
     )
   }
 
+  // Show existing application status
+  if (existingApplication && existingApplication.status !== 'PENDING') {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <Header />
+        <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px', textAlign: 'center' }}>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}>
+              {existingApplication.status === 'APPROVED' ? '✅' : '❌'}
+            </div>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>
+              Application {existingApplication.status}
+            </h1>
+            <p style={{ color: 'gray', marginBottom: '20px' }}>
+              {existingApplication.status === 'APPROVED' 
+                ? 'Congratulations! You are now a partner merchant.' 
+                : 'Unfortunately, your application was not approved at this time.'}
+            </p>
+            <button
+              onClick={() => router.push(existingApplication.status === 'APPROVED' ? '/merchant/dashboard' : '/')}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: existingApplication.status === 'APPROVED' ? 'green' : 'blue',
+                color: 'white',
+                border: '2px solid black',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              {existingApplication.status === 'APPROVED' ? 'Go to Dashboard' : 'Go Home'}
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  // Show pending application message
+  if (existingApplication && existingApplication.status === 'PENDING') {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <Header />
+        <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px', textAlign: 'center' }}>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid #ffc107', boxShadow: '4px 4px 0px black' }}>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}></div>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>Application Under Review</h1>
+            <p style={{ color: 'gray', marginBottom: '20px' }}>
+              Your application for <strong>{existingApplication.storeName}</strong> is pending approval.
+            </p>
+            <p style={{ color: 'gray', fontSize: '14px', marginBottom: '20px' }}>
+              You will receive an email notification once your account is approved.
+            </p>
+            <button
+              onClick={() => router.push('/')}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#ffc107',
+                color: 'black',
+                border: '2px solid black',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
-      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>🏪 Become a Partner Merchant</h1>
-          <p style={{ textAlign: 'center', color: 'gray', marginBottom: '30px' }}>Join Tindahan Online and sell your products!</p>
-          
+      <div style={{ maxWidth: '700px', margin: '40px auto', padding: '20px' }}>
+        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '10px' }}>🏪</div>
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '10px' }}>
+              Become a Partner Merchant
+            </h1>
+            <p style={{ color: 'gray' }}>
+              Join Tindahan Online and sell your products!
+            </p>
+          </div>
+
           {message && (
             <div style={{ 
               padding: '15px', 
@@ -134,7 +278,7 @@ export default function MerchantApplyPage() {
                 onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
                 placeholder="e.g., Aling Nena's Sari-Sari Store"
                 required
-                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -143,14 +287,14 @@ export default function MerchantApplyPage() {
               <select
                 value={formData.businessType}
                 onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
-                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', boxSizing: 'border-box' }}
+                required
+                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
               >
-                <option>Sari-Sari Store</option>
-                <option>Bakery</option>
-                <option>Hardware Store</option>
-                <option>Pharmacy</option>
-                <option>Restaurant</option>
-                <option>Others</option>
+                <option value="Sari-Sari Store">Sari-Sari Store</option>
+                <option value="Grocery">Grocery</option>
+                <option value="Convenience Store">Convenience Store</option>
+                <option value="Supermarket">Supermarket</option>
+                <option value="Specialty Store">Specialty Store</option>
               </select>
             </div>
 
@@ -162,72 +306,50 @@ export default function MerchantApplyPage() {
                 onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
                 placeholder="09XXXXXXXXX"
                 required
-                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
               />
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>📄 BIR Registration (Image)</label>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}> BIR Registration (Image)</label>
               <input
                 ref={birInputRef}
                 type="file"
                 accept="image/*"
-                onChange={(e) => handleFileChange('bir', e)}
+                onChange={handleBirChange}
                 style={{ display: 'none' }}
               />
               <button
                 type="button"
                 onClick={() => birInputRef.current?.click()}
-                style={{ 
-                  width: '100%', 
-                  padding: '12px', 
-                  backgroundColor: files.bir ? '#e8f5e9' : '#f0f0f0', 
-                  border: '2px dashed black', 
-                  borderRadius: '8px', 
-                  cursor: 'pointer', 
-                  fontWeight: 'bold' 
-                }}
+                style={{ width: '100%', padding: '12px', backgroundColor: birFile ? '#e8f5e9' : '#f0f0f0', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
               >
-                {files.bir ? '✅ BIR Uploaded' : 'Upload BIR Document'}
+                {birFile ? '✅ BIR Uploaded' : '📤 Upload BIR Document'}
               </button>
-              {previews.bir && (
-                <img src={previews.bir} alt="BIR" style={{ width: '100%', marginTop: '10px', borderRadius: '8px', border: '2px solid black' }} />
+              {birPreview && (
+                <img src={birPreview} alt="BIR Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', marginTop: '10px', borderRadius: '8px', border: '2px solid black' }} />
               )}
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}> Business Permit (Image)</label>
+            <div style={{ marginBottom: '30px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>📄 Business Permit (Image)</label>
               <input
                 ref={permitInputRef}
                 type="file"
                 accept="image/*"
-                onChange={(e) => handleFileChange('permit', e)}
+                onChange={handlePermitChange}
                 style={{ display: 'none' }}
               />
               <button
                 type="button"
                 onClick={() => permitInputRef.current?.click()}
-                style={{ 
-                  width: '100%', 
-                  padding: '12px', 
-                  backgroundColor: files.permit ? '#e8f5e9' : '#f0f0f0', 
-                  border: '2px dashed black', 
-                  borderRadius: '8px', 
-                  cursor: 'pointer', 
-                  fontWeight: 'bold' 
-                }}
+                style={{ width: '100%', padding: '12px', backgroundColor: permitFile ? '#e8f5e9' : '#f0f0f0', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
               >
-                {files.permit ? '✅ Permit Uploaded' : 'Upload Business Permit'}
+                {permitFile ? '✅ Permit Uploaded' : '📤 Upload Business Permit'}
               </button>
-              {previews.permit && (
-                <img src={previews.permit} alt="Permit" style={{ width: '100%', marginTop: '10px', borderRadius: '8px', border: '2px solid black' }} />
+              {permitPreview && (
+                <img src={permitPreview} alt="Permit Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', marginTop: '10px', borderRadius: '8px', border: '2px solid black' }} />
               )}
-            </div>
-
-            <div style={{ backgroundColor: '#f0f8ff', padding: '15px', borderRadius: '8px', border: '2px solid #b0c4de', marginBottom: '20px' }}>
-              <p style={{ fontSize: '14px', color: '#004080', margin: 0 }}>
-                <strong>Note:</strong> By applying, you agree to a <strong>20% commission fee</strong> on all sales.
-              </p>
             </div>
 
             <button
@@ -236,7 +358,7 @@ export default function MerchantApplyPage() {
               style={{
                 width: '100%',
                 padding: '15px',
-                backgroundColor: submitting ? 'gray' : 'blue',
+                backgroundColor: submitting ? 'gray' : 'green',
                 color: 'white',
                 border: '2px solid black',
                 borderRadius: '8px',
@@ -249,6 +371,22 @@ export default function MerchantApplyPage() {
               {submitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </form>
+
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <button
+              onClick={() => router.push('/')}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: 'transparent',
+                color: 'blue',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'underline'
+              }}
+            >
+              ← Back to Home
+            </button>
+          </div>
         </div>
       </div>
     </main>
