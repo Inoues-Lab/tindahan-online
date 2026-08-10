@@ -50,11 +50,10 @@ export default function MerchantProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/products')
+      const res = await fetch('/api/merchant/products')
       const data = await res.json()
       if (res.ok) {
-        const myProducts = (data.products || []).filter((p: any) => p.merchantId === user?.id)
-        setProducts(myProducts)
+        setProducts(data.products || [])
       }
     } catch (error) {
       console.error('Error:', error)
@@ -99,11 +98,10 @@ export default function MerchantProductsPage() {
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         weightKg: parseFloat(formData.weightKg) || 1.0,
-        imageUrl,
-        merchantId: user?.id
+        imageUrl
       }
 
-      const res = await fetch('/api/admin/products', {
+      const res = await fetch('/api/merchant/products', {
         method: editingProduct ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingProduct ? { ...productData, id: editingProduct.id } : productData)
@@ -146,7 +144,7 @@ export default function MerchantProductsPage() {
     if (!confirm('Delete this product?')) return
     
     try {
-      const res = await fetch(`/api/admin/products?id=${productId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/merchant/products?id=${productId}`, { method: 'DELETE' })
       if (res.ok) {
         alert('Product deleted!')
         fetchProducts()
@@ -226,11 +224,10 @@ export default function MerchantProductsPage() {
           </div>
         )}
 
-        {/* Add/Edit Product Form */}
         {showForm && (
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
             <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-              {editingProduct ? '✏️ Edit Product' : ' Add New Product'}
+              {editingProduct ? '✏️ Edit Product' : '➕ Add New Product'}
             </h2>
             
             <form onSubmit={handleSubmit}>
@@ -329,7 +326,6 @@ export default function MerchantProductsPage() {
           </div>
         )}
 
-        {/* Products List */}
         <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
           <h2 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '20px' }}>📦 Your Products ({products.length})</h2>
           
@@ -348,7 +344,7 @@ export default function MerchantProductsPage() {
                   <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{product.name}</h3>
                   <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px' }}>{product.description}</p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{product.price.toFixed(2)}</span>
+                    <span style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>{product.price.toFixed(2)}</span>
                     <span style={{ fontSize: '14px', color: 'gray' }}>Stock: {product.stock}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
