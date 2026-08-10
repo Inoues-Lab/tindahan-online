@@ -64,14 +64,11 @@ export default function Header() {
           🛒 Tindahan
         </Link>
 
-        {/* Desktop Navigation */}
+        {/* Desktop Navigation - Hidden on mobile by default */}
         <nav style={{ 
-          display: { xs: 'none', md: 'flex' },
+          display: 'flex',
           gap: '16px', 
-          alignItems: 'center',
-          '@media (max-width: 768px)': {
-            display: 'none'
-          }
+          alignItems: 'center'
         }}>
           {user && (
             <>
@@ -120,7 +117,7 @@ export default function Header() {
                 fontWeight: 'bold',
                 fontSize: '14px'
               }}>
-                🛍️ Shop
+                ️ Shop
               </Link>
 
               <button 
@@ -157,15 +154,12 @@ export default function Header() {
           )}
         </nav>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Button - Only shown when needed */}
         {user && (
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             style={{
               display: 'none',
-              '@media (max-width: 768px)': {
-                display: 'block'
-              },
               background: 'none',
               border: '2px solid black',
               borderRadius: '8px',
@@ -179,13 +173,9 @@ export default function Header() {
         )}
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Shown when mobileMenuOpen is true */}
       {mobileMenuOpen && user && (
         <div style={{
-          display: 'none',
-          '@media (max-width: 768px)': {
-            display: 'block'
-          },
           backgroundColor: '#f9f9f9',
           borderTop: '2px solid black',
           padding: '16px'
@@ -207,7 +197,7 @@ export default function Header() {
                 alignItems: 'center'
               }}
             >
-              <span>🛒 Cart</span>
+              <span> Cart</span>
               {cartCount > 0 && (
                 <span style={{
                   backgroundColor: 'red',
