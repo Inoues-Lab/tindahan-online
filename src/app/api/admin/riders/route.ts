@@ -50,16 +50,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // FIX: Map 'APPROVE' to 'APPROVED' and 'REJECT' to 'REJECTED'
+    const newStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED'
+
     // Update rider profile status
     await prisma.riderProfile.upsert({
       where: { userId: riderId },
-      update: { status: action },
-      create: { userId: riderId, status: action }
+      update: { status: newStatus },
+      create: { userId: riderId, status: newStatus }
     })
 
     return NextResponse.json({ 
       success: true, 
-      message: `Rider ${action.toLowerCase()} successfully!` 
+      message: `Rider ${newStatus.toLowerCase()} successfully!` 
     })
   } catch (error) {
     console.error('Error:', error)
