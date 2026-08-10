@@ -43,6 +43,7 @@ export default function MerchantOrdersPage() {
     }
   }
 
+  // FIXED: Use the correct status names that exist in your database schema
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     if (!confirm(`Are you sure you want to mark this order as ${newStatus}?`)) return
 
@@ -54,10 +55,11 @@ export default function MerchantOrdersPage() {
       })
 
       if (res.ok) {
-        alert(`Order marked as ${newStatus}!`)
+        alert(`Order updated to ${newStatus}!`)
         fetchOrders() // Refresh list
       } else {
-        alert('Failed to update order')
+        const data = await res.json()
+        alert(data.error || 'Failed to update order')
       }
     } catch (error) {
       alert('Error updating order')
@@ -67,10 +69,10 @@ export default function MerchantOrdersPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING': return { bg: '#fff3cd', text: '#856404', border: '#ffc107' }
-      case 'CONFIRMED': return { bg: '#d1ecf1', text: '#0c5460', border: '#17a2b8' }
-      case 'PREPARING': return { bg: '#e2e3e5', text: '#383d41', border: '#6c757d' }
-      case 'READY_FOR_PICKUP': return { bg: '#d4edda', text: '#155724', border: '#28a745' }
+      case 'ACCEPTED': return { bg: '#d1ecf1', text: '#0c5460', border: '#17a2b8' }
+      case 'IN_PROGRESS': return { bg: '#e2e3e5', text: '#383d41', border: '#6c757d' }
       case 'COMPLETED': return { bg: '#d4edda', text: '#155724', border: '#28a745' }
+      case 'CANCELLED': return { bg: '#f8d7da', text: '#721c24', border: '#dc3545' }
       default: return { bg: '#f8f9fa', text: '#333', border: '#ddd' }
     }
   }
@@ -146,26 +148,29 @@ export default function MerchantOrdersPage() {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Action Buttons - FIXED TO USE CORRECT STATUS NAMES */}
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     {order.status === 'PENDING' && (
-                      <button onClick={() => handleStatusUpdate(order.id, 'CONFIRMED')} style={{ flex: 1, padding: '12px', backgroundColor: '#17a2b8', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                        ✅ Confirm Order
+                      <button onClick={() => handleStatusUpdate(order.id, 'ACCEPTED')} style={{ flex: 1, padding: '12px', backgroundColor: '#17a2b8', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                        ✅ Confirm Order (Accept)
                       </button>
                     )}
-                    {order.status === 'CONFIRMED' && (
-                      <button onClick={() => handleStatusUpdate(order.id, 'PREPARING')} style={{ flex: 1, padding: '12px', backgroundColor: '#6c757d', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                        🔨 Start Preparing
+                    
+                    {order.status === 'ACCEPTED' && (
+                      <button onClick={() => handleStatusUpdate(order.id, 'IN_PROGRESS')} style={{ flex: 1, padding: '12px', backgroundColor: '#6c757d', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                         Start Preparing
                       </button>
                     )}
-                    {order.status === 'PREPARING' && (
-                      <button onClick={() => handleStatusUpdate(order.id, 'READY_FOR_PICKUP')} style={{ flex: 1, padding: '12px', backgroundColor: '#28a745', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                        📦 Ready for Pickup
+                    
+                    {order.status === 'IN_PROGRESS' && (
+                      <button onClick={() => handleStatusUpdate(order.id, 'COMPLETED')} style={{ flex: 1, padding: '12px', backgroundColor: '#28a745', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                        📦 Mark as Completed
                       </button>
                     )}
-                    {['READY_FOR_PICKUP', 'COMPLETED', 'CANCELLED'].includes(order.status) && (
-                      <div style={{ padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px', fontWeight: 'bold', textAlign: 'center', width: '100%' }}>
-                        No actions available (Status: {order.status})
+                    
+                    {['COMPLETED', 'CANCELLED'].includes(order.status) && (
+                      <div style={{ padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px', fontWeight: 'bold', textAlign: 'center', width: '100%', border: '2px solid black' }}>
+                        Order is {order.status}
                       </div>
                     )}
                   </div>
