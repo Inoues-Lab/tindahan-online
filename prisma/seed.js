@@ -1,102 +1,132 @@
-const { PrismaClient } = require('@prisma/client')
-const bcrypt = require('bcryptjs')
+import { PrismaClient } from '@prisma/client'
+import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Seeding database...')
+  // Create Admin User
+  const adminPassword = await bcrypt.hash('admin123', 10)
+  await prisma.user.upsert({
+    where: { email: 'admin@tindahan.com' },
+    update: {},
+    create: {
+      email: 'admin@tindahan.com',
+      password: adminPassword,
+      name: 'Admin',
+      role: 'ADMIN',
+    },
+  })
 
-  const products = await Promise.all([
-    prisma.product.create({
-      data: {
-        name: 'Jasmine Rice (5kg)',
-        description: 'Premium Jasmine Rice',
-        price: 350,
-        stock: 100,
-        image: '/images/rice.jpg'
-      }
-    }),
-    prisma.product.create({
-      data: {
+  // Create Customer User
+  const customerPassword = await bcrypt.hash('customer123', 10)
+  const customer = await prisma.user.upsert({
+    where: { email: 'customer@tindahan.com' },
+    update: {},
+    create: {
+      email: 'customer@tindahan.com',
+      password: customerPassword,
+      name: 'Juan Dela Cruz',
+      phone: '09551652430',
+      address: 'Becques, Tagudin, Ilocos Sur',
+      role: 'CUSTOMER',
+    },
+  })
+
+  // Create Merchant User
+  const merchantPassword = await bcrypt.hash('merchant123', 10)
+  const merchantUser = await prisma.user.upsert({
+    where: { email: 'merchant@tindahan.com' },
+    update: {},
+    create: {
+      email: 'merchant@tindahan.com',
+      password: merchantPassword,
+      name: 'Grace Encarnacion',
+      phone: '09551652431',
+      address: 'Tagudin, Ilocos Sur',
+      role: 'MERCHANT',
+    },
+  })
+
+  // Create Merchant Profile
+  const merchantProfile = await prisma.merchantProfile.upsert({
+    where: { userId: merchantUser.id },
+    update: {},
+    create: {
+      userId: merchantUser.id,
+      storeName: 'Grace Store',
+      businessType: 'Grocery',
+      status: 'APPROVED',
+    },
+  })
+
+  // Create Rider User
+  const riderPassword = await bcrypt.hash('rider123', 10)
+  const riderUser = await prisma.user.upsert({
+    where: { email: 'rider@tindahan.com' },
+    update: {},
+    create: {
+      email: 'rider@tindahan.com',
+      password: riderPassword,
+      name: 'Pedro Rider',
+      phone: '09551652432',
+      role: 'RIDER',
+    },
+  })
+
+  // Create Rider Profile
+  await prisma.riderProfile.upsert({
+    where: { userId: riderUser.id },
+    update: {},
+    create: {
+      userId: riderUser.id,
+      status: 'APPROVED',
+      vehicleType: 'Motorcycle',
+      plateNumber: 'ABC-123',
+    },
+  })
+
+  // Create Products
+  await prisma.product.createMany({
+    data: [
+      {
         name: 'Canned Corned Beef (150g)',
         description: 'Delicious corned beef',
-        price: 45,
-        stock: 50,
-        image: '/images/cornedbeef.jpg'
-      }
-    }),
-    prisma.product.create({
-      data: {
-        name: 'Fresh Eggs (1 tray)',
-        description: 'Farm fresh eggs',
-        price: 220,
-        stock: 30,
-        image: '/images/eggs.jpg'
-      }
-    }),
-    prisma.product.create({
-      data: {
+        price: 45.0,
+        stock: 200,
+        merchantId: merchantProfile.id,
+      },
+      {
         name: 'Coca Cola 1.5L',
         description: 'Refreshing soda',
-        price: 95,
-        stock: 40,
-        image: '/images/coke.jpg'
-      }
-    }),
-    prisma.product.create({
-      data: {
-        name: 'Instant Noodles (Pack of 5)',
-        description: 'Quick and easy meal',
-        price: 65,
+        price: 95.0,
+        stock: 150,
+        merchantId: merchantProfile.id,
+      },
+      {
+        name: 'Daing',
+        description: 'Dried fish',
+        price: 10.0,
+        stock: 500,
+        merchantId: merchantProfile.id,
+      },
+      {
+        name: 'Eggs (1 dozen)',
+        description: 'Fresh eggs',
+        price: 120.0,
         stock: 100,
-        image: '/images/noodles.jpg'
-      }
-    }),
-    prisma.product.create({
-      data: {
-        name: 'test',
-        description: 'test',
-        price: 100,
-        stock: 10,
-        image: '/images/test.jpg'
-      }
-    })
-  ])
-
-  const hashedPassword = await bcrypt.hash('123456', 10)
-
-  await prisma.user.create({
-    data: {
-      name: 'Admin User',
-      email: 'admin@tindahan.com',
-      passwordHash: hashedPassword,
-      role: 'ADMIN',
-      phone: '09123456789'
-    }
+        merchantId: merchantProfile.id,
+      },
+      {
+        name: 'Rice (5kg)',
+        description: 'Premium rice',
+        price: 350.0,
+        stock: 100,
+        merchantId: merchantProfile.id,
+      },
+    ],
   })
 
-  await prisma.user.create({
-    data: {
-      name: 'Rider Mark',
-      email: 'rider@mark.com',
-      passwordHash: hashedPassword,
-      role: 'RIDER',
-      phone: '09987654321'
-    }
-  })
-
-  await prisma.user.create({
-    data: {
-      name: 'Customer Juan',
-      email: 'customer@juan.com',
-      passwordHash: hashedPassword,
-      role: 'CUSTOMER',
-      phone: '09111222333'
-    }
-  })
-
-  console.log('✅ Seeding completed!')
-  console.log(`Created ${products.length} products`)
+  console.log('Seed data created successfully!')
 }
 
 main()
