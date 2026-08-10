@@ -59,10 +59,10 @@ export default function MyOrdersPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'PENDING': return ' Pending'
+      case 'PENDING': return '⏳ Pending'
       case 'ACCEPTED': return '✅ Accepted by Rider'
       case 'COMPLETED': return '✅ Delivered'
-      case 'CANCELLED': return '❌ Cancelled'
+      case 'CANCELLED': return ' Cancelled'
       default: return status
     }
   }
@@ -102,12 +102,7 @@ export default function MyOrdersPage() {
                   borderRadius: '12px', 
                   border: '3px solid black', 
                   boxShadow: '3px 3px 0px black',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  ':hover': {
-                    transform: 'translateY(-3px)',
-                    boxShadow: '5px 5px 0px black'
-                  }
+                  cursor: 'pointer'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', alignItems: 'flex-start' }}>
                     <div>
@@ -116,7 +111,7 @@ export default function MyOrdersPage() {
                           Order #{order.id.slice(0, 8).toUpperCase()}
                         </h3>
                         {order.serviceType === 'PABILI' && (
-                          <span style={{ padding: '4px 8px', backgroundColor: '#ffc107', color: 'black', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}> PABILI</span>
+                          <span style={{ padding: '4px 8px', backgroundColor: '#ffc107', color: 'black', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>🛒 PABILI</span>
                         )}
                         {order.serviceType === 'PADALA' && (
                           <span style={{ padding: '4px 8px', backgroundColor: '#17a2b8', color: 'white', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>📦 PADALA</span>
@@ -145,7 +140,7 @@ export default function MyOrdersPage() {
                   {/* SERVICE SPECIFIC DETAILS */}
                   {order.serviceType === 'PABILI' && (
                     <div style={{ backgroundColor: '#fff3cd', padding: '15px', borderRadius: '8px', border: '2px solid #ffc107', marginBottom: '15px' }}>
-                      <p style={{ fontWeight: 'bold', color: '#856404', marginBottom: '10px', margin: '0 0 10px 0' }}> PABILI Request Details:</p>
+                      <p style={{ fontWeight: 'bold', color: '#856404', marginBottom: '10px', margin: '0 0 10px 0' }}>🛒 PABILI Request Details:</p>
                       <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>What to buy:</strong> {order.itemDescription}</p>
                       {order.storeLocation && <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>Where:</strong> {order.storeLocation}</p>}
                       {order.maxAmount && <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>Max Budget:</strong> ₱{order.maxAmount.toFixed(2)}</p>}
@@ -155,7 +150,7 @@ export default function MyOrdersPage() {
 
                   {order.serviceType === 'PADALA' && (
                     <div style={{ backgroundColor: '#d1ecf1', padding: '15px', borderRadius: '8px', border: '2px solid #17a2b8', marginBottom: '15px' }}>
-                      <p style={{ fontWeight: 'bold', color: '#0c5460', marginBottom: '10px', margin: '0 0 10px 0' }}>📦 PADALA Details:</p>
+                      <p style={{ fontWeight: 'bold', color: '#0c5460', marginBottom: '10px', margin: '0 0 10px 0' }}> PADALA Details:</p>
                       <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>Package:</strong> {order.packageDescription}</p>
                       <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>Sender:</strong> {order.senderName} ({order.senderContact})</p>
                       <p style={{ margin: '5px 0', fontSize: '14px' }}><strong>Receiver:</strong> {order.receiverName} ({order.receiverContact})</p>
