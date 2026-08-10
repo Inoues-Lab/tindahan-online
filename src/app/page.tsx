@@ -15,14 +15,37 @@ export default function HomePage() {
       .then(data => {
         if (data.user) {
           setUser(data.user)
-          if (data.user.role === 'ADMIN') router.push('/admin')
-          else if (data.user.role === 'RIDER') router.push('/rider')
-          else if (data.user.role === 'MERCHANT') router.push('/merchant/dashboard')
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [router])
+  }, [])
+
+  const handleMerchantClick = () => {
+    if (user) {
+      // User is logged in - go straight to apply
+      router.push('/merchant/apply')
+    } else {
+      // User is NOT logged in - go to register first
+      router.push('/register?role=MERCHANT')
+    }
+  }
+
+  const handleRiderClick = () => {
+    if (user) {
+      router.push('/rider/apply')
+    } else {
+      router.push('/register?role=RIDER')
+    }
+  }
+
+  const handleShopClick = () => {
+    if (user) {
+      router.push('/products')
+    } else {
+      router.push('/register?role=CUSTOMER')
+    }
+  }
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
@@ -34,16 +57,16 @@ export default function HomePage() {
         textAlign: 'center',
         color: 'white'
       }}>
-        <h1 style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '20px', textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
-           Tindahan Online
+        <h1 style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '20px' }}>
+          🛒 Tindahan Online
         </h1>
-        <p style={{ fontSize: '24px', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>
+        <p style={{ fontSize: '24px', marginBottom: '40px' }}>
           Fresh groceries delivered to your door within the day!
         </p>
         
-        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
-            onClick={() => router.push('/products')}
+            onClick={handleShopClick}
             style={{
               padding: '20px 40px',
               backgroundColor: 'white',
@@ -56,11 +79,11 @@ export default function HomePage() {
               boxShadow: '4px 4px 0px black'
             }}
           >
-             Shop Now
+            🛒 Shop Now
           </button>
           
           <button
-            onClick={() => router.push('/register?role=RIDER')}
+            onClick={handleRiderClick}
             style={{
               padding: '20px 40px',
               backgroundColor: '#28a745',
@@ -73,11 +96,11 @@ export default function HomePage() {
               boxShadow: '4px 4px 0px black'
             }}
           >
-             Become a Rider
+            🏍️ Become a Rider
           </button>
           
           <button
-            onClick={() => router.push('/register?role=MERCHANT')}
+            onClick={handleMerchantClick}
             style={{
               padding: '20px 40px',
               backgroundColor: '#ffc107',
@@ -90,7 +113,7 @@ export default function HomePage() {
               boxShadow: '4px 4px 0px black'
             }}
           >
-             Partner Merchant
+            🏪 Partner Merchant
           </button>
         </div>
       </div>
@@ -102,7 +125,7 @@ export default function HomePage() {
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
-            <div style={{ fontSize: '60px', marginBottom: '20px' }}>🚚</div>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}></div>
             <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Same-Day Delivery</h3>
             <p style={{ color: 'gray', fontSize: '16px' }}>Order before 2 PM and get your groceries delivered the same day!</p>
           </div>
@@ -114,60 +137,15 @@ export default function HomePage() {
           </div>
 
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
-            <div style={{ fontSize: '60px', marginBottom: '20px' }}>️</div>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}>🛡️</div>
             <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Secure & Safe</h3>
             <p style={{ color: 'gray', fontSize: '16px' }}>Verified riders and merchants. Your safety is our priority!</p>
           </div>
         </div>
       </div>
 
-      <div style={{ backgroundColor: '#f0f8ff', padding: '60px 20px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '36px', fontWeight: 'bold', textAlign: 'center', marginBottom: '50px' }}>How It Works</h2>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '30px' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ width: '80px', height: '80px', backgroundColor: '#667eea', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 'bold', margin: '0 auto 20px', border: '3px solid black' }}>1</div>
-              <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px' }}>Browse & Order</h3>
-              <p style={{ color: 'gray' }}>Shop from your favorite local stores</p>
-            </div>
-
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ width: '80px', height: '80px', backgroundColor: '#28a745', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 'bold', margin: '0 auto 20px', border: '3px solid black' }}>2</div>
-              <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px' }}>We Process</h3>
-              <p style={{ color: 'gray' }}>Our team picks and packs your order</p>
-            </div>
-
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ width: '80px', height: '80px', backgroundColor: '#ffc107', color: 'black', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 'bold', margin: '0 auto 20px', border: '3px solid black' }}>3</div>
-              <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px' }}>Fast Delivery</h3>
-              <p style={{ color: 'gray' }}>Tracked delivery right to your door</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div style={{ backgroundColor: '#2c3e50', color: 'white', padding: '40px 20px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '20px' }}>Ready to Get Started?</h2>
-        <p style={{ fontSize: '18px', marginBottom: '30px' }}>Join thousands of satisfied customers in your area!</p>
-        <button
-          onClick={() => router.push('/register')}
-          style={{
-            padding: '15px 40px',
-            backgroundColor: '#667eea',
-            color: 'white',
-            border: '3px solid black',
-            borderRadius: '12px',
-            fontWeight: 'bold',
-            fontSize: '18px',
-            cursor: 'pointer',
-            boxShadow: '4px 4px 0px black'
-          }}
-        >
-          Create Free Account
-        </button>
-        
-        <p style={{ marginTop: '30px', fontSize: '14px', color: '#95a5a6' }}>
+        <p style={{ fontSize: '14px', color: '#95a5a6' }}>
           © 2024 Tindahan Online. All rights reserved.
         </p>
       </div>
