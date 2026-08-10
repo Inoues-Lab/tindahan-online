@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ orderID: string }> }
+  context: { params: Promise<{ orderId: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -14,11 +14,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Await the params
-    const { orderID } = await context.params
+    const { orderId } = await context.params
 
     const order = await prisma.order.findUnique({
-      where: { id: orderID },
+      where: { id: orderId },
       include: {
         items: {
           include: {
@@ -32,9 +31,8 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // FIX: Use 'as any' to bypass TypeScript strictness
-    // We check for userId, customerId, or user.id just in case
-    const ownerId = (order as any).userId || (order as any).customerId || (order as any).user?.id;
+    // Use type assertion to bypass TypeScript check
+    const ownerId = (order as any).userId || (order as any).customerId || (order as any).user?.id
 
     if (ownerId !== userId) {
       return NextResponse.json({ error: 'Not authorized to view this order' }, { status: 403 })
