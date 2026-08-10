@@ -20,10 +20,6 @@ export default function HomePage() {
           if (data.user.role === 'MERCHANT') {
             router.push('/merchant/dashboard')
           } 
-          // If Admin, go to Admin Dashboard (if you have one)
-          else if (data.user.role === 'ADMIN') {
-             // router.push('/admin') 
-          }
         }
       })
       .catch(() => {})
@@ -36,7 +32,7 @@ export default function HomePage() {
   }
 
   const handleRiderClick = () => {
-    if (user) router.push('/rider/apply') // or rider dashboard
+    if (user) router.push('/rider/apply')
     else router.push('/register?role=RIDER')
   }
 
@@ -80,7 +76,7 @@ export default function HomePage() {
           </button>
           
           <button onClick={handleMerchantClick} style={{ padding: '20px 40px', backgroundColor: '#ffc107', color: 'black', border: '3px solid black', borderRadius: '12px', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer', boxShadow: '4px 4px 0px black' }}>
-            🏪 Partner Merchant
+             Partner Merchant
           </button>
         </div>
       </div>
@@ -93,7 +89,7 @@ export default function HomePage() {
             <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Same-Day Delivery</h3>
           </div>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
-            <div style={{ fontSize: '60px', marginBottom: '20px' }}>💰</div>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}></div>
             <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Best Prices</h3>
           </div>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>

@@ -42,13 +42,16 @@ export async function GET() {
     const uniqueOrderIds = new Set()
 
     orderItems.forEach(item => {
-      // Calculate Sales (Only for Completed/Delivered orders)
-      if (item.order.status === 'COMPLETED' || item.order.status === 'DELIVERED') {
+      // FIX: Convert to string to avoid TypeScript enum errors
+      const status = String(item.order.status)
+
+      // Calculate Sales (Check for common "Success" statuses)
+      if (status === 'COMPLETED' || status === 'DELIVERED' || status === 'ACCEPTED') {
         totalSales += (item.price * item.quantity)
       }
 
-      // Count Pending Orders (PENDING, CONFIRMED, PREPARING)
-      if (['PENDING', 'CONFIRMED', 'PREPARING'].includes(item.order.status)) {
+      // Count Pending/Active Orders
+      if (['PENDING', 'CONFIRMED', 'PREPARING', 'ACCEPTED', 'IN_PROGRESS', 'READY_FOR_PICKUP'].includes(status)) {
         if (!uniqueOrderIds.has(item.orderId)) {
           uniqueOrderIds.add(item.orderId)
           pendingOrders++
