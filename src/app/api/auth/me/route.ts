@@ -11,17 +11,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    // FIXED: Use only 'select', remove 'include'
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
-        name: true,
         email: true,
+        name: true,
         role: true,
         phone: true,
         address: true,
-        cashOnHand: true,
+        // REMOVED: cashOnHand: true (field doesn't exist in schema)
         riderProfile: true,
         merchantProfile: true
       }
