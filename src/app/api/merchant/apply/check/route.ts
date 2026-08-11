@@ -8,17 +8,26 @@ export async function GET() {
     const userId = cookieStore.get('userId')?.value
 
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const application = await prisma.merchantApplication.findFirst({
+    // Check if user already has a merchant profile (application)
+    const application = await prisma.merchantProfile.findFirst({
       where: { userId },
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json({ application })
+    if (!application) {
+      return NextResponse.json({ hasApplication: false })
+    }
+
+    return NextResponse.json({ 
+      hasApplication: true, 
+      status: application.status,
+      storeName: application.storeName
+    })
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error checking merchant application:', error)
     return NextResponse.json({ error: 'Failed to check application' }, { status: 500 })
   }
 }
