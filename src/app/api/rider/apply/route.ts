@@ -12,7 +12,6 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    // Only use fields that exist in your schema
     const { vehicleType, plateNumber } = body
 
     // Check if already has a PENDING application
@@ -24,21 +23,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You already have a pending application' }, { status: 400 })
     }
 
-    // Create or Update application (Profile)
-    const application = await prisma.riderProfile.upsert({
-      where: { userId },
-      update: {
-        vehicleType: vehicleType || null,
-        plateNumber: plateNumber || null,
-        status: 'PENDING'
-      },
-      create: {
-        userId,
-        vehicleType: vehicleType || null,
-        plateNumber: plateNumber || null,
-        status: 'PENDING'
-      }
+    // Check if rider profile exists
+    const existingProfile = await prisma.riderProfile.findUnique({
+      where: { userId }
     })
+
+    let application
+    if (existingProfile) {
+      // Update existing profile
+      application = await prisma.riderProfile.update({
+        where: { userId },
+        data: {
+          vehicleType: vehicleType || null,
+          plateNumber: plateNumber || null,
+          status: 'PENDING'
+        }
+      })
+    } else {
+      // Create new profile
+      application = await prisma.riderProfile.create({
+        data: {
+          userId,
+          vehicleType: vehicleType || null,
+          plateNumber: plateNumber || null,
+          status: 'PENDING'
+        }
+      })
+    }
 
     return NextResponse.json({ success: true, application })
   } catch (error) {
