@@ -1,35 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Header from '@/components/Header'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const searchParams = useSearchParams()
+  const defaultRole = searchParams.get('role') || 'CUSTOMER'
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     phone: '',
     address: '',
-    role: 'CUSTOMER'
+    role: defaultRole
   })
-
-  // Read role from URL without using useSearchParams()
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const role = params.get('role')
-    if (role === 'RIDER' || role === 'MERCHANT') {
-      setFormData(prev => ({ ...prev, role }))
-    }
-  }, [])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
+    setLoading(true)
 
     try {
       const res = await fetch('/api/auth/register', {
@@ -40,139 +34,154 @@ export default function RegisterPage() {
 
       const data = await res.json()
 
-      if (res.ok) {
-        // Redirect based on selected role to the apply page
-        if (formData.role === 'RIDER') {
-          router.push('/rider/apply')
-        } else if (formData.role === 'MERCHANT') {
+      if (!res.ok) {
+        setError(data.error || 'Registration failed')
+        return
+      }
+
+      // Registration successful - auto login and redirect
+      if (data.user) {
+        // Set the cookie manually
+        await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        })
+
+        // Redirect based on role
+        if (data.user.role === 'MERCHANT') {
           router.push('/merchant/apply')
+        } else if (data.user.role === 'RIDER') {
+          router.push('/rider/apply')
         } else {
           router.push('/')
         }
-      } else {
-        setError(data.error || 'Registration failed')
       }
     } catch (err) {
-      setError('An error occurred')
+      setError('An error occurred. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', maxWidth: '500px', width: '100%' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>Create Account</h1>
-        <p style={{ textAlign: 'center', color: 'gray', marginBottom: '30px' }}>Join Tindahan Online today!</p>
+    <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+      <Header />
+      <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px' }}>
+        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '30px', textAlign: 'center' }}>
+            Create Account
+          </h1>
 
-        {error && (
-          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', color: 'red' }}>
-            {error}
-          </div>
-        )}
+          {error && (
+            <div style={{ backgroundColor: '#fee', border: '2px solid red', padding: '15px', borderRadius: '8px', marginBottom: '20px', color: 'red' }}>
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Full Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Juan Dela Cruz"
-              required
-              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-            />
-          </div>
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Full Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Juan Dela Cruz"
+                required
+                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+              />
+            </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Email</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="you@example.com"
-              required
-              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-            />
-          </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="your@email.com"
+                required
+                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+              />
+            </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Password</label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder="••••••••"
-              required
-              minLength={6}
-              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-            />
-          </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Password</label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Create a password"
+                required
+                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+              />
+            </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Phone Number</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="09XXXXXXXXX"
-              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-            />
-          </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Phone Number</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="09551652430"
+                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+              />
+            </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Address</label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="House No., Street, Barangay, City"
-              rows={3}
-              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-            />
-          </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Address</label>
+              <textarea
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="Your complete address"
+                rows={3}
+                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+              />
+            </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>I want to be a:</label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>I want to:</label>
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+              >
+                <option value="CUSTOMER">Shop as Customer</option>
+                <option value="MERCHANT">Become a Merchant</option>
+                <option value="RIDER">Become a Rider</option>
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{ 
+                width: '100%', 
+                padding: '15px', 
+                backgroundColor: loading ? 'gray' : '#4caf50', 
+                color: 'white', 
+                border: '2px solid black', 
+                borderRadius: '8px', 
+                fontWeight: 'bold', 
+                fontSize: '18px', 
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: '4px 4px 0px black'
+              }}
             >
-              <option value="CUSTOMER">Customer (Shop & Order)</option>
-              <option value="RIDER">Rider (Deliver Orders)</option>
-              <option value="MERCHANT">Merchant (Sell Products)</option>
-            </select>
-            <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>
-              {formData.role === 'CUSTOMER' && 'You can start shopping immediately!'}
-              {formData.role === 'RIDER' && 'You will need to submit requirements for approval.'}
-              {formData.role === 'MERCHANT' && 'You will need to submit documents for approval.'}
+              {loading ? 'Creating Account...' : 'Register'}
+            </button>
+          </form>
+
+          <div style={{ marginTop: '30px', textAlign: 'center' }}>
+            <p style={{ color: 'gray' }}>
+              Already have an account?{' '}
+              <a href="/login" style={{ color: '#2196f3', fontWeight: 'bold' }}>
+                Login here
+              </a>
             </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '15px',
-              backgroundColor: loading ? 'gray' : 'green',
-              color: 'white',
-              border: '2px solid black',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              fontSize: '18px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '4px 4px 0px black'
-            }}
-          >
-            {loading ? 'Creating Account...' : 'Register'}
-          </button>
-        </form>
-
-        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <Link href="/login" style={{ color: 'blue', textDecoration: 'underline', fontWeight: 'bold' }}>
-            Already have an account? Login here
-          </Link>
         </div>
       </div>
     </main>
