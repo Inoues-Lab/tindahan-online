@@ -1,129 +1,137 @@
-// prisma/seed.ts
 import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
+import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Starting database seed...')
-
-  // Create admin user
-  const adminPassword = await bcrypt.hash('Niekoh1128*', 10)
+  // Create Admin User
+  const adminPassword = await bcrypt.hash('admin123', 10)
   await prisma.user.upsert({
     where: { email: 'admin@tindahan.com' },
     update: {},
     create: {
       email: 'admin@tindahan.com',
+      password: adminPassword,
       name: 'Admin',
-      password: adminPassword, // Changed to match schema
       role: 'ADMIN',
-      phone: '09551652430',
     },
   })
 
-  // Create rider user
-  const riderPassword = await bcrypt.hash('123456', 10)
-  await prisma.user.upsert({
-    where: { email: 'rider@mark.com' },
+  // Create Customer User
+  const customerPassword = await bcrypt.hash('customer123', 10)
+  const customer = await prisma.user.upsert({
+    where: { email: 'customer@tindahan.com' },
     update: {},
     create: {
-      email: 'rider@mark.com',
-      name: 'rider1',
-      password: riderPassword, // Changed to match schema
+      email: 'customer@tindahan.com',
+      password: customerPassword,
+      name: 'Juan Dela Cruz',
+      phone: '09551652430',
+      address: 'Becques, Tagudin, Ilocos Sur',
+      role: 'CUSTOMER',
+    },
+  })
+
+  // Create Merchant User
+  const merchantPassword = await bcrypt.hash('merchant123', 10)
+  const merchantUser = await prisma.user.upsert({
+    where: { email: 'merchant@tindahan.com' },
+    update: {},
+    create: {
+      email: 'merchant@tindahan.com',
+      password: merchantPassword,
+      name: 'Grace Encarnacion',
+      phone: '09551652431',
+      address: 'Tagudin, Ilocos Sur',
+      role: 'MERCHANT',
+    },
+  })
+
+  // Create Merchant Profile
+  const merchantProfile = await prisma.merchantProfile.upsert({
+    where: { userId: merchantUser.id },
+    update: {},
+    create: {
+      userId: merchantUser.id,
+      storeName: 'Grace Store',
+      businessType: 'Grocery',
+      status: 'APPROVED',
+    },
+  })
+
+  // Create Rider User
+  const riderPassword = await bcrypt.hash('rider123', 10)
+  const riderUser = await prisma.user.upsert({
+    where: { email: 'rider@tindahan.com' },
+    update: {},
+    create: {
+      email: 'rider@tindahan.com',
+      password: riderPassword,
+      name: 'Pedro Rider',
+      phone: '09551652432',
       role: 'RIDER',
     },
   })
 
-  // Create customer user
-  const customerPassword = await bcrypt.hash('123456', 10)
-  await prisma.user.upsert({
-    where: { email: 'marky@gmail.com' },
+  // Create Rider Profile
+  await prisma.riderProfile.upsert({
+    where: { userId: riderUser.id },
     update: {},
     create: {
-      email: 'marky@gmail.com',
-      name: 'marky',
-      password: customerPassword, // Changed to match schema
-      role: 'CUSTOMER',
-      phone: '09551652430',
+      userId: riderUser.id,
+      status: 'APPROVED',
+      vehicleType: 'Motorcycle',
+      plateNumber: 'ABC-123',
     },
   })
 
-  // Create products
-  await prisma.product.upsert({
-    where: { id: 'prod-1' },
-    update: {},
-    create: {
-      id: 'prod-1',
-      name: 'Jasmine Rice (5kg)',
-      description: 'Premium Jasmine Rice',
-      price: 350,
-      stock: 100,
-      weightKg: 5.0,
-    },
+  // Create Products
+  await prisma.product.createMany({
+    data: [
+      {
+        name: 'Canned Corned Beef (150g)',
+        description: 'Delicious corned beef',
+        price: 45.0,
+        stock: 200,
+        merchantId: merchantProfile.id,
+      },
+      {
+        name: 'Coca Cola 1.5L',
+        description: 'Refreshing soda',
+        price: 95.0,
+        stock: 150,
+        merchantId: merchantProfile.id,
+      },
+      {
+        name: 'Daing',
+        description: 'Dried fish',
+        price: 10.0,
+        stock: 500,
+        merchantId: merchantProfile.id,
+      },
+      {
+        name: 'Eggs (1 dozen)',
+        description: 'Fresh eggs',
+        price: 120.0,
+        stock: 100,
+        merchantId: merchantProfile.id,
+      },
+      {
+        name: 'Rice (5kg)',
+        description: 'Premium rice',
+        price: 350.0,
+        stock: 100,
+        merchantId: merchantProfile.id,
+      },
+    ],
   })
 
-  await prisma.product.upsert({
-    where: { id: 'prod-2' },
-    update: {},
-    create: {
-      id: 'prod-2',
-      name: 'Canned Corned Beef (150g)',
-      description: 'Delicious corned beef',
-      price: 45,
-      stock: 200,
-      weightKg: 0.15,
-    },
-  })
-
-  await prisma.product.upsert({
-    where: { id: 'prod-3' },
-    update: {},
-    create: {
-      id: 'prod-3',
-      name: 'Fresh Eggs (1 tray)',
-      description: 'Farm fresh eggs',
-      price: 220,
-      stock: 30,
-      weightKg: 0.5,
-    },
-  })
-
-  await prisma.product.upsert({
-    where: { id: 'prod-4' },
-    update: {},
-    create: {
-      id: 'prod-4',
-      name: 'Coca Cola 1.5L',
-      description: 'Refreshing soda',
-      price: 95,
-      stock: 40,
-      weightKg: 1.5,
-    },
-  })
-
-  await prisma.product.upsert({
-    where: { id: 'prod-5' },
-    update: {},
-    create: {
-      id: 'prod-5',
-      name: 'Instant Noodles (Pack of 5)',
-      description: 'Quick and easy meal',
-      price: 65,
-      stock: 100,
-      weightKg: 0.4,
-    },
-  })
-
-  console.log('✅ Seed completed successfully!')
-  console.log('📝 Login credentials:')
-  console.log('  Admin:    admin@tindahan.com / Niekoh1128*')
-  console.log('  Rider:    rider@mark.com / 123456')
-  console.log('  Customer: marky@gmail.com / 123456')
+  console.log('Seed data created successfully!')
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e)
+    console.error(e)
     process.exit(1)
   })
   .finally(async () => {
