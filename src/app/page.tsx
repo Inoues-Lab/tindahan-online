@@ -9,17 +9,21 @@ export default function HomePage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+    useEffect(() => {
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => {
         if (data.user) {
           setUser(data.user)
           
-          // SMART REDIRECT: If Merchant, go to Dashboard immediately
-          if (data.user.role === 'MERCHANT') {
+          // SMART REDIRECT based on role
+          if (data.user.role === 'ADMIN') {
+            router.push('/admin/dashboard')
+          } else if (data.user.role === 'MERCHANT') {
             router.push('/merchant/dashboard')
-          } 
+          } else if (data.user.role === 'RIDER') {
+            router.push('/rider/dashboard')
+          }
         }
       })
       .catch(() => {})
