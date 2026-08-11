@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 
@@ -12,6 +12,33 @@ export default function LoginPage() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Check if already logged in
+  useEffect(() => {
+    const checkLogin = async () => {
+      try {
+        const res = await fetch('/api/auth/me')
+        const data = await res.json()
+        
+        if (data.user) {
+          // Already logged in, redirect to appropriate dashboard
+          if (data.user.role === 'ADMIN') {
+            router.push('/admin/dashboard')
+          } else if (data.user.role === 'MERCHANT') {
+            router.push('/merchant/dashboard')
+          } else if (data.user.role === 'RIDER') {
+            router.push('/rider/dashboard')
+          } else {
+            router.push('/')
+          }
+        }
+      } catch (error) {
+        // Not logged in, stay on login page
+      }
+    }
+    
+    checkLogin()
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,10 +56,12 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setError(data.error || 'Login failed')
+        setLoading(false)
         return
       }
 
       if (data.user) {
+        // Redirect based on role
         if (data.user.role === 'ADMIN') {
           router.push('/admin/dashboard')
         } else if (data.user.role === 'MERCHANT') {
@@ -45,7 +74,6 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError('An error occurred. Please try again.')
-    } finally {
       setLoading(false)
     }
   }

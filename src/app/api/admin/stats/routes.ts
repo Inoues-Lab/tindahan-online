@@ -7,7 +7,9 @@ export async function GET() {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
 
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (user?.role !== 'ADMIN') {

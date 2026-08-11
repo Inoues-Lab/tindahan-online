@@ -18,21 +18,33 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     checkAuth()
-  }, [router])
+  }, [])
 
   const checkAuth = async () => {
     try {
       const res = await fetch('/api/auth/me')
       const data = await res.json()
       
-      if (!data.user || data.user.role !== 'ADMIN') {
+      if (!data.user) {
         router.push('/login')
+        return
+      }
+      
+      if (data.user.role !== 'ADMIN') {
+        if (data.user.role === 'MERCHANT') {
+          router.push('/merchant/dashboard')
+        } else if (data.user.role === 'RIDER') {
+          router.push('/rider/dashboard')
+        } else {
+          router.push('/')
+        }
         return
       }
       
       setUser(data.user)
       fetchStats()
     } catch (error) {
+      console.error('Auth check error:', error)
       router.push('/login')
     } finally {
       setLoading(false)
@@ -57,6 +69,15 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.push('/')
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
   if (loading) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
@@ -70,13 +91,29 @@ export default function AdminDashboard() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ marginBottom: '30px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px' }}>
-            Admin Dashboard
-          </h1>
-          <p style={{ fontSize: '16px', color: 'gray' }}>
-            Welcome back, {user?.name}!
-          </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+          <div>
+            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
+              Admin Dashboard
+            </h1>
+            <p style={{ fontSize: '16px', color: 'gray' }}>
+              Welcome back, {user?.name}!
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              border: '2px solid black',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Logout
+          </button>
         </div>
 
         {/* Stats Grid */}
@@ -178,7 +215,7 @@ export default function AdminDashboard() {
               textAlign: 'left'
             }}
           >
-            🛍️ Manage Products
+            ️ Manage Products
           </button>
 
           <button

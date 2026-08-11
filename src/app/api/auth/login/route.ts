@@ -26,7 +26,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    // Set cookie
     const response = NextResponse.json({ 
       success: true, 
       user: {
@@ -37,11 +36,12 @@ export async function POST(request: Request) {
       }
     })
 
+    // Set cookie with proper options
     response.cookies.set('userId', user.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/'
     })
 
