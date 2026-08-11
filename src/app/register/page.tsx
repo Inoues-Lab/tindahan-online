@@ -1,72 +1,8 @@
-'use client'
-
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import Header from '@/components/Header'
+import RegisterForm from '@/components/RegisterForm'
 
 export default function RegisterPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const defaultRole = searchParams.get('role') || 'CUSTOMER'
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    phone: '',
-    address: '',
-    role: defaultRole
-  })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || 'Registration failed')
-        return
-      }
-
-      // Registration successful - auto login and redirect
-      if (data.user) {
-        // Set the cookie manually
-        await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password
-          })
-        })
-
-        // Redirect based on role
-        if (data.user.role === 'MERCHANT') {
-          router.push('/merchant/apply')
-        } else if (data.user.role === 'RIDER') {
-          router.push('/rider/apply')
-        } else {
-          router.push('/')
-        }
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
@@ -76,103 +12,9 @@ export default function RegisterPage() {
             Create Account
           </h1>
 
-          {error && (
-            <div style={{ backgroundColor: '#fee', border: '2px solid red', padding: '15px', borderRadius: '8px', marginBottom: '20px', color: 'red' }}>
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Full Name</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Juan Dela Cruz"
-                required
-                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="your@email.com"
-                required
-                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Password</label>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Create a password"
-                required
-                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Phone Number</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="09551652430"
-                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Address</label>
-              <textarea
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Your complete address"
-                rows={3}
-                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>I want to:</label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-              >
-                <option value="CUSTOMER">Shop as Customer</option>
-                <option value="MERCHANT">Become a Merchant</option>
-                <option value="RIDER">Become a Rider</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ 
-                width: '100%', 
-                padding: '15px', 
-                backgroundColor: loading ? 'gray' : '#4caf50', 
-                color: 'white', 
-                border: '2px solid black', 
-                borderRadius: '8px', 
-                fontWeight: 'bold', 
-                fontSize: '18px', 
-                cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: '4px 4px 0px black'
-              }}
-            >
-              {loading ? 'Creating Account...' : 'Register'}
-            </button>
-          </form>
+          <Suspense fallback={<div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>}>
+            <RegisterForm />
+          </Suspense>
 
           <div style={{ marginTop: '30px', textAlign: 'center' }}>
             <p style={{ color: 'gray' }}>
