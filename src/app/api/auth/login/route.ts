@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
+import bcrypt from 'bcryptjs'
 
 export async function POST(request: Request) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const { email, password } = body
 
     if (!email || !password) {
-      return NextResponse.json({ error: 'Missing email or password' }, { status: 400 })
+      return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
     }
 
     const user = await prisma.user.findUnique({
@@ -20,31 +20,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    const isValid = await bcrypt.compare(password, user.password)
+    const isPasswordValid = await bcrypt.compare(password, user.password)
 
-    if (!isValid) {
+    if (!isPasswordValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    const cookieStore = await cookies()
-    cookieStore.set('userId', user.id, {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7,
-      sameSite: 'lax',
-      httpOnly: true,
-      secure: true
-    })
-
-    return NextResponse.json({
+    // Set cookie
+    const response = NextResponse.json({ 
+      success: true, 
       user: {
         id: user.id,
-        name: user.name,
         email: user.email,
+        name: user.name,
         role: user.role
       }
     })
+
+    response.cookies.set('userId', user.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/'
+    })
+
+    return response
   } catch (error) {
     console.error('Login error:', error)
-    return NextResponse.json({ error: 'Failed to login' }, { status: 500 })
+    return NextResponse.json({ error: 'Login failed' }, { status: 500 })
   }
 }
