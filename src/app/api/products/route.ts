@@ -1,13 +1,37 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { cookies } from 'next/headers'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // PUBLIC - Anyone can view products (no auth required)
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search')
+    const category = searchParams.get('category')
+
+    const where: any = {}
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    if (category) {
+      where.category = category
+    }
+
     const products = await prisma.product.findMany({
-      orderBy: { name: 'asc' }
+      where,
+      include: {
+        merchant: {
+          select: {
+            storeName: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
     })
+
     return NextResponse.json({ products })
   } catch (error) {
     console.error('Error fetching products:', error)
@@ -17,20 +41,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies()
-    const userId = cookieStore.get('userId')?.value
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
-
     const body = await request.json()
-    const { name, description, price, stock, weightKg, imageUrl } = body
+    const { name, description, price, stock, imageUrl, merchantId } = body
 
     if (!name || !price || stock === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -39,11 +51,11 @@ export async function POST(request: Request) {
     const product = await prisma.product.create({
       data: {
         name,
-        description: description || null,
+        description: description || '',
         price: parseFloat(price),
         stock: parseInt(stock),
-        weightKg: parseFloat(weightKg) || 1.0,
-        imageUrl: imageUrl || null
+        imageUrl: imageUrl || null,
+        merchantId: merchantId || null
       }
     })
 
