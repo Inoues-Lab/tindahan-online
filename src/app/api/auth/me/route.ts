@@ -20,14 +20,17 @@ export async function GET() {
         role: true,
         phone: true,
         address: true,
-        // REMOVED: cashOnHand: true (field doesn't exist in schema)
         riderProfile: true,
         merchantProfile: true
       }
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      // User doesn't exist (maybe deleted during cleanup)
+      // Clear the cookie and return error
+      const response = NextResponse.json({ error: 'User not found' }, { status: 404 })
+      response.cookies.set('userId', '', { maxAge: 0 })
+      return response
     }
 
     return NextResponse.json({ user })
