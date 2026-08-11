@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import AdminHeader from '@/components/AdminHeader'
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -69,19 +69,10 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/')
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
-
   if (loading) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <Header />
+        <AdminHeader />
         <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
       </main>
     )
@@ -89,35 +80,19 @@ export default function AdminDashboard() {
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-      <Header />
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <div>
-            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
-              Admin Dashboard
-            </h1>
-            <p style={{ fontSize: '16px', color: 'gray' }}>
-              Welcome back, {user?.name}!
-            </p>
-          </div>
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: '2px solid black',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            Logout
-          </button>
+      <AdminHeader />
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px' }}>
+        <div style={{ marginBottom: '30px' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
+            Admin Dashboard
+          </h1>
+          <p style={{ fontSize: '16px', color: 'gray' }}>
+            Welcome back, {user?.name}!
+          </p>
         </div>
 
         {/* Stats Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
           <div style={{ backgroundColor: '#e3f2fd', padding: '25px', borderRadius: '12px', border: '3px solid #2196f3', textAlign: 'center' }}>
             <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Total Users</p>
             <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#2196f3', margin: 0 }}>{stats.totalUsers}</p>
@@ -145,6 +120,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions */}
+        <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>Quick Actions</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
           <button
             onClick={() => router.push('/admin/merchants')}
@@ -197,7 +173,7 @@ export default function AdminDashboard() {
               textAlign: 'left'
             }}
           >
-            📦 View All Orders
+             View All Orders
           </button>
 
           <button
