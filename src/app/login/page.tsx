@@ -32,7 +32,6 @@ export default function LoginPage() {
         return
       }
 
-      // Login successful - redirect based on role
       if (data.user) {
         if (data.user.role === 'ADMIN') {
           router.push('/admin/dashboard')
@@ -117,13 +116,6 @@ export default function LoginPage() {
               <a href="/register" style={{ color: '#2196f3', fontWeight: 'bold' }}>
                 Register here
               </a>
-            </p>
-          </div>
-
-          <div style={{ marginTop: '30px', padding: '20px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
-            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Test Accounts:</p>
-            <p style={{ fontSize: '14px' }}>
-              <strong>Admin:</strong> admin@tindahan.com / Niekoh1128*
             </p>
           </div>
         </div>
