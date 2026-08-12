@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import MerchantHeader from '@/components/MerchantHeader'
 
 export default function MerchantOrdersPage() {
   const router = useRouter()
