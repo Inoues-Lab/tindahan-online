@@ -1,6 +1,4 @@
-git add .
-git commit -m "Fix admin dashboard - add customers box and remove go to home"
-git push origin main'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -14,7 +12,7 @@ export default function AdminDashboard() {
     totalUsers: 0,
     merchants: 0,
     riders: 0,
-    customers: 0, // Added Customers box data
+    customers: 0,
     orders: 0,
     products: 0
   })
@@ -50,20 +48,30 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      // Note: If your original code had a specific API endpoint for stats, 
-      // keep that logic here. For now, I'm using a fallback to match your screenshot numbers.
-      
-      // Example: const res = await fetch('/api/admin/stats');
-      // const data = await res.json();
-      
-      // Fallback data based on your screenshot to ensure it looks right:
+      // Fetch all stats
+      const [usersRes, merchantsRes, ridersRes, ordersRes, productsRes] = await Promise.all([
+        fetch('/api/admin/users').catch(() => null),
+        fetch('/api/admin/merchants').catch(() => null),
+        fetch('/api/admin/riders').catch(() => null),
+        fetch('/api/admin/orders').catch(() => null),
+        fetch('/api/admin/products').catch(() => null)
+      ])
+
+      const usersData = usersRes ? await usersRes.json().catch(() => ({ users: [] })) : { users: [] }
+      const merchantsData = merchantsRes ? await merchantsRes.json().catch(() => ({ applications: [] })) : { applications: [] }
+      const ridersData = ridersRes ? await ridersRes.json().catch(() => ({ applications: [] })) : { applications: [] }
+      const ordersData = ordersRes ? await ordersRes.json().catch(() => ({ orders: [] })) : { orders: [] }
+      const productsData = productsRes ? await productsRes.json().catch(() => ({ products: [] })) : { products: [] }
+
+      const customersCount = (usersData.users || []).filter((u: any) => u.role === 'CUSTOMER').length
+
       setStats({
-        totalUsers: 4,
-        merchants: 1,
-        riders: 2,
-        customers: 0, // 4 Total - 1 Merchant - 2 Riders - 1 Admin = 0 Customers
-        orders: 0,
-        products: 3
+        totalUsers: (usersData.users || []).length,
+        merchants: (merchantsData.applications || []).length,
+        riders: (ridersData.applications || []).length,
+        customers: customersCount,
+        orders: (ordersData.orders || []).length,
+        products: (productsData.products || []).length
       })
     } catch (error) {
       console.error('Error fetching stats:', error)
@@ -92,7 +100,7 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Stats Grid - NOW HAS 6 BOXES */}
+        {/* Stats Grid - 6 BOXES NOW */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
           <div style={{ backgroundColor: '#e3f2fd', padding: '25px', borderRadius: '12px', border: '3px solid #2196f3', textAlign: 'center' }}>
             <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Total Users</p>
@@ -126,7 +134,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions - GO TO HOME REMOVED */}
+        {/* Quick Actions - NO "GO TO HOME" BUTTON */}
         <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>Quick Actions</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
           <button
@@ -218,8 +226,6 @@ export default function AdminDashboard() {
           >
              Income & Analytics
           </button>
-          
-          {/* "Go to Home" button is completely removed from here */}
         </div>
       </div>
     </main>
