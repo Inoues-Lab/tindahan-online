@@ -51,6 +51,8 @@ model User {
   riderProfile    RiderProfile?
   orders          Order[]
   cart            Cart?
+  resetToken       String?
+  resetTokenExpiry DateTime?
 }
 
 model MerchantProfile {
