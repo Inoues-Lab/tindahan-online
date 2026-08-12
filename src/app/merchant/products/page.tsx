@@ -9,6 +9,8 @@ export default function MerchantProductsPage() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -52,8 +54,31 @@ export default function MerchantProductsPage() {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setUploading(true)
 
     try {
+      let imageUrl = formData.imageUrl
+
+      // Upload file if selected
+      if (selectedFile) {
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', selectedFile)
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadFormData
+        })
+
+        const uploadData = await uploadRes.json()
+        if (uploadRes.ok) {
+          imageUrl = uploadData.url
+        } else {
+          setError(uploadData.error || 'Failed to upload image')
+          setUploading(false)
+          return
+        }
+      }
+
       const res = await fetch('/api/merchant/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +87,7 @@ export default function MerchantProductsPage() {
           description: formData.description,
           price: parseFloat(formData.price),
           stock: parseInt(formData.stock),
-          imageUrl: formData.imageUrl
+          imageUrl: imageUrl
         })
       })
 
@@ -72,12 +97,15 @@ export default function MerchantProductsPage() {
         alert('Product added!')
         setShowModal(false)
         setFormData({ name: '', description: '', price: '', stock: '', imageUrl: '' })
+        setSelectedFile(null)
         fetchProducts()
       } else {
         setError(data.error || 'Failed to add product')
       }
     } catch (error) {
       setError('An error occurred')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -225,14 +253,55 @@ export default function MerchantProductsPage() {
                   />
                 </div>
 
+                {/* Image Upload Section */}
                 <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Image URL</label>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                    Product Image
+                  </label>
+                  
+                  {/* File Upload Input */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    disabled={uploading}
+                    style={{ 
+                      width: '100%', 
+                      padding: '12px', 
+                      border: '2px dashed black', 
+                      borderRadius: '8px',
+                      backgroundColor: selectedFile ? '#e8f5e9' : '#f9f9f9',
+                      cursor: 'pointer',
+                      marginBottom: '10px'
+                    }}
+                  />
+                  
+                  {selectedFile && (
+                    <p style={{ fontSize: '12px', color: 'green', marginBottom: '10px' }}>
+                      ✓ Selected: {selectedFile.name}
+                    </p>
+                  )}
+                  
+                  <p style={{ fontSize: '12px', color: 'gray', marginBottom: '10px' }}>
+                    Or paste image URL below:
+                  </p>
+                  
+                  {/* Product Image URL (Alternative) */}
                   <input
                     type="url"
                     value={formData.imageUrl}
                     onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://..."
-                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                    placeholder="https://example.com/image.jpg"
+                    disabled={uploading || !!selectedFile}
+                    style={{ 
+                      width: '100%', 
+                      padding: '12px', 
+                      border: '2px solid black', 
+                      borderRadius: '8px', 
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                      opacity: selectedFile ? 0.6 : 1
+                    }}
                   />
                 </div>
 
@@ -263,23 +332,25 @@ export default function MerchantProductsPage() {
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     type="submit"
+                    disabled={uploading}
                     style={{
                       flex: 1,
                       padding: '15px',
-                      backgroundColor: '#4caf50',
+                      backgroundColor: uploading ? '#999' : '#4caf50',
                       color: 'white',
                       border: '2px solid black',
                       borderRadius: '8px',
                       fontWeight: 'bold',
                       fontSize: '16px',
-                      cursor: 'pointer'
+                      cursor: uploading ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    Add Product
+                    {uploading ? 'Uploading...' : 'Add Product'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
+                    disabled={uploading}
                     style={{
                       padding: '15px 24px',
                       backgroundColor: 'white',
@@ -288,7 +359,7 @@ export default function MerchantProductsPage() {
                       borderRadius: '8px',
                       fontWeight: 'bold',
                       fontSize: '16px',
-                      cursor: 'pointer'
+                      cursor: uploading ? 'not-allowed' : 'pointer'
                     }}
                   >
                     Cancel
