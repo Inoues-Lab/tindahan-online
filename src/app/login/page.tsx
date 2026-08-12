@@ -117,6 +117,11 @@ export default function LoginPage() {
                 style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
               />
             </div>
+            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+  <a href="/forgot-password" style={{ color: '#2196f3', fontSize: '14px', fontWeight: 'bold' }}>
+    Forgot Password?
+  </a>
+</div>
 
             <button
               type="submit"
