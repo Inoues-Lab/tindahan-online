@@ -7,9 +7,7 @@ export async function GET() {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (user?.role !== 'ADMIN') {
@@ -30,7 +28,7 @@ export async function GET() {
       totalProducts
     })
   } catch (error) {
-    console.error('Error fetching admin stats:', error)
-    return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })
+    console.error('Error fetching stats:', error)
+    return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }
