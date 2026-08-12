@@ -20,11 +20,10 @@ export default function MerchantHeader() {
       top: 0,
       zIndex: 100
     }}>
-      {/* Desktop Header */}
       <div style={{ 
         maxWidth: '1200px', 
         margin: '0 auto', 
-        padding: '15px 30px',
+        padding: '15px 20px',
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center'
@@ -32,7 +31,7 @@ export default function MerchantHeader() {
         <div 
           onClick={() => router.push('/merchant/dashboard')}
           style={{ 
-            fontSize: '24px', 
+            fontSize: '20px', 
             fontWeight: 'bold', 
             cursor: 'pointer',
             display: 'flex',
@@ -43,7 +42,8 @@ export default function MerchantHeader() {
            Tindahan Merchant
         </div>
         
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        {/* Desktop Navigation - Hidden on Mobile */}
+        <div className="desktop-nav" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button
             onClick={() => router.push('/merchant/dashboard')}
             style={{
@@ -57,7 +57,7 @@ export default function MerchantHeader() {
               fontSize: '14px'
             }}
           >
-            📊 Dashboard
+             Dashboard
           </button>
           <button
             onClick={() => router.push('/merchant/products')}
@@ -72,7 +72,7 @@ export default function MerchantHeader() {
               fontSize: '14px'
             }}
           >
-            📦 Products
+             Products
           </button>
           <button
             onClick={() => router.push('/merchant/orders')}
@@ -87,7 +87,7 @@ export default function MerchantHeader() {
               fontSize: '14px'
             }}
           >
-            🛒 Orders
+             Orders
           </button>
           <button
             onClick={handleLogout}
@@ -106,43 +106,34 @@ export default function MerchantHeader() {
             Logout
           </button>
         </div>
+
+        {/* Mobile Menu Toggle - Hidden on Desktop */}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="mobile-menu-btn"
+          style={{
+            display: 'none',
+            padding: '10px 15px',
+            backgroundColor: 'white',
+            border: '2px solid black',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '24px',
+            marginLeft: '10px'
+          }}
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
       </div>
 
-      {/* Mobile Menu Toggle */}
-      <button
-        onClick={() => setMenuOpen(!menuOpen)}
-        style={{
-          display: 'none',
-          position: 'absolute',
-          top: '15px',
-          right: '15px',
-          padding: '10px',
-          backgroundColor: 'white',
-          border: '2px solid black',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          fontSize: '24px',
-          zIndex: 101
-        }}
-        className="mobile-menu-btn"
-      >
-        {menuOpen ? '✕' : '☰'}
-      </button>
-
-      {/* Mobile Menu */}
+      {/* Mobile Menu Dropdown */}
       {menuOpen && (
-        <div style={{
-          display: 'none',
+        <div className="mobile-menu" style={{
           backgroundColor: 'white',
           borderTop: '2px solid black',
-          padding: '20px',
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
+          padding: '15px',
           boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          zIndex: 100
-        }} className="mobile-menu">
+        }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
               onClick={() => {
@@ -150,14 +141,13 @@ export default function MerchantHeader() {
                 setMenuOpen(false)
               }}
               style={{
-                padding: '15px',
+                padding: '12px',
                 backgroundColor: 'white',
                 color: 'black',
                 border: '2px solid black',
                 borderRadius: '8px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontSize: '16px',
                 textAlign: 'left'
               }}
             >
@@ -169,18 +159,17 @@ export default function MerchantHeader() {
                 setMenuOpen(false)
               }}
               style={{
-                padding: '15px',
+                padding: '12px',
                 backgroundColor: 'white',
                 color: 'black',
                 border: '2px solid black',
                 borderRadius: '8px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontSize: '16px',
                 textAlign: 'left'
               }}
             >
-              📦 Products
+               Products
             </button>
             <button
               onClick={() => {
@@ -188,18 +177,17 @@ export default function MerchantHeader() {
                 setMenuOpen(false)
               }}
               style={{
-                padding: '15px',
+                padding: '12px',
                 backgroundColor: 'white',
                 color: 'black',
                 border: '2px solid black',
                 borderRadius: '8px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontSize: '16px',
                 textAlign: 'left'
               }}
             >
-              🛒 Orders
+               Orders
             </button>
             <button
               onClick={() => {
@@ -207,14 +195,13 @@ export default function MerchantHeader() {
                 setMenuOpen(false)
               }}
               style={{
-                padding: '15px',
+                padding: '12px',
                 backgroundColor: '#dc3545',
                 color: 'white',
                 border: '2px solid black',
                 borderRadius: '8px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontSize: '16px',
                 textAlign: 'center',
                 boxShadow: '3px 3px 0px black'
               }}
@@ -225,38 +212,22 @@ export default function MerchantHeader() {
         </div>
       )}
 
-      {/* Responsive CSS */}
-      <style jsx>{`
+      {/* Responsive CSS - Forces proper display */}
+      <style jsx global>{`
         @media (max-width: 768px) {
-          header > div:first-child {
-            padding: 15px 20px;
+          .desktop-nav {
+            display: none !important;
           }
-          
-          header > div:first-child > div:last-child {
-            display: none;
-          }
-          
           .mobile-menu-btn {
             display: block !important;
           }
-          
-          .mobile-menu {
-            display: block !important;
-          }
-          
-          header > div:first-child > div:first-child {
-            font-size: 20px;
-          }
         }
-        
-        @media (max-width: 480px) {
-          header > div:first-child > div:first-child {
-            font-size: 18px;
+        @media (min-width: 769px) {
+          .desktop-nav {
+            display: flex !important;
           }
-          
-          .mobile-menu button {
-            padding: 12px !important;
-            font-size: 14px !important;
+          .mobile-menu-btn {
+            display: none !important;
           }
         }
       `}</style>
