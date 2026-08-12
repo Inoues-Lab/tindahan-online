@@ -1,44 +1,28 @@
-// src/app/admin/products/page.tsx
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminHeader from '@/components/AdminHeader'
 
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  stock: number
-  imageUrl?: string
-  weightKg: number
-}
-
 export default function AdminProductsPage() {
   const router = useRouter()
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [uploading, setUploading] = useState(false)
-  
+  const [editingProduct, setEditingProduct] = useState<any>(null)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     stock: '',
-    weightKg: '',
+    imageUrl: ''
   })
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     checkAuth()
     fetchProducts()
-  }, [])
+  }, [router])
 
   const checkAuth = async () => {
     try {
@@ -54,7 +38,7 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/products')
+      const res = await fetch('/api/admin/products')
       const data = await res.json()
       if (res.ok) {
         setProducts(data.products || [])
@@ -66,118 +50,47 @@ export default function AdminProductsPage() {
     }
   }
 
-  const openAddModal = () => {
-    setEditingProduct(null)
-    setFormData({ name: '', description: '', price: '', stock: '', weightKg: '' })
-    setImageFile(null)
-    setImagePreview('')
-    setShowModal(true)
-  }
-
-  const openEditModal = (product: Product) => {
-    setEditingProduct(product)
-    setFormData({
-      name: product.name,
-      description: product.description || '',
-      price: product.price.toString(),
-      stock: product.stock.toString(),
-      weightKg: product.weightKg.toString(),
-    })
-    setImagePreview(product.imageUrl || '')
-    setImageFile(null)
-    setShowModal(true)
-  }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setImageFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageFile) return imagePreview || null
-    
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', imageFile)
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      })
-
-      const data = await res.json()
-      if (res.ok) {
-        return data.url
-      } else {
-        alert('Failed to upload image')
-        return null
-      }
-    } catch (error) {
-      alert('Error uploading image')
-      return null
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!formData.name || !formData.price || !formData.stock) {
-      alert('Please fill in required fields')
-      return
-    }
-
-    const imageUrl = await uploadImage()
-    if (uploading) return
+    setError('')
 
     try {
-      const url = editingProduct ? `/api/admin/products?id=${editingProduct.id}` : '/api/admin/products'
-      const method = editingProduct ? 'PUT' : 'POST'
-
-      const res = await fetch(url, {
-        method,
+      const res = await fetch('/api/admin/products', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          imageUrl,
+          name: formData.name,
+          description: formData.description,
           price: parseFloat(formData.price),
           stock: parseInt(formData.stock),
-          weightKg: parseFloat(formData.weightKg) || 1.0
+          imageUrl: formData.imageUrl
         })
       })
 
+      const data = await res.json()
+
       if (res.ok) {
-        alert(editingProduct ? 'Product updated!' : 'Product added!')
+        alert('Product added!')
         setShowModal(false)
+        setFormData({ name: '', description: '', price: '', stock: '', imageUrl: '' })
         fetchProducts()
       } else {
-        const data = await res.json()
-        alert(data.error || 'Failed to save product')
+        setError(data.error || 'Failed to add product')
       }
     } catch (error) {
-      alert('Error saving product')
+      setError('An error occurred')
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteProduct = async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return
 
     try {
-      const res = await fetch(`/api/admin/products?id=${id}`, {
+      const res = await fetch(`/api/admin/products?id=${productId}`, {
         method: 'DELETE'
       })
 
       if (res.ok) {
-        alert('Product deleted!')
         fetchProducts()
       } else {
         alert('Failed to delete product')
@@ -187,15 +100,10 @@ export default function AdminProductsPage() {
     }
   }
 
-  const filteredProducts = Array.isArray(products) ? products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) : []
-
   if (loading) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <Header />
+        <AdminHeader />
         <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
       </main>
     )
@@ -203,307 +111,195 @@ export default function AdminProductsPage() {
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-      <Header />
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+      <AdminHeader />
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
-              Product Management
+            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
+               Product Management
             </h1>
             <p style={{ fontSize: '16px', color: 'gray' }}>
               Manage your inventory ({products.length} products)
             </p>
           </div>
-          <button
-            onClick={openAddModal}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'green',
-              color: 'white',
-              border: '2px solid black',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontSize: '16px',
-            }}
-          >
-            Add New Product
-          </button>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search products..."
-            style={{
-              width: '100%',
-              padding: '12px 15px',
-              fontSize: '16px',
-              border: '2px solid black',
-              borderRadius: '8px',
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '3px solid black', overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: '#f0f0f0' }}>
-                <tr>
-                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid black', fontSize: '14px' }}>Product</th>
-                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid black', fontSize: '14px' }}>Price</th>
-                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid black', fontSize: '14px' }}>Stock</th>
-                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid black', fontSize: '14px' }}>Weight</th>
-                  <th style={{ padding: '15px', textAlign: 'right', borderBottom: '2px solid black', fontSize: '14px' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: 'gray' }}>
-                      {searchTerm ? 'No products found' : 'No products yet.'}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredProducts.map((product) => (
-                    <tr key={product.id} style={{ borderBottom: '1px solid #ddd' }}>
-                      <td style={{ padding: '15px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                          <div style={{ 
-                            width: '60px', 
-                            height: '60px', 
-                            backgroundColor: '#f0f0f0', 
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '24px',
-                            flexShrink: 0,
-                            overflow: 'hidden'
-                          }}>
-                            {product.imageUrl ? (
-                              <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              ''
-                            )}
-                          </div>
-                          <div>
-                            <p style={{ fontWeight: 'bold', marginBottom: '3px' }}>{product.name}</p>
-                            <p style={{ fontSize: '13px', color: 'gray' }}>{product.description}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'green' }}>
-                          ₱{product.price.toFixed(2)}
-                        </span>
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <span style={{ 
-                          padding: '4px 12px', 
-                          backgroundColor: product.stock > 0 ? '#e8f5e9' : '#fee',
-                          color: product.stock > 0 ? 'green' : 'red',
-                          borderRadius: '4px',
-                          fontWeight: 'bold',
-                          fontSize: '14px'
-                        }}>
-                          {product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '15px', fontSize: '14px', color: 'gray' }}>
-                        {product.weightKg}kg
-                      </td>
-                      <td style={{ padding: '15px', textAlign: 'right' }}>
-                        <button
-                          onClick={() => openEditModal(product)}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: 'blue',
-                            color: 'white',
-                            border: '2px solid black',
-                            borderRadius: '6px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            marginRight: '8px'
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: 'red',
-                            color: 'white',
-                            border: '2px solid black',
-                            borderRadius: '6px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => setShowModal(true)}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#4caf50',
+                color: 'white',
+                border: '2px solid black',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '3px 3px 0px black'
+              }}
+            >
+              + Add New Product
+            </button>
+            <button
+              onClick={() => router.push('/admin/dashboard')}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: 'white',
+                color: 'black',
+                border: '2px solid black',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              ← Back
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Add/Edit Product Modal */}
-      {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '4px solid black', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-              {editingProduct ? 'Edit Product' : 'Add New Product'}
-            </h2>
+        {error && (
+          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', color: 'red' }}>
+            {error}
+          </div>
+        )}
 
-            <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Name *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Canned Corned Beef"
-                  style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                  required
-                />
-              </div>
-
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Product description..."
-                  style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', minHeight: '80px', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Image Upload Section */}
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Image</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  style={{ display: 'none' }}
-                />
+        {products.length === 0 ? (
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
+            <p style={{ fontSize: '18px', color: 'gray' }}>No products yet. Add your first product!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            {products.map((product) => (
+              <div key={product.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
+                {product.imageUrl && (
+                  <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', marginBottom: '15px' }} />
+                )}
+                <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{product.name}</h3>
+                <p style={{ color: 'gray', fontSize: '14px', marginBottom: '10px' }}>{product.description}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#4caf50' }}>{product.price}</span>
+                  <span style={{ fontSize: '14px', color: 'gray' }}>Stock: {product.stock}</span>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => handleDeleteProduct(product.id)}
                   style={{
                     width: '100%',
-                    padding: '12px',
-                    backgroundColor: '#f0f0f0',
-                    border: '2px dashed black',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    marginBottom: '10px'
-                  }}
-                >
-                  {imageFile ? 'Change Image' : 'Upload Image'}
-                </button>
-                {imagePreview && (
-                  <div style={{ textAlign: 'center' }}>
-                    <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '2px solid black' }} />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Price (₱) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="0.00"
-                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                    required
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Stock Quantity *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    placeholder="0"
-                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Weight (kg)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formData.weightKg}
-                  onChange={(e) => setFormData({ ...formData, weightKg: e.target.value })}
-                  placeholder="1.0"
-                  style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    backgroundColor: uploading ? 'gray' : 'green',
+                    padding: '10px',
+                    backgroundColor: '#dc3545',
                     color: 'white',
                     border: '2px solid black',
                     borderRadius: '8px',
                     fontWeight: 'bold',
-                    cursor: uploading ? 'not-allowed' : 'pointer',
-                    fontSize: '16px'
+                    cursor: 'pointer'
                   }}
                 >
-                  {uploading ? 'Uploading...' : (editingProduct ? 'Update Product' : 'Add Product')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    backgroundColor: 'gray',
-                    color: 'white',
-                    border: '2px solid black',
-                    borderRadius: '8px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    fontSize: '16px'
-                  }}
-                >
-                  Cancel
+                  🗑️ Delete
                 </button>
               </div>
-            </form>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Add Product Modal */}
+        {showModal && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+            <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>Add New Product</h2>
+              
+              <form onSubmit={handleAddProduct}>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Name *</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Image URL</label>
+                  <input
+                    type="url"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    placeholder="https://..."
+                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Price (₱) *</label>
+                    <input
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      required
+                      step="0.01"
+                      style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Stock Quantity *</label>
+                    <input
+                      type="number"
+                      value={formData.stock}
+                      onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                      required
+                      style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="submit"
+                    style={{
+                      flex: 1,
+                      padding: '15px',
+                      backgroundColor: '#4caf50',
+                      color: 'white',
+                      border: '2px solid black',
+                      borderRadius: '8px',
+                      fontWeight: 'bold',
+                      fontSize: '16px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Add Product
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    style={{
+                      padding: '15px 24px',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      border: '2px solid black',
+                      borderRadius: '8px',
+                      fontWeight: 'bold',
+                      fontSize: '16px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
     </main>
   )
 }
