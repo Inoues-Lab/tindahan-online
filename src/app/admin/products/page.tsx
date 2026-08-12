@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import AdminHeader from '@/components/AdminHeader'
 
 interface Product {
   id: string

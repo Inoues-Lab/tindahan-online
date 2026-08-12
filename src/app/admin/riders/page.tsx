@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import AdminHeader from '@/components/AdminHeader'
 
 export default function AdminRidersPage() {
   const router = useRouter()
