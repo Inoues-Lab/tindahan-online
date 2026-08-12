@@ -2,22 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import AdminHeader from '@/components/AdminHeader'
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
-  const [riders, setRiders] = useState<any[]>([])
-  const [incomeData, setIncomeData] = useState<any>({
-    todayIncome: 0,
-    totalIncome: 0,
-    todayRevenue: 0,
-    totalRevenue: 0,
-    todayOrders: 0,
-    totalOrders: 0
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    merchants: 0,
+    riders: 0,
+    customers: 0,
+    orders: 0,
+    products: 0
   })
-  const [error, setError] = useState('')
 
   useEffect(() => {
     checkAuth()
@@ -28,49 +26,63 @@ export default function AdminDashboard() {
       const res = await fetch('/api/auth/me')
       const data = await res.json()
       
-      if (!data.user || data.user.role !== 'ADMIN') {
+      if (!data.user) {
+        router.push('/login')
+        return
+      }
+      
+      if (data.user.role !== 'ADMIN') {
         router.push('/')
         return
       }
       
       setUser(data.user)
-      fetchDashboardData()
+      fetchStats()
     } catch (error) {
-      router.push('/')
+      console.error('Auth check error:', error)
+      router.push('/login')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const fetchDashboardData = async () => {
+  const fetchStats = async () => {
     try {
-      // Fetch riders
-      const ridersRes = await fetch('/api/admin/riders')
-      const ridersData = await ridersRes.json()
-      
-      if (ridersRes.ok) {
-        setRiders(ridersData.riders || [])
-      }
+      // Fetch all stats in parallel
+      const [usersRes, merchantsRes, ridersRes, ordersRes, productsRes] = await Promise.all([
+        fetch('/api/admin/users'), // You might need to create this or adjust based on your existing API
+        fetch('/api/admin/merchants'),
+        fetch('/api/admin/riders'),
+        fetch('/api/admin/orders'),
+        fetch('/api/admin/products')
+      ])
 
-      // Fetch income
-      const incomeRes = await fetch('/api/admin/income')
-      const incomeData = await incomeRes.json()
-      
-      if (incomeRes.ok) {
-        setIncomeData(incomeData)
-      } else {
-        console.error('Income fetch error:', incomeData)
-      }
+      const usersData = await usersRes.json().catch(() => ({ users: [] }))
+      const merchantsData = await merchantsRes.json().catch(() => ({ applications: [] }))
+      const ridersData = await ridersRes.json().catch(() => ({ applications: [] }))
+      const ordersData = await ordersRes.json().catch(() => ({ orders: [] }))
+      const productsData = await productsRes.json().catch(() => ({ products: [] }))
+
+      // Calculate customers (users with role USER)
+      const customersCount = (usersData.users || []).filter((u: any) => u.role === 'USER').length
+
+      setStats({
+        totalUsers: (usersData.users || []).length,
+        merchants: (merchantsData.applications || []).length,
+        riders: (ridersData.applications || []).length,
+        customers: customersCount,
+        orders: (ordersData.orders || []).length,
+        products: (productsData.products || []).length
+      })
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-      setError('Failed to load dashboard data')
-    } finally {
-      setLoading(false)
+      console.error('Error fetching stats:', error)
     }
   }
 
   if (loading) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <Header />
+        <AdminHeader />
         <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
       </main>
     )
@@ -78,140 +90,141 @@ export default function AdminDashboard() {
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-      <Header />
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
-          Admin Dashboard 🔧
-        </h1>
-        <p style={{ fontSize: '16px', color: 'gray', marginBottom: '20px' }}>
-          Manage riders, view remittances, and track income
-        </p>
-
-        {error && (
-          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px' }}>
-            <strong style={{ color: 'red' }}>Error:</strong> {error}
-          </div>
-        )}
-
-        {/* Registered Riders */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>Registered Riders</h2>
-          {riders.length === 0 ? (
-            <p style={{ color: 'gray' }}>No riders registered yet</p>
-          ) : (
-            <div style={{ display: 'grid', gap: '15px' }}>
-              {riders.map((rider) => (
-                <div key={rider.id} style={{ padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px solid black', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ fontWeight: 'bold', marginBottom: '3px' }}>{rider.name}</p>
-                    <p style={{ fontSize: '13px', color: 'gray' }}>{rider.email}</p>
-                    <p style={{ fontSize: '13px', color: 'gray' }}>Phone: {rider.phone || 'N/A'}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: '12px', color: 'gray' }}>Cash on Hand</p>
-                    <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{rider.cashOnHand?.toFixed(2) || '0.00'}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      <AdminHeader />
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px' }}>
+        <div style={{ marginBottom: '30px' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
+            Admin Dashboard
+          </h1>
+          <p style={{ fontSize: '16px', color: 'gray' }}>
+            Welcome back, {user?.name}!
+          </p>
         </div>
 
-        {/* Income Overview */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>💰 Income Overview</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-            <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
-              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Income</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>{incomeData.todayIncome?.toFixed(2) || '0.00'}</p>
-              <p style={{ fontSize: '11px', color: 'gray' }}>{incomeData.todayOrders || 0} orders today</p>
-            </div>
-            <div style={{ padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '2px solid blue' }}>
-              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Total Income</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'blue' }}>₱{incomeData.totalIncome?.toFixed(2) || '0.00'}</p>
-              <p style={{ fontSize: '11px', color: 'gray' }}>{incomeData.totalOrders || 0} total orders</p>
-            </div>
-            <div style={{ padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
-              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Revenue</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'orange' }}>{incomeData.todayRevenue?.toFixed(2) || '0.00'}</p>
-              <p style={{ fontSize: '11px', color: 'gray' }}>Gross sales</p>
-            </div>
-            <div style={{ padding: '15px', backgroundColor: '#f3e5f5', borderRadius: '8px', border: '2px solid purple' }}>
-              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Total Revenue</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'purple' }}>{incomeData.totalRevenue?.toFixed(2) || '0.00'}</p>
-              <p style={{ fontSize: '11px', color: 'gray' }}>All time gross</p>
-            </div>
+        {/* Stats Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+          <div style={{ backgroundColor: '#e3f2fd', padding: '25px', borderRadius: '12px', border: '3px solid #2196f3', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Total Users</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#2196f3', margin: 0 }}>{stats.totalUsers}</p>
+          </div>
+
+          <div style={{ backgroundColor: '#fff3e0', padding: '25px', borderRadius: '12px', border: '3px solid #ff9800', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Merchants</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#ff9800', margin: 0 }}>{stats.merchants}</p>
+          </div>
+
+          <div style={{ backgroundColor: '#e8f5e9', padding: '25px', borderRadius: '12px', border: '3px solid #4caf50', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Riders</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>{stats.riders}</p>
+          </div>
+
+          <div style={{ backgroundColor: '#e0f7fa', padding: '25px', borderRadius: '12px', border: '3px solid #00bcd4', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Customers</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#00bcd4', margin: 0 }}>{stats.customers}</p>
+          </div>
+
+          <div style={{ backgroundColor: '#f3e5f5', padding: '25px', borderRadius: '12px', border: '3px solid #9c27b0', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Orders</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#9c27b0', margin: 0 }}>{stats.orders}</p>
+          </div>
+
+          <div style={{ backgroundColor: '#fce4ec', padding: '25px', borderRadius: '12px', border: '3px solid #e91e63', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Products</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#e91e63', margin: 0 }}>{stats.products}</p>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-          <button
-            onClick={() => router.push('/admin/products')}
-            style={{
-              padding: '20px',
-              backgroundColor: 'blue',
-              color: 'white',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontSize: '18px',
-              boxShadow: '4px 4px 0px black'
-            }}
-          >
-            📦 Manage Products
-          </button>
-          <button
-            onClick={() => router.push('/admin/remittance')}
-            style={{
-              padding: '20px',
-              backgroundColor: 'green',
-              color: 'white',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontSize: '18px',
-              boxShadow: '4px 4px 0px black'
-            }}
-          >
-             Process Remittances
-          </button>
+        {/* Quick Actions */}
+        <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>Quick Actions</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
           <button
             onClick={() => router.push('/admin/merchants')}
             style={{
-              padding: '20px',
-              backgroundColor: '#ffc107',
-              color: 'black',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontSize: '18px',
-              boxShadow: '4px 4px 0px black',
-              gridColumn: '1 / -1'
-            }}
-          >
-            🏪 Manage Merchants
-          </button>
-          {/* NEW BUTTON: Manage Riders */}
-          <button
-            onClick={() => router.push('/admin/riders')}
-            style={{
-              padding: '20px',
-              backgroundColor: '#17a2b8', // Cyan/Blue for riders
+              padding: '30px',
+              backgroundColor: '#ff9800',
               color: 'white',
               border: '3px solid black',
               borderRadius: '12px',
+              fontSize: '20px',
               fontWeight: 'bold',
               cursor: 'pointer',
-              fontSize: '18px',
               boxShadow: '4px 4px 0px black',
-              gridColumn: '1 / -1'
+              textAlign: 'left'
             }}
           >
-            🏍️ Manage Riders
+             Manage Merchants
+          </button>
+
+          <button
+            onClick={() => router.push('/admin/riders')}
+            style={{
+              padding: '30px',
+              backgroundColor: '#4caf50',
+              color: 'white',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '4px 4px 0px black',
+              textAlign: 'left'
+            }}
+          >
+             Manage Riders
+          </button>
+
+          <button
+            onClick={() => router.push('/admin/orders')}
+            style={{
+              padding: '30px',
+              backgroundColor: '#9c27b0',
+              color: 'white',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '4px 4px 0px black',
+              textAlign: 'left'
+            }}
+          >
+             View All Orders
+          </button>
+
+          <button
+            onClick={() => router.push('/admin/products')}
+            style={{
+              padding: '30px',
+              backgroundColor: '#e91e63',
+              color: 'white',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '4px 4px 0px black',
+              textAlign: 'left'
+            }}
+          >
+             Manage Products
+          </button>
+
+          <button
+            onClick={() => router.push('/admin/income')}
+            style={{
+              padding: '30px',
+              backgroundColor: '#2196f3',
+              color: 'white',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '4px 4px 0px black',
+              textAlign: 'left'
+            }}
+          >
+             Income & Analytics
           </button>
         </div>
       </div>
