@@ -14,7 +14,6 @@ export async function GET() {
       return NextResponse.json({ error: 'Admin only' }, { status: 403 })
     }
 
-    // Count everything for the dashboard boxes
     const totalUsers = await prisma.user.count()
     const totalMerchants = await prisma.merchantProfile.count()
     const totalRiders = await prisma.riderProfile.count()
