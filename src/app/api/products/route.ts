@@ -1,31 +1,32 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { cookies } from 'next/headers'
 
-export async function GET(request: Request) {
+// GET: Fetch ALL products with merchant info
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const search = searchParams.get('search')
-    const category = searchParams.get('category')
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
 
-    const where: any = {}
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ]
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (category) {
-      where.category = category
+    // Check if admin
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (user?.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access only' }, { status: 403 })
     }
 
+    // Fetch all products with merchant info
     const products = await prisma.product.findMany({
-      where,
       include: {
-        merchant: {
+        user: {
           select: {
-            storeName: true
+            id: true,
+            name: true,
+            email: true,
+            role: true
           }
         }
       },
@@ -39,23 +40,32 @@ export async function GET(request: Request) {
   }
 }
 
+// POST: Admin creates a product
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { name, description, price, stock, imageUrl, merchantId } = body
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
 
-    if (!name || !price || stock === undefined) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (user?.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access only' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { name, description, price, stock, imageUrl } = body
 
     const product = await prisma.product.create({
       data: {
         name,
-        description: description || '',
-        price: parseFloat(price),
-        stock: parseInt(stock),
-        imageUrl: imageUrl || null,
-        merchantId: merchantId || null
+        description,
+        price,
+        stock,
+        imageUrl,
+        userId: userId,
       }
     })
 
@@ -63,5 +73,38 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating product:', error)
     return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
+  }
+}
+
+// DELETE: Admin deletes a product
+export async function DELETE(request: Request) {
+  try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (user?.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access only' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const productId = searchParams.get('id')
+
+    if (!productId) {
+      return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
+    }
+
+    await prisma.product.delete({
+      where: { id: productId }
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting product:', error)
+    return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 })
   }
 }

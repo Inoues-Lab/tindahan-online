@@ -59,7 +59,6 @@ export default function AdminProductsPage() {
     try {
       let imageUrl = formData.imageUrl
 
-      // Upload file if selected
       if (selectedFile) {
         const uploadFormData = new FormData()
         uploadFormData.append('file', selectedFile)
@@ -201,8 +200,14 @@ export default function AdminProductsPage() {
                 )}
                 <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{product.name}</h3>
                 <p style={{ color: 'gray', fontSize: '14px', marginBottom: '10px' }}>{product.description}</p>
+                
+                {/* Show Merchant Name */}
+<p style={{ fontSize: '12px', color: '#00bcd4', fontWeight: 'bold', marginBottom: '10px' }}>
+   Sold by: {product.merchant?.storeName || product.merchant?.user?.name || 'Admin / Unknown'}
+</p>
+                
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#4caf50' }}>{product.price}</span>
+                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#4caf50' }}>₱{product.price}</span>
                   <span style={{ fontSize: '14px', color: 'gray' }}>Stock: {product.stock}</span>
                 </div>
                 <button
@@ -253,13 +258,8 @@ export default function AdminProductsPage() {
                   />
                 </div>
 
-                {/* Image Upload Section */}
                 <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
-                    Product Image
-                  </label>
-                  
-                  {/* File Upload Input */}
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Image</label>
                   <input
                     type="file"
                     accept="image/*"
@@ -275,18 +275,12 @@ export default function AdminProductsPage() {
                       marginBottom: '10px'
                     }}
                   />
-                  
                   {selectedFile && (
                     <p style={{ fontSize: '12px', color: 'green', marginBottom: '10px' }}>
                       ✓ Selected: {selectedFile.name}
                     </p>
                   )}
-                  
-                  <p style={{ fontSize: '12px', color: 'gray', marginBottom: '10px' }}>
-                    Or paste image URL below:
-                  </p>
-                  
-                  {/* Product Image URL (Alternative) */}
+                  <p style={{ fontSize: '12px', color: 'gray', marginBottom: '10px' }}>Or paste image URL below:</p>
                   <input
                     type="url"
                     value={formData.imageUrl}

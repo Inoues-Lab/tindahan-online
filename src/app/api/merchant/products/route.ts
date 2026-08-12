@@ -2,25 +2,30 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
-// GET: Fetch merchant's products
+// GET: Fetch products for the logged-in merchant only
 export async function GET() {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
 
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    const merchant = await prisma.merchantProfile.findUnique({ 
-      where: { userId },
-      select: { id: true }
+    // Find the merchant profile for this user
+    const merchantProfile = await prisma.merchantProfile.findUnique({
+      where: { userId }
     })
 
-    if (!merchant) {
+    if (!merchantProfile) {
       return NextResponse.json({ error: 'Merchant profile not found' }, { status: 404 })
     }
 
+    // Only fetch products belonging to THIS merchant's store
     const products = await prisma.product.findMany({
-      where: { merchantId: merchant.id },
+      where: {
+        merchantId: merchantProfile.id
+      },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -31,39 +36,37 @@ export async function GET() {
   }
 }
 
-// POST: Create new product
+// POST: Create a new product linked to the merchant's store
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
 
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    const merchant = await prisma.merchantProfile.findUnique({ 
-      where: { userId },
-      select: { id: true }
+    // Find the merchant profile
+    const merchantProfile = await prisma.merchantProfile.findUnique({
+      where: { userId }
     })
 
-    if (!merchant) {
+    if (!merchantProfile) {
       return NextResponse.json({ error: 'Merchant profile not found' }, { status: 404 })
     }
 
     const body = await request.json()
     const { name, description, price, stock, imageUrl } = body
 
-    if (!name || !price || stock === undefined) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    // FIXED: Removed userId because it doesn't exist in the Product model
+    // Create product AND link it to the merchant profile
     const product = await prisma.product.create({
       data: {
         name,
-        description: description || '',
+        description,
         price: parseFloat(price),
         stock: parseInt(stock),
-        imageUrl: imageUrl || '',
-        merchantId: merchant.id
+        imageUrl,
+        merchantId: merchantProfile.id, // 🔑 Links to the store!
       }
     })
 
@@ -74,95 +77,45 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT: Update product
-export async function PUT(request: Request) {
-  try {
-    const cookieStore = await cookies()
-    const userId = cookieStore.get('userId')?.value
-
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-
-    if (!id) {
-      return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
-    }
-
-    const merchant = await prisma.merchantProfile.findUnique({ 
-      where: { userId },
-      select: { id: true }
-    })
-
-    if (!merchant) {
-      return NextResponse.json({ error: 'Merchant profile not found' }, { status: 404 })
-    }
-
-    // Verify product belongs to this merchant
-    const existingProduct = await prisma.product.findUnique({
-      where: { id }
-    })
-
-    if (!existingProduct || existingProduct.merchantId !== merchant.id) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
-    }
-
-    const body = await request.json()
-    const { name, description, price, stock, imageUrl } = body
-
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-      data: {
-        name: name || existingProduct.name,
-        description: description !== undefined ? description : existingProduct.description,
-        price: price !== undefined ? parseFloat(price) : existingProduct.price,
-        stock: stock !== undefined ? parseInt(stock) : existingProduct.stock,
-        imageUrl: imageUrl !== undefined ? imageUrl : existingProduct.imageUrl
-      }
-    })
-
-    return NextResponse.json({ success: true, product: updatedProduct })
-  } catch (error) {
-    console.error('Error updating product:', error)
-    return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
-  }
-}
-
-// DELETE: Delete product
+// DELETE: Delete a product
 export async function DELETE(request: Request) {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
 
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-
-    if (!id) {
-      return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const merchant = await prisma.merchantProfile.findUnique({ 
-      where: { userId },
-      select: { id: true }
+    const merchantProfile = await prisma.merchantProfile.findUnique({
+      where: { userId }
     })
 
-    if (!merchant) {
+    if (!merchantProfile) {
       return NextResponse.json({ error: 'Merchant profile not found' }, { status: 404 })
     }
 
-    // Verify product belongs to this merchant
-    const existingProduct = await prisma.product.findUnique({
-      where: { id }
+    const { searchParams } = new URL(request.url)
+    const productId = searchParams.get('id')
+
+    if (!productId) {
+      return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
+    }
+
+    // Verify the product belongs to this merchant's store
+    const product = await prisma.product.findFirst({
+      where: {
+        id: productId,
+        merchantId: merchantProfile.id
+      }
     })
 
-    if (!existingProduct || existingProduct.merchantId !== merchant.id) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found or unauthorized' }, { status: 404 })
     }
 
     await prisma.product.delete({
-      where: { id }
+      where: { id: productId }
     })
 
     return NextResponse.json({ success: true })
