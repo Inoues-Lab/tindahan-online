@@ -2,75 +2,73 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import AdminHeader from '@/components/AdminHeader'
 
-export default function AdminDashboard() {
+export default function AdminRidersPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
-  const [riders, setRiders] = useState<any[]>([])
-  const [incomeData, setIncomeData] = useState<any>({
-    todayIncome: 0,
-    totalIncome: 0,
-    todayRevenue: 0,
-    totalRevenue: 0,
-    todayOrders: 0,
-    totalOrders: 0
-  })
+  const [applications, setApplications] = useState<any[]>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     checkAuth()
+    fetchApplications()
   }, [router])
 
   const checkAuth = async () => {
     try {
       const res = await fetch('/api/auth/me')
       const data = await res.json()
-      
       if (!data.user || data.user.role !== 'ADMIN') {
         router.push('/')
-        return
       }
-      
-      setUser(data.user)
-      fetchDashboardData()
     } catch (error) {
       router.push('/')
     }
   }
 
-  const fetchDashboardData = async () => {
+  const fetchApplications = async () => {
     try {
-      // Fetch riders
-      const ridersRes = await fetch('/api/admin/riders')
-      const ridersData = await ridersRes.json()
-      
-      if (ridersRes.ok) {
-        setRiders(ridersData.riders || [])
-      }
-
-      // Fetch income
-      const incomeRes = await fetch('/api/admin/income')
-      const incomeData = await incomeRes.json()
-      
-      if (incomeRes.ok) {
-        setIncomeData(incomeData)
+      const res = await fetch('/api/admin/riders')
+      const data = await res.json()
+      if (res.ok) {
+        setApplications(data.applications || [])
       } else {
-        console.error('Income fetch error:', incomeData)
+        setError(data.error)
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-      setError('Failed to load dashboard data')
+      setError('Failed to load applications')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleAction = async (id: string, action: string) => {
+    if (!confirm(`Are you sure you want to ${action.toLowerCase()} this application?`)) return
+
+    try {
+      const res = await fetch('/api/admin/riders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId: id, action })
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        alert(data.message)
+        fetchApplications()
+      } else {
+        alert(data.error)
+      }
+    } catch (error) {
+      alert('Error processing request')
     }
   }
 
   if (loading) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <Header />
+        <AdminHeader />
         <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
       </main>
     )
@@ -78,142 +76,133 @@ export default function AdminDashboard() {
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-      <Header />
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
-          Admin Dashboard 🔧
-        </h1>
-        <p style={{ fontSize: '16px', color: 'gray', marginBottom: '20px' }}>
-          Manage riders, view remittances, and track income
-        </p>
+      <AdminHeader />
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
+               Rider Applications
+            </h1>
+            <p style={{ fontSize: '16px', color: 'gray' }}>
+              Review and approve new rider partners
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/admin/dashboard')}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: 'gray',
+              color: 'white',
+              border: '2px solid black',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            ← Back
+          </button>
+        </div>
 
         {error && (
-          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px' }}>
-            <strong style={{ color: 'red' }}>Error:</strong> {error}
+          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', color: 'red' }}>
+            {error}
           </div>
         )}
 
-        {/* Registered Riders */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>Registered Riders</h2>
-          {riders.length === 0 ? (
-            <p style={{ color: 'gray' }}>No riders registered yet</p>
-          ) : (
-            <div style={{ display: 'grid', gap: '15px' }}>
-              {riders.map((rider) => (
-                <div key={rider.id} style={{ padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px solid black', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ fontWeight: 'bold', marginBottom: '3px' }}>{rider.name}</p>
-                    <p style={{ fontSize: '13px', color: 'gray' }}>{rider.email}</p>
-                    <p style={{ fontSize: '13px', color: 'gray' }}>Phone: {rider.phone || 'N/A'}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: '12px', color: 'gray' }}>Cash on Hand</p>
-                    <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'green' }}>₱{rider.cashOnHand?.toFixed(2) || '0.00'}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Income Overview */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>💰 Income Overview</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-            <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
-              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Income</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'green' }}>{incomeData.todayIncome?.toFixed(2) || '0.00'}</p>
-              <p style={{ fontSize: '11px', color: 'gray' }}>{incomeData.todayOrders || 0} orders today</p>
-            </div>
-            <div style={{ padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '2px solid blue' }}>
-              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Total Income</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'blue' }}>₱{incomeData.totalIncome?.toFixed(2) || '0.00'}</p>
-              <p style={{ fontSize: '11px', color: 'gray' }}>{incomeData.totalOrders || 0} total orders</p>
-            </div>
-            <div style={{ padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid orange' }}>
-              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Today's Revenue</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'orange' }}>{incomeData.todayRevenue?.toFixed(2) || '0.00'}</p>
-              <p style={{ fontSize: '11px', color: 'gray' }}>Gross sales</p>
-            </div>
-            <div style={{ padding: '15px', backgroundColor: '#f3e5f5', borderRadius: '8px', border: '2px solid purple' }}>
-              <p style={{ fontSize: '12px', color: 'gray', marginBottom: '5px' }}>Total Revenue</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'purple' }}>{incomeData.totalRevenue?.toFixed(2) || '0.00'}</p>
-              <p style={{ fontSize: '11px', color: 'gray' }}>All time gross</p>
-            </div>
+        {applications.length === 0 ? (
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
+            <p style={{ fontSize: '18px', color: 'gray' }}>No rider applications yet.</p>
           </div>
-        </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '15px' }}>
+            {applications.map((app) => (
+              <div key={app.id} style={{ 
+                backgroundColor: 'white', 
+                padding: '20px', 
+                borderRadius: '12px', 
+                border: '3px solid black',
+                boxShadow: app.status === 'PENDING' ? '4px 4px 0px black' : 'none',
+                opacity: app.status !== 'PENDING' ? 0.7 : 1
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
+                  <div style={{ flex: 1, minWidth: '250px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{app.user?.name || 'Unknown Rider'}</h3>
+                      <span style={{ 
+                        padding: '4px 12px', 
+                        borderRadius: '20px', 
+                        fontSize: '12px', 
+                        fontWeight: 'bold',
+                        backgroundColor: app.status === 'APPROVED' ? '#e8f5e9' : app.status === 'REJECTED' ? '#fee' : '#fff3cd',
+                        color: app.status === 'APPROVED' ? 'green' : app.status === 'REJECTED' ? 'red' : '#856404',
+                        border: `1px solid ${app.status === 'APPROVED' ? 'green' : app.status === 'REJECTED' ? 'red' : '#ffc107'}`
+                      }}>
+                        {app.status}
+                      </span>
+                    </div>
+                    <p style={{ margin: '5px 0', color: 'gray' }}>
+                      <strong>Vehicle Type:</strong> {app.vehicleType || 'N/A'}
+                    </p>
+                    <p style={{ margin: '5px 0', color: 'gray' }}>
+                      <strong>Plate Number:</strong> {app.plateNumber || 'N/A'}
+                    </p>
+                    <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f0f8ff', borderRadius: '8px' }}>
+                      <p style={{ margin: '2px 0', fontSize: '14px' }}><strong>Email:</strong> {app.user?.email || 'Unknown'}</p>
+                      <p style={{ margin: '2px 0', fontSize: '14px' }}><strong>Phone:</strong> {app.user?.phone || 'N/A'}</p>
+                    </div>
+                    
+                    <div style={{ marginTop: '15px', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                      {app.licenseUrl && (
+                        <a href={app.licenseUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}>📄 View License</a>
+                      )}
+                      {app.orCrUrl && (
+                        <a href={app.orCrUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}> View OR/CR</a>
+                      )}
+                      {!app.licenseUrl && !app.orCrUrl && (
+                        <p style={{ color: 'gray', fontSize: '14px' }}>No documents uploaded</p>
+                      )}
+                    </div>
+                  </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-          <button
-            onClick={() => router.push('/admin/products')}
-            style={{
-              padding: '20px',
-              backgroundColor: 'blue',
-              color: 'white',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontSize: '18px',
-              boxShadow: '4px 4px 0px black'
-            }}
-          >
-            📦 Manage Products
-          </button>
-          <button
-            onClick={() => router.push('/admin/remittance')}
-            style={{
-              padding: '20px',
-              backgroundColor: 'green',
-              color: 'white',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontSize: '18px',
-              boxShadow: '4px 4px 0px black'
-            }}
-          >
-             Process Remittances
-          </button>
-          <button
-            onClick={() => router.push('/admin/merchants')}
-            style={{
-              padding: '20px',
-              backgroundColor: '#ffc107',
-              color: 'black',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontSize: '18px',
-              boxShadow: '4px 4px 0px black',
-              gridColumn: '1 / -1'
-            }}
-          >
-            🏪 Manage Merchants
-          </button>
-          {/* NEW BUTTON: Manage Riders */}
-          <button
-            onClick={() => router.push('/admin/riders')}
-            style={{
-              padding: '20px',
-              backgroundColor: '#17a2b8', // Cyan/Blue for riders
-              color: 'white',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontSize: '18px',
-              boxShadow: '4px 4px 0px black',
-              gridColumn: '1 / -1'
-            }}
-          >
-            🏍️ Manage Riders
-          </button>
-        </div>
+                  {app.status === 'PENDING' && (
+                    <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                      <button
+                        onClick={() => handleAction(app.id, 'APPROVE')}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: 'green',
+                          color: 'white',
+                          border: '2px solid black',
+                          borderRadius: '8px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          minWidth: '120px'
+                        }}
+                      >
+                        ✅ Approve
+                      </button>
+                      <button
+                        onClick={() => handleAction(app.id, 'REJECT')}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: 'red',
+                          color: 'white',
+                          border: '2px solid black',
+                          borderRadius: '8px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          minWidth: '120px'
+                        }}
+                      >
+                        ❌ Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   )
