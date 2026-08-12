@@ -43,27 +43,44 @@ export default function AdminMerchantsPage() {
     }
   }
 
-  const handleAction = async (id: string, action: string) => {
+    const handleAction = async (id: string, action: string) => {
     if (!confirm(`Are you sure you want to ${action.toLowerCase()} this application?`)) return
 
     try {
       const res = await fetch('/api/admin/merchants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicationId: id, action })
+        body: JSON.stringify({ 
+          merchantProfileId: id,
+          status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED'
+        })
       })
 
       const data = await res.json()
       if (res.ok) {
-        alert(data.message)
+        alert(`Merchant ${action.toLowerCase()}d successfully!`)
         fetchApplications()
       } else {
-        alert(data.error)
+        alert(data.error || `Failed to ${action.toLowerCase()} merchant`)
       }
     } catch (error) {
+      console.error('Error:', error)
       alert('Error processing request')
     }
   }
+
+    const data = await res.json()
+    if (res.ok) {
+      alert(data.message || `Merchant ${action.toLowerCase()}d successfully!`)
+      fetchApplications()
+    } else {
+      alert(data.error || `Failed to ${action.toLowerCase()} merchant`)
+    }
+  } catch (error) {
+    console.error('Error:', error)
+    alert('Error processing request')
+  }
+}
 
   if (loading) {
     return (
