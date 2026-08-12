@@ -12,9 +12,9 @@ export async function sendPasswordResetEmail(email: string, resetToken: string, 
   const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${resetToken}`
 
   const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: 'Password Reset - Tindahan Online',
+  from: `"Tindahan Online" <${process.env.EMAIL_USER}>`,
+  to: email,
+  subject: 'Password Reset - Tindahan Online',
     html: `
       <!DOCTYPE html>
       <html>
