@@ -25,10 +25,17 @@ export default function RegisterForm() {
     setLoading(true)
 
     try {
-      // 🔑 STEP 1: Log out any existing session (clears old admin cookie)
-      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
+      // 🔑 Step 1: Force logout first (clear old session completely)
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' })
+      } catch (e) {
+        // Ignore logout errors
+      }
 
-      // STEP 2: Register the new user
+      // Wait a tiny bit for cookie to clear
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // 🔑 Step 2: Register (sets new cookie directly)
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,28 +50,16 @@ export default function RegisterForm() {
         return
       }
 
-      // STEP 3: Auto-login as the NEW user
-      const loginRes = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        })
-      })
-
-      const loginData = await loginRes.json()
-
-      // STEP 4: Redirect based on the NEW user's role
-      if (loginRes.ok && loginData.user) {
-        if (loginData.user.role === 'MERCHANT') {
-          router.push('/merchant/apply')
-        } else if (loginData.user.role === 'RIDER') {
-          router.push('/rider/apply')
-        } else if (loginData.user.role === 'ADMIN' || loginData.user.role === 'SUB_ADMIN') {
-          router.push('/admin/dashboard')
+      // 🔑 Step 3: Redirect with full page reload to get fresh cookies
+      if (data.user) {
+        if (data.user.role === 'MERCHANT') {
+          window.location.href = '/merchant/apply'
+        } else if (data.user.role === 'RIDER') {
+          window.location.href = '/rider/apply'
+        } else if (data.user.role === 'ADMIN' || data.user.role === 'SUB_ADMIN') {
+          window.location.href = '/admin/dashboard'
         } else {
-          router.push('/') // CUSTOMER goes to home/shop
+          window.location.href = '/' // CUSTOMER
         }
       } else {
         router.push('/login')

@@ -42,20 +42,22 @@ export async function POST(request: Request) {
       }
     })
 
-    // Set session cookie (same as login does)
-    const cookieStore = await cookies()
-    cookieStore.set('userId', user.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    })
-
-    return NextResponse.json({ 
+    // 🔑 Set session cookie DIRECTLY (replaces any old cookies)
+    const response = NextResponse.json({ 
       success: true, 
       user,
       message: 'Registration successful'
     })
+
+    response.cookies.set('userId', user.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/'
+    })
+
+    return response
   } catch (error) {
     console.error('Registration error:', error)
     return NextResponse.json({ error: 'Registration failed' }, { status: 500 })
