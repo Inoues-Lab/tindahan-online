@@ -70,16 +70,19 @@ model MerchantProfile {
 }
 
 model RiderProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status      String   @default("PENDING")
-  vehicleType String?
-  plateNumber String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status           String   @default("PENDING")
+  vehicleType      String?
+  plateNumber      String?
+  licenseUrl       String?   // <-- ADDED: Driving License photo
+  orcrUrl          String?   // <-- ADDED: Motorcycle OR/CR photo
+  authorizationUrl String?   // <-- ADDED: Authorization Letter photo
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  deliveries  Order[]
+  deliveries       Order[]
 }
 
 model Product {
