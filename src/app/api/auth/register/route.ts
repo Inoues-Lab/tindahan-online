@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
@@ -39,6 +40,15 @@ export async function POST(request: Request) {
         name: true,
         role: true
       }
+    })
+
+    // Set session cookie (same as login does)
+    const cookieStore = await cookies()
+    cookieStore.set('userId', user.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
     })
 
     return NextResponse.json({ 

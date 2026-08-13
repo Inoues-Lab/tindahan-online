@@ -39,25 +39,17 @@ export default function RegisterForm() {
         return
       }
 
-      // Auto login after registration
-      const loginRes = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        })
-      })
-
-      const loginData = await loginRes.json()
-
-      if (loginRes.ok && loginData.user) {
-        if (loginData.user.role === 'MERCHANT') {
+      // Registration successful and already logged in (cookie set by API)
+      // Redirect based on role
+      if (data.user) {
+        if (data.user.role === 'MERCHANT') {
           router.push('/merchant/apply')
-        } else if (loginData.user.role === 'RIDER') {
+        } else if (data.user.role === 'RIDER') {
           router.push('/rider/apply')
+        } else if (data.user.role === 'ADMIN' || data.user.role === 'SUB_ADMIN') {
+          router.push('/admin/dashboard')
         } else {
-          router.push('/')
+          router.push('/') // CUSTOMER goes to home
         }
       } else {
         router.push('/login')
