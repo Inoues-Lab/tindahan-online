@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 
@@ -39,7 +39,7 @@ function detectDeliveryZone(address: string): { zone: string; baseFee: number; z
   return { zone: 'zone4', baseFee: 100, zoneName: 'Far Towns/Cities (Default)' }
 }
 
-const inputStyle = {
+const inputStyle: CSSProperties = {
   width: '100%',
   padding: '12px',
   borderRadius: '8px',
@@ -49,14 +49,14 @@ const inputStyle = {
   backgroundColor: 'white'
 }
 
-const labelStyle = {
+const labelStyle: CSSProperties = {
   display: 'block',
   fontWeight: 'bold',
   marginBottom: '5px',
   fontSize: '16px'
 }
 
-const cardStyle = {
+const cardStyle: CSSProperties = {
   backgroundColor: 'white',
   padding: '20px',
   borderRadius: '12px',
