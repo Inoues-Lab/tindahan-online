@@ -21,7 +21,8 @@ export async function GET() {
         phone: true,
         address: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        riderProfile: true   // 🔑 ADDED: so the rider dashboard can read the status!
       }
     })
 
