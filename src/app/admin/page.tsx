@@ -31,7 +31,7 @@ export default function AdminDashboard() {
         return
       }
       
-      // Allow both ADMIN and SUB_ADMIN to access this page
+      // Allow both ADMIN and SUB_ADMIN
       if (data.user.role !== 'ADMIN' && data.user.role !== 'SUB_ADMIN') {
         router.push('/')
         return
@@ -102,7 +102,7 @@ export default function AdminDashboard() {
             {isSuperAdmin ? 'Admin Dashboard' : 'Sub-Admin Dashboard'}
           </h1>
           <p style={{ fontSize: '16px', color: 'gray' }}>
-            Welcome back, {user?.name || 'Admin'}!
+            Welcome back, {user?.name}!
           </p>
         </div>
 
