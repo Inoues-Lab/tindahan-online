@@ -1,4 +1,3 @@
-// src/app/padala/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -24,20 +23,54 @@ function detectDeliveryZone(address: string): { zone: string; baseFee: number; z
   return { zone: 'zone4', baseFee: 100, zoneName: 'Far Towns/Cities (Default)' }
 }
 
+const inputStyle = {
+  width: '100%',
+  padding: '12px',
+  borderRadius: '8px',
+  border: '2px solid black',
+  boxSizing: 'border-box',
+  fontSize: '16px',
+  backgroundColor: 'white'
+}
+
+const labelStyle = {
+  display: 'block',
+  fontWeight: 'bold',
+  marginBottom: '5px',
+  fontSize: '16px'
+}
+
+const cardStyle = {
+  backgroundColor: 'white',
+  padding: '20px',
+  borderRadius: '12px',
+  border: '3px solid black',
+  boxShadow: '4px 4px 0px black',
+  marginBottom: '20px'
+}
+
 export default function PadalaPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
 
+  // Address popup states
+  const [showSenderPopup, setShowSenderPopup] = useState(false)
+  const [showReceiverPopup, setShowReceiverPopup] = useState(false)
+  const [useRegisteredSender, setUseRegisteredSender] = useState<boolean | null>(null)
+  const [useRegisteredReceiver, setUseRegisteredReceiver] = useState<boolean | null>(null)
+
   // Sender details
   const [senderName, setSenderName] = useState('')
   const [senderAddress, setSenderAddress] = useState('')
   const [senderContact, setSenderContact] = useState('')
+  const [customSenderAddress, setCustomSenderAddress] = useState('')
 
   // Receiver details
   const [receiverName, setReceiverName] = useState('')
   const [receiverAddress, setReceiverAddress] = useState('')
   const [receiverContact, setReceiverContact] = useState('')
+  const [customReceiverAddress, setCustomReceiverAddress] = useState('')
 
   // Package details
   const [packageDescription, setPackageDescription] = useState('')
@@ -51,8 +84,13 @@ export default function PadalaPage() {
         if (data.user) {
           setUser(data.user)
           setSenderName(data.user.name || '')
-          setSenderAddress(data.user.address || '')
           setSenderContact(data.user.phone || '')
+
+          if (data.user.address && data.user.address.trim() !== '') {
+            setShowSenderPopup(true)
+          } else {
+            setUseRegisteredSender(false)
+          }
         } else {
           router.push('/login')
         }
@@ -60,12 +98,42 @@ export default function PadalaPage() {
       .catch(() => router.push('/login'))
   }, [router])
 
+  // Show receiver popup after sender is resolved
   useEffect(() => {
-    if (receiverAddress) {
-      const zone = detectDeliveryZone(receiverAddress)
+    if (useRegisteredSender !== null && !showSenderPopup) {
+      if (user?.address && user.address.trim() !== '') {
+        setShowReceiverPopup(true)
+      } else {
+        setUseRegisteredReceiver(false)
+      }
+    }
+  }, [useRegisteredSender, showSenderPopup, user])
+
+  const handleSenderChoice = (useRegistered: boolean) => {
+    setUseRegisteredSender(useRegistered)
+    setShowSenderPopup(false)
+    if (useRegistered && user?.address) {
+      setSenderAddress(user.address)
+    }
+  }
+
+  const handleReceiverChoice = (useRegistered: boolean) => {
+    setUseRegisteredReceiver(useRegistered)
+    setShowReceiverPopup(false)
+    if (useRegistered && user?.address) {
+      setReceiverAddress(user.address)
+    }
+  }
+
+  const finalSenderAddress = useRegisteredSender === true ? senderAddress : useRegisteredSender === false ? customSenderAddress : ''
+  const finalReceiverAddress = useRegisteredReceiver === true ? receiverAddress : useRegisteredReceiver === false ? customReceiverAddress : ''
+
+  useEffect(() => {
+    if (finalReceiverAddress) {
+      const zone = detectDeliveryZone(finalReceiverAddress)
       setDeliveryZone(zone)
     }
-  }, [receiverAddress])
+  }, [finalReceiverAddress])
 
   const weight = parseFloat(estimatedWeight) || 0.5
   const baseFee = deliveryZone?.baseFee || 40
@@ -73,7 +141,7 @@ export default function PadalaPage() {
   const deliveryFee = baseFee + weightFee
 
   const handleSubmit = async () => {
-    if (!senderName || !senderAddress || !senderContact || !receiverName || !receiverAddress || !receiverContact || !packageDescription) {
+    if (!senderName || !finalSenderAddress || !senderContact || !receiverName || !finalReceiverAddress || !receiverContact || !packageDescription) {
       alert('Please fill in all required fields')
       return
     }
@@ -85,14 +153,14 @@ export default function PadalaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceType: 'PADALA',
-          deliveryAddress: receiverAddress,
+          deliveryAddress: finalReceiverAddress,
           contactNumber: receiverContact,
           deliveryFee: deliveryFee,
           senderName,
-          senderAddress,
+          senderAddress: finalSenderAddress,
           senderContact,
           receiverName,
-          receiverAddress,
+          receiverAddress: finalReceiverAddress,
           receiverContact,
           packageDescription,
           requiredLoadKg: weight
@@ -100,8 +168,8 @@ export default function PadalaPage() {
       })
       const data = await response.json()
       if (response.ok) {
-        alert('PADALA request submitted successfully! A rider will pick up and deliver your package.')
-        router.push('/orders/my-orders')
+        alert('PADALA request submitted successfully! A rider will pick up and deliver your package. 📦')
+        router.push('/orders')
       } else {
         alert(data.error || 'Failed to submit request')
       }
@@ -121,87 +189,234 @@ export default function PadalaPage() {
     )
   }
 
+  const popupOverlayStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '20px'
+  }
+
+  const popupCardStyle = {
+    backgroundColor: 'white',
+    padding: '30px',
+    borderRadius: '12px',
+    border: '3px solid black',
+    maxWidth: '500px',
+    width: '100%',
+    boxShadow: '8px 8px 0px black'
+  }
+
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
-      
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ backgroundColor: '#d1ecf1', padding: '20px', borderRadius: '12px', border: '3px solid #17a2b8', marginBottom: '20px', boxShadow: '3px 3px 0px black' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px', color: '#0c5460' }}> PADALA Service</h1>
-          <p style={{ fontSize: '16px', color: '#0c5460', lineHeight: '1.6' }}>
-            Send packages and items safely! Our riders will pick up from you and deliver to the receiver with photo proof.
+
+      {/* Sender Address Popup */}
+      {showSenderPopup && (
+        <div style={popupOverlayStyle}>
+          <div style={popupCardStyle}>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>📍 Pickup Address</h2>
+            <p style={{ fontSize: '16px', marginBottom: '20px', textAlign: 'center', color: 'gray' }}>Where should the rider pick up the package?</p>
+            <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
+              <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>Your registered address:</p>
+              <p style={{ fontSize: '14px', color: 'gray' }}>{user.address}</p>
+            </div>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button
+                onClick={() => handleSenderChoice(true)}
+                style={{ flex: 1, padding: '15px', backgroundColor: '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+              >
+                ✅ Yes, Use This
+              </button>
+              <button
+                onClick={() => handleSenderChoice(false)}
+                style={{ flex: 1, padding: '15px', backgroundColor: 'white', color: 'black', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+              >
+                ✏️ Enter New
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receiver Address Popup */}
+      {showReceiverPopup && (
+        <div style={popupOverlayStyle}>
+          <div style={popupCardStyle}>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>📍 Delivery Address</h2>
+            <p style={{ fontSize: '16px', marginBottom: '20px', textAlign: 'center', color: 'gray' }}>Where should the package be delivered?</p>
+            <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
+              <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>Your registered address:</p>
+              <p style={{ fontSize: '14px', color: 'gray' }}>{user.address}</p>
+            </div>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button
+                onClick={() => handleReceiverChoice(true)}
+                style={{ flex: 1, padding: '15px', backgroundColor: '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+              >
+                ✅ Yes, Use This
+              </button>
+              <button
+                onClick={() => handleReceiverChoice(false)}
+                style={{ flex: 1, padding: '15px', backgroundColor: 'white', color: 'black', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+              >
+                ✏️ Enter New
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '30px 20px' }}>
+        {/* Service Banner - Clean Style */}
+        <div style={{ backgroundColor: '#e0f7fa', padding: '25px', borderRadius: '12px', border: '3px solid #00bcd4', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px', color: '#00838f' }}>📦 PADALA Service</h1>
+          <p style={{ fontSize: '16px', color: '#00838f', lineHeight: '1.6' }}>
+            Send packages and items safely! Our riders will pick up from you and deliver to the receiver with <strong>photo proof</strong>.
           </p>
         </div>
 
         {/* Sender Details */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '3px 3px 0px black' }}>
-          <h2 style={{ fontSize: '20px', marginBottom: '15px', color: 'black' }}> Sender Details (You)</h2>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Full Name *</label>
-            <input type="text" value={senderName} onChange={(e) => setSenderName(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }} placeholder="Your full name" />
-          </div>
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>🏠 Sender Details (You)</h2>
 
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Pickup Address *</label>
-            <textarea value={senderAddress} onChange={(e) => setSenderAddress(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }} placeholder="Where should the rider pick up the package?" />
+            <label style={labelStyle}>Full Name *</label>
+            <input
+              type="text"
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              style={{ ...inputStyle, fontWeight: 'bold' }}
+              placeholder="Your full name"
+            />
           </div>
 
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Contact Number *</label>
-            <input type="text" value={senderContact} onChange={(e) => setSenderContact(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }} placeholder="09xxxxxxxxx" />
+          {useRegisteredSender === true ? (
+            <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid #4caf50' }}>
+              <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>📍 Pickup Address:</p>
+              <p style={{ fontWeight: 'bold' }}>{senderAddress}</p>
+            </div>
+          ) : useRegisteredSender === false ? (
+            <div style={{ marginBottom: '15px' }}>
+              <label style={labelStyle}>Pickup Address *</label>
+              <textarea
+                value={customSenderAddress}
+                onChange={(e) => setCustomSenderAddress(e.target.value)}
+                style={{ ...inputStyle, minHeight: '80px', fontWeight: 'bold' }}
+                placeholder="Where should the rider pick up the package?"
+              />
+            </div>
+          ) : null}
+
+          <div>
+            <label style={labelStyle}>Contact Number *</label>
+            <input
+              type="text"
+              value={senderContact}
+              onChange={(e) => setSenderContact(e.target.value)}
+              style={{ ...inputStyle, fontWeight: 'bold' }}
+              placeholder="09xxxxxxxxx"
+            />
           </div>
         </div>
 
         {/* Receiver Details */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '3px 3px 0px black' }}>
-          <h2 style={{ fontSize: '20px', marginBottom: '15px', color: 'black' }}>📍 Receiver Details</h2>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Receiver Name *</label>
-            <input type="text" value={receiverName} onChange={(e) => setReceiverName(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }} placeholder="Receiver's full name" />
-          </div>
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>📍 Receiver Details</h2>
 
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Delivery Address *</label>
-            <textarea value={receiverAddress} onChange={(e) => setReceiverAddress(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }} placeholder="Where should the package be delivered?" />
-            {deliveryZone && receiverAddress && (
-              <p style={{ fontSize: '12px', color: 'blue', marginTop: '5px' }}>
-                📍 Detected: {deliveryZone.zoneName} (Base fee: ₱{deliveryZone.baseFee})
-              </p>
-            )}
+            <label style={labelStyle}>Receiver Name *</label>
+            <input
+              type="text"
+              value={receiverName}
+              onChange={(e) => setReceiverName(e.target.value)}
+              style={{ ...inputStyle, fontWeight: 'bold' }}
+              placeholder="Receiver's full name"
+            />
           </div>
 
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Receiver Contact Number *</label>
-            <input type="text" value={receiverContact} onChange={(e) => setReceiverContact(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }} placeholder="09xxxxxxxxx" />
+          {useRegisteredReceiver === true ? (
+            <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid #4caf50' }}>
+              <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>📍 Delivery Address:</p>
+              <p style={{ fontWeight: 'bold' }}>{receiverAddress}</p>
+              {deliveryZone && (
+                <p style={{ fontSize: '12px', color: '#2196f3', marginTop: '5px', fontWeight: 'bold' }}>
+                  🚚 Zone: {deliveryZone.zoneName} (Base fee: ₱{deliveryZone.baseFee})
+                </p>
+              )}
+            </div>
+          ) : useRegisteredReceiver === false ? (
+            <div style={{ marginBottom: '15px' }}>
+              <label style={labelStyle}>Delivery Address *</label>
+              <textarea
+                value={customReceiverAddress}
+                onChange={(e) => setCustomReceiverAddress(e.target.value)}
+                style={{ ...inputStyle, minHeight: '80px', fontWeight: 'bold' }}
+                placeholder="Where should the package be delivered?"
+              />
+              {deliveryZone && customReceiverAddress && (
+                <p style={{ fontSize: '12px', color: '#2196f3', marginTop: '5px', fontWeight: 'bold' }}>
+                  🚚 Detected: {deliveryZone.zoneName} (Base fee: ₱{deliveryZone.baseFee})
+                </p>
+              )}
+            </div>
+          ) : null}
+
+          <div>
+            <label style={labelStyle}>Receiver Contact Number *</label>
+            <input
+              type="text"
+              value={receiverContact}
+              onChange={(e) => setReceiverContact(e.target.value)}
+              style={{ ...inputStyle, fontWeight: 'bold' }}
+              placeholder="09xxxxxxxxx"
+            />
           </div>
         </div>
 
         {/* Package Details */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '3px 3px 0px black' }}>
-          <h2 style={{ fontSize: '20px', marginBottom: '15px', color: 'black' }}> Package Details</h2>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Package Description *</label>
-            <textarea value={packageDescription} onChange={(e) => setPackageDescription(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }} placeholder="Describe the package (e.g., Box of clothes, documents, food items)" />
-          </div>
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>📦 Package Details</h2>
 
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Estimated Weight (kg)</label>
-            <input type="number" value={estimatedWeight} onChange={(e) => setEstimatedWeight(e.target.value)} step="0.1" min="0.1" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }} placeholder="e.g., 2.5" />
+            <label style={labelStyle}>Package Description *</label>
+            <textarea
+              value={packageDescription}
+              onChange={(e) => setPackageDescription(e.target.value)}
+              style={{ ...inputStyle, minHeight: '80px', fontWeight: 'bold' }}
+              placeholder="Describe the package (e.g., Box of clothes, documents, food items)"
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Estimated Weight (kg)</label>
+            <input
+              type="number"
+              value={estimatedWeight}
+              onChange={(e) => setEstimatedWeight(e.target.value)}
+              step="0.1"
+              min="0.1"
+              style={{ ...inputStyle, fontWeight: 'bold' }}
+              placeholder="e.g., 2.5"
+            />
             <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>ℹ️ Fee: ₱5 per kg</p>
           </div>
         </div>
 
-        {/* Delivery Fee & Submit */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '3px 3px 0px black' }}>
-          <div style={{ backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
-            <p style={{ fontSize: '16px', color: 'black', marginBottom: '5px' }}>
-              <strong>Delivery Fee:</strong> ₱{deliveryFee.toFixed(2)}
+        {/* Fee & Submit */}
+        <div style={cardStyle}>
+          <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
+            <p style={{ fontSize: '16px', marginBottom: '5px' }}>
+              <strong>🚚 Delivery Fee:</strong> ₱{deliveryFee.toFixed(2)}
             </p>
             <p style={{ fontSize: '12px', color: 'gray' }}>
-              (Base ₱{baseFee} + {weight}kg × ₱5) - {deliveryZone?.zoneName || 'Enter receiver address'}
+              (Base ₱{baseFee} + {weight}kg × ₱5) — {deliveryZone?.zoneName || 'Enter receiver address first'}
             </p>
           </div>
 
@@ -209,15 +424,19 @@ export default function PadalaPage() {
             onClick={handleSubmit}
             disabled={loading}
             style={{
-              width: '100%', padding: '15px',
-              backgroundColor: loading ? 'gray' : 'blue',
-              color: 'white', border: '2px solid black', borderRadius: '8px',
-              fontSize: '18px', fontWeight: 'bold',
+              width: '100%',
+              padding: '15px',
+              backgroundColor: loading ? 'gray' : '#00bcd4',
+              color: 'white',
+              border: '2px solid black',
+              borderRadius: '8px',
+              fontSize: '18px',
+              fontWeight: 'bold',
               cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '3px 3px 0px black'
+              boxShadow: '4px 4px 0px black'
             }}
           >
-            {loading ? 'Processing...' : ' Submit PADALA Request'}
+            {loading ? 'Processing...' : '📦 Submit PADALA Request'}
           </button>
         </div>
       </div>
