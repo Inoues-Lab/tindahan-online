@@ -51,11 +51,26 @@ async function updateOrder(request: Request) {
     const body = await request.json()
 
     // Accept any field name the page might send
+    // Accept any field name the page might send
     const orderId = body.orderId || body.id
-    const status = body.status || body.action || body.newStatus
+    let status = (body.status || body.action || body.newStatus || '').toString().toUpperCase()
+
+    // 🔑 Translate the page's words into valid enum values
+    if (status === 'CONFIRM' || status === 'CONFIRMED') status = 'ACCEPTED'
+    if (status === 'CANCEL') status = 'CANCELLED'
+
+    // 🔑 Only allow valid enum values (prevents Prisma 500 errors)
+    const validStatuses = [
+      'PENDING', 'ACCEPTED', 'IN_PROGRESS', 'READY_FOR_PICKUP',
+      'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED', 'CANCELLED'
+    ]
 
     if (!orderId || !status) {
       return NextResponse.json({ error: 'Missing orderId or status' }, { status: 400 })
+    }
+
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json({ error: `Invalid status: ${status}` }, { status: 400 })
     }
 
     const order = await prisma.order.update({
