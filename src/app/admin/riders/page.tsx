@@ -6,13 +6,12 @@ import AdminHeader from '@/components/AdminHeader'
 
 export default function AdminRidersPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
   const [applications, setApplications] = useState<any[]>([])
-  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<any>(null)
 
   useEffect(() => {
     checkAuth()
-    fetchApplications()
   }, [router])
 
   const checkAuth = async () => {
@@ -21,7 +20,9 @@ export default function AdminRidersPage() {
       const data = await res.json()
       if (!data.user || (data.user.role !== 'ADMIN' && data.user.role !== 'SUB_ADMIN')) {
         router.push('/')
+        return
       }
+      fetchApplications()
     } catch (error) {
       router.push('/')
     }
@@ -33,36 +34,58 @@ export default function AdminRidersPage() {
       const data = await res.json()
       if (res.ok) {
         setApplications(data.applications || [])
-      } else {
-        setError(data.error)
       }
     } catch (error) {
-      setError('Failed to load applications')
+      console.error('Error fetching applications:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAction = async (id: string, action: string) => {
-    if (!confirm(`Are you sure you want to ${action.toLowerCase()} this application?`)) return
+  const handleAction = async (profileId: string, status: string) => {
+    if (status === 'REJECTED' && !confirm('Are you sure you want to reject this rider?')) return
 
     try {
       const res = await fetch('/api/admin/riders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicationId: id, action })
+        body: JSON.stringify({ riderProfileId: profileId, status })
       })
-
       const data = await res.json()
       if (res.ok) {
-        alert(data.message)
+        alert(data.message || 'Rider updated!')
         fetchApplications()
       } else {
-        alert(data.error)
+        alert(data.error || 'Failed to update rider')
       }
     } catch (error) {
-      alert('Error processing request')
+      alert('Network error')
     }
+  }
+
+  // 🔍 Find uploaded documents (checks multiple possible field names)
+  const getDocuments = (app: any) => {
+    const docs: { label: string; url: string }[] = []
+    const candidates: [string[], string][] = [
+      [['licenseUrl', 'drivingLicenseUrl', 'drivingLicense', 'license'], '🪪 Driving License'],
+      [['orcrUrl', 'motorcycleOrcrUrl', 'orcr', 'motorcycleOrCr'], '🏍️ Motorcycle OR/CR'],
+      [['authorizationUrl', 'authorizationLetterUrl', 'authorizationLetter', 'authorization'], '📄 Authorization Letter']
+    ]
+    for (const [keys, label] of candidates) {
+      for (const key of keys) {
+        if (app[key] && typeof app[key] === 'string' && app[key].startsWith('http')) {
+          docs.push({ label, url: app[key] })
+          break
+        }
+      }
+    }
+    return docs
+  }
+
+  const statusColors: any = {
+    PENDING: '#ff9800',
+    APPROVED: '#4caf50',
+    REJECTED: '#dc3545'
   }
 
   if (loading) {
@@ -77,133 +100,140 @@ export default function AdminRidersPage() {
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <AdminHeader />
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '30px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
-               Rider Applications
-            </h1>
-            <p style={{ fontSize: '16px', color: 'gray' }}>
-              Review and approve new rider partners
-            </p>
+            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>🏍️ Rider Applications</h1>
+            <p style={{ fontSize: '16px', color: 'gray' }}>Review and approve new rider partners</p>
           </div>
           <button
-            onClick={() => router.push('/admin/dashboard')}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: 'gray',
-              color: 'white',
-              border: '2px solid black',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
+            onClick={() => router.push('/admin')}
+            style={{ padding: '12px 24px', backgroundColor: 'white', color: 'black', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
           >
             ← Back
           </button>
         </div>
-
-        {error && (
-          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', color: 'red' }}>
-            {error}
-          </div>
-        )}
 
         {applications.length === 0 ? (
           <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
             <p style={{ fontSize: '18px', color: 'gray' }}>No rider applications yet.</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: '15px' }}>
+          <div style={{ display: 'grid', gap: '20px' }}>
             {applications.map((app) => (
-              <div key={app.id} style={{ 
-                backgroundColor: 'white', 
-                padding: '20px', 
-                borderRadius: '12px', 
-                border: '3px solid black',
-                boxShadow: app.status === 'PENDING' ? '4px 4px 0px black' : 'none',
-                opacity: app.status !== 'PENDING' ? 0.7 : 1
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
-                  <div style={{ flex: 1, minWidth: '250px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                      <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{app.user?.name || 'Unknown Rider'}</h3>
-                      <span style={{ 
-                        padding: '4px 12px', 
-                        borderRadius: '20px', 
-                        fontSize: '12px', 
-                        fontWeight: 'bold',
-                        backgroundColor: app.status === 'APPROVED' ? '#e8f5e9' : app.status === 'REJECTED' ? '#fee' : '#fff3cd',
-                        color: app.status === 'APPROVED' ? 'green' : app.status === 'REJECTED' ? 'red' : '#856404',
-                        border: `1px solid ${app.status === 'APPROVED' ? 'green' : app.status === 'REJECTED' ? 'red' : '#ffc107'}`
-                      }}>
-                        {app.status}
-                      </span>
-                    </div>
-                    <p style={{ margin: '5px 0', color: 'gray' }}>
-                      <strong>Vehicle Type:</strong> {app.vehicleType || 'N/A'}
-                    </p>
-                    <p style={{ margin: '5px 0', color: 'gray' }}>
-                      <strong>Plate Number:</strong> {app.plateNumber || 'N/A'}
-                    </p>
-                    <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f0f8ff', borderRadius: '8px' }}>
-                      <p style={{ margin: '2px 0', fontSize: '14px' }}><strong>Email:</strong> {app.user?.email || 'Unknown'}</p>
-                      <p style={{ margin: '2px 0', fontSize: '14px' }}><strong>Phone:</strong> {app.user?.phone || 'N/A'}</p>
-                    </div>
-                    
-                    <div style={{ marginTop: '15px', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                      {app.licenseUrl && (
-                        <a href={app.licenseUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}>📄 View License</a>
-                      )}
-                      {app.orCrUrl && (
-                        <a href={app.orCrUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline', fontSize: '14px' }}> View OR/CR</a>
-                      )}
-                      {!app.licenseUrl && !app.orCrUrl && (
-                        <p style={{ color: 'gray', fontSize: '14px' }}>No documents uploaded</p>
-                      )}
-                    </div>
+              <div key={app.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', opacity: app.status !== 'PENDING' ? 0.75 : 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{app.user?.name}</h3>
+                    <span style={{ padding: '5px 15px', backgroundColor: statusColors[app.status] || '#757575', color: 'white', borderRadius: '20px', fontWeight: 'bold', fontSize: '12px' }}>
+                      {app.status}
+                    </span>
                   </div>
-
                   {app.status === 'PENDING' && (
-                    <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
                       <button
-                        onClick={() => handleAction(app.id, 'APPROVE')}
-                        style={{
-                          padding: '10px 20px',
-                          backgroundColor: 'green',
-                          color: 'white',
-                          border: '2px solid black',
-                          borderRadius: '8px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          minWidth: '120px'
-                        }}
+                        onClick={() => handleAction(app.id, 'APPROVED')}
+                        style={{ padding: '10px 20px', backgroundColor: '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
                       >
                         ✅ Approve
                       </button>
                       <button
-                        onClick={() => handleAction(app.id, 'REJECT')}
-                        style={{
-                          padding: '10px 20px',
-                          backgroundColor: 'red',
-                          color: 'white',
-                          border: '2px solid black',
-                          borderRadius: '8px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          minWidth: '120px'
-                        }}
+                        onClick={() => handleAction(app.id, 'REJECTED')}
+                        style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
                       >
                         ❌ Reject
                       </button>
                     </div>
                   )}
                 </div>
+
+                <p style={{ fontSize: '14px', color: 'gray', margin: '0 0 5px 0' }}>📧 {app.user?.email} | 📞 {app.user?.phone || 'N/A'}</p>
+                <p style={{ fontSize: '14px', color: 'gray', margin: '0 0 15px 0' }}>🏍️ {app.vehicleType || 'N/A'} | 🔢 {app.plateNumber || 'N/A'}</p>
+
+                {/* 🔑 VIEW DETAILS BUTTON */}
+                <button
+                  onClick={() => setSelected(app)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#2196f3',
+                    color: 'white',
+                    border: '2px solid black',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    boxShadow: '3px 3px 0px black'
+                  }}
+                >
+                  👁️ View Details & Documents
+                </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* 🔑 DETAILS MODAL */}
+      {selected && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', maxWidth: '600px', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '8px 8px 0px black' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>🏍️ Rider Details</h2>
+              <button
+                onClick={() => setSelected(null)}
+                style={{ padding: '8px 16px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', border: '2px solid black', marginBottom: '20px' }}>
+              <p style={{ margin: '0 0 8px 0' }}><strong>👤 Name:</strong> {selected.user?.name}</p>
+              <p style={{ margin: '0 0 8px 0' }}><strong>📧 Email:</strong> {selected.user?.email}</p>
+              <p style={{ margin: '0 0 8px 0' }}><strong>📞 Phone:</strong> {selected.user?.phone || 'N/A'}</p>
+              <p style={{ margin: '0 0 8px 0' }}><strong>📍 Address:</strong> {selected.user?.address || 'N/A'}</p>
+              <p style={{ margin: '0 0 8px 0' }}><strong>🏍️ Vehicle:</strong> {selected.vehicleType || 'N/A'}</p>
+              <p style={{ margin: 0 }}><strong>🔢 Plate Number:</strong> {selected.plateNumber || 'N/A'}</p>
+            </div>
+
+            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px' }}>📄 Uploaded Documents</h3>
+            {getDocuments(selected).length === 0 ? (
+              <p style={{ color: 'gray', textAlign: 'center', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '2px dashed black' }}>
+                No documents uploaded
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gap: '15px' }}>
+                {getDocuments(selected).map((doc) => (
+                  <div key={doc.label} style={{ border: '2px solid black', borderRadius: '8px', padding: '10px' }}>
+                    <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{doc.label}</p>
+                    <img src={doc.url} alt={doc.label} style={{ width: '100%', maxHeight: '250px', objectFit: 'contain', borderRadius: '8px', backgroundColor: '#f9f9f9' }} />
+                    <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '10px', color: '#2196f3', fontWeight: 'bold', fontSize: '14px' }}>
+                      🔗 Open Full Image
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selected.status === 'PENDING' && (
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button
+                  onClick={() => { handleAction(selected.id, 'APPROVED'); setSelected(null) }}
+                  style={{ flex: 1, padding: '15px', backgroundColor: '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+                >
+                  ✅ Approve
+                </button>
+                <button
+                  onClick={() => { handleAction(selected.id, 'REJECTED'); setSelected(null) }}
+                  style={{ flex: 1, padding: '15px', backgroundColor: '#dc3545', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+                >
+                  ❌ Reject
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   )
 }
