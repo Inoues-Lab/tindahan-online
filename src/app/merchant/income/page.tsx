@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import MerchantHeader from '@/components/MerchantHeader'
 
+const COMMISSION_RATE = 0.10
+
 export default function MerchantIncomePage() {
   const router = useRouter()
   const [sales, setSales] = useState<any[]>([])
@@ -26,6 +28,8 @@ export default function MerchantIncomePage() {
     }
   }
 
+  const net = (s: any) => s.amount * (1 - COMMISSION_RATE)
+
   const dateKey = (value: any) => {
     const d = new Date(value)
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
@@ -36,11 +40,11 @@ export default function MerchantIncomePage() {
   yest.setDate(yest.getDate() - 1)
   const yesterdayKey = dateKey(yest)
 
-  const sumFor = (key: string) => sales.filter((s) => dateKey(s.createdAt) === key).reduce((t, s) => t + s.amount, 0)
+  const sumFor = (key: string) => sales.filter((s) => dateKey(s.createdAt) === key).reduce((t, s) => t + net(s), 0)
 
   const todayIncome = sumFor(todayKey)
   const yesterdayIncome = sumFor(yesterdayKey)
-  const totalIncome = sales.reduce((t, s) => t + s.amount, 0)
+  const totalIncome = sales.reduce((t, s) => t + net(s), 0)
   const selectedIncome = selectedDate ? sumFor(selectedDate) : 0
   const displayList = selectedDate ? sales.filter((s) => dateKey(s.createdAt) === selectedDate) : sales
 
@@ -60,7 +64,7 @@ export default function MerchantIncomePage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
           <div>
             <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>💰 My Sales</h1>
-            <p style={{ fontSize: '16px', color: 'gray' }}>Track your store earnings</p>
+            <p style={{ fontSize: '16px', color: 'gray' }}>After 10% platform commission</p>
           </div>
           <button onClick={() => router.push('/merchant/dashboard')} style={{ padding: '12px 24px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
             ← Back
@@ -71,17 +75,14 @@ export default function MerchantIncomePage() {
           <div style={{ backgroundColor: '#e8f5e9', padding: '25px', borderRadius: '12px', border: '3px solid #4caf50', textAlign: 'center', boxShadow: '4px 4px 0px black' }}>
             <p style={{ fontSize: '14px', color: 'gray', fontWeight: 'bold', marginBottom: '10px' }}>📅 Today's Sales</p>
             <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>₱{todayIncome.toFixed(2)}</p>
-            <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>{sales.filter((s) => dateKey(s.createdAt) === todayKey).length} orders</p>
           </div>
           <div style={{ backgroundColor: '#e3f2fd', padding: '25px', borderRadius: '12px', border: '3px solid #2196f3', textAlign: 'center', boxShadow: '4px 4px 0px black' }}>
             <p style={{ fontSize: '14px', color: 'gray', fontWeight: 'bold', marginBottom: '10px' }}>⏮️ Yesterday</p>
             <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#2196f3', margin: 0 }}>₱{yesterdayIncome.toFixed(2)}</p>
-            <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>{sales.filter((s) => dateKey(s.createdAt) === yesterdayKey).length} orders</p>
           </div>
           <div style={{ backgroundColor: '#f3e5f5', padding: '25px', borderRadius: '12px', border: '3px solid #9c27b0', textAlign: 'center', boxShadow: '4px 4px 0px black' }}>
-            <p style={{ fontSize: '14px', color: 'gray', fontWeight: 'bold', marginBottom: '10px' }}>🏆 Total Sales</p>
+            <p style={{ fontSize: '14px', color: 'gray', fontWeight: 'bold', marginBottom: '10px' }}>🏆 Total (Net)</p>
             <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#9c27b0', margin: 0 }}>₱{totalIncome.toFixed(2)}</p>
-            <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>{sales.length} orders</p>
           </div>
         </div>
 
@@ -102,7 +103,7 @@ export default function MerchantIncomePage() {
           </div>
           {selectedDate && (
             <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid #ff9800', textAlign: 'center' }}>
-              <p style={{ fontWeight: 'bold', margin: 0, fontSize: '18px' }}>💵 Sales for {selectedDate}: ₱{selectedIncome.toFixed(2)}</p>
+              <p style={{ fontWeight: 'bold', margin: 0, fontSize: '18px' }}>💵 Net sales for {selectedDate}: ₱{selectedIncome.toFixed(2)}</p>
             </div>
           )}
         </div>
@@ -120,9 +121,9 @@ export default function MerchantIncomePage() {
               <div key={s.id} style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
                   <p style={{ fontWeight: 'bold', margin: '0 0 5px 0' }}>Order #{s.id.slice(0, 8).toUpperCase()} — {s.serviceType}</p>
-                  <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>{new Date(s.createdAt).toLocaleString()} | {s.status}</p>
+                  <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>{new Date(s.createdAt).toLocaleString()} | Gross ₱{s.amount.toFixed(2)}</p>
                 </div>
-                <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>+₱{s.amount.toFixed(2)}</p>
+                <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>+₱{net(s).toFixed(2)}</p>
               </div>
             ))}
           </div>
