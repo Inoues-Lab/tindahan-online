@@ -16,9 +16,9 @@ export async function GET() {
 
     if (!rider) return NextResponse.json({ error: 'Rider profile not found' }, { status: 404 })
 
-    const availableOrders = await prisma.order.findMany({
+       const availableOrders = await prisma.order.findMany({
       where: { 
-        status: 'READY_FOR_PICKUP',
+        status: { in: ['ACCEPTED', 'READY_FOR_PICKUP'] },
         riderId: null
       },
       include: { 
