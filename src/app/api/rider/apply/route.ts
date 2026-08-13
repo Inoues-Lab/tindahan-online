@@ -10,7 +10,15 @@ export async function GET() {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const profile = await prisma.riderProfile.findUnique({ where: { userId } })
-    return NextResponse.json({ profile })
+
+    // 🔑 Return the profile under EVERY possible name so any page can read it
+    return NextResponse.json({
+      success: true,
+      profile,
+      application: profile,
+      riderProfile: profile,
+      status: profile?.status || null
+    })
   } catch (error) {
     console.error('Error fetching rider profile:', error)
     return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 })
@@ -26,7 +34,6 @@ export async function POST(request: Request) {
 
     const body = await request.json()
 
-    // 🔑 Accept the EXACT field names the page sends (case-sensitive!)
     const vehicleType = body.vehicleType || body.vehicle || null
     const plateNumber = body.plateNumber || body.plate || null
     const licenseUrl = body.licenseUrl || body.drivingLicenseUrl || body.drivingLicense || body.license || null
