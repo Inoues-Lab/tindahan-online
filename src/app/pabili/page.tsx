@@ -1,4 +1,3 @@
-// src/app/pabili/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -38,6 +37,32 @@ function detectDeliveryZone(address: string): { zone: string; baseFee: number; z
     }
   }
   return { zone: 'zone4', baseFee: 100, zoneName: 'Far Towns/Cities (Default)' }
+}
+
+const inputStyle = {
+  width: '100%',
+  padding: '12px',
+  borderRadius: '8px',
+  border: '2px solid black',
+  boxSizing: 'border-box',
+  fontSize: '16px',
+  backgroundColor: 'white'
+}
+
+const labelStyle = {
+  display: 'block',
+  fontWeight: 'bold',
+  marginBottom: '5px',
+  fontSize: '16px'
+}
+
+const cardStyle = {
+  backgroundColor: 'white',
+  padding: '20px',
+  borderRadius: '12px',
+  border: '3px solid black',
+  boxShadow: '4px 4px 0px black',
+  marginBottom: '20px'
 }
 
 export default function PabiliPage() {
@@ -91,7 +116,7 @@ export default function PabiliPage() {
     }
   }, [finalAddress])
 
-  const totalWeight = 0.5 // Default weight for PABILI
+  const totalWeight = 0.5
   const baseFee = deliveryZone?.baseFee || 40
   const weightFee = totalWeight * 5
   const deliveryFee = baseFee + weightFee
@@ -126,8 +151,8 @@ export default function PabiliPage() {
       })
       const data = await response.json()
       if (response.ok) {
-        alert('PABILI request submitted successfully! A rider will help you buy the items.')
-        router.push('/orders/my-orders')
+        alert('PABILI request submitted successfully! A rider will help you buy the items. 🛒')
+        router.push('/orders')
       } else {
         alert(data.error || 'Failed to submit request')
       }
@@ -150,103 +175,107 @@ export default function PabiliPage() {
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
-      
+
+      {/* CLEAN Address Popup */}
       {showPopup && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', maxWidth: '500px', width: '90%', boxShadow: '8px 8px 0px black' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center', color: 'black' }}>📍 Delivery Address</h2>
-            <p style={{ fontSize: '18px', marginBottom: '20px', textAlign: 'center', color: 'black', fontWeight: 'bold' }}>Do you want to use your current address?</p>
-            <div style={{ backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
-              <p style={{ fontWeight: 'bold', marginBottom: '5px', color: 'black' }}>Your current address:</p>
-              <p style={{ color: 'black', fontSize: '14px' }}>{registeredAddress}</p>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', maxWidth: '500px', width: '100%', boxShadow: '8px 8px 0px black' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>📍 Delivery Address</h2>
+            <p style={{ fontSize: '16px', marginBottom: '20px', textAlign: 'center', color: 'gray' }}>Do you want to use your registered address?</p>
+            <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
+              <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>Your registered address:</p>
+              <p style={{ fontSize: '14px', color: 'gray' }}>{registeredAddress}</p>
             </div>
             <div style={{ display: 'flex', gap: '15px' }}>
-              <button onClick={() => handleAddressChoice(true)} style={{ flex: 1, padding: '15px', backgroundColor: 'green', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>✅ Yes</button>
-              <button onClick={() => handleAddressChoice(false)} style={{ flex: 1, padding: '15px', backgroundColor: 'blue', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>❌ No</button>
+              <button
+                onClick={() => handleAddressChoice(true)}
+                style={{ flex: 1, padding: '15px', backgroundColor: '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+              >
+                ✅ Yes, Use This
+              </button>
+              <button
+                onClick={() => handleAddressChoice(false)}
+                style={{ flex: 1, padding: '15px', backgroundColor: 'white', color: 'black', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+              >
+                ✏️ Enter New
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ backgroundColor: '#fff3cd', padding: '20px', borderRadius: '12px', border: '3px solid #ffc107', marginBottom: '20px', boxShadow: '3px 3px 0px black' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px', color: '#856404' }}>🛒 PABILI Service</h1>
-          <p style={{ fontSize: '16px', color: '#856404', lineHeight: '1.6' }}>
-            Need something bought? Our reliable riders will buy anything for you! From medicines to cooking oil, toiletries, pandesal, sushi bake, and even lotto tickets — <strong>PABILI ANYTHING FROM ANYWHERE, ANYTIME!</strong>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '30px 20px' }}>
+        {/* Service Banner - Clean Style */}
+        <div style={{ backgroundColor: '#fff3e0', padding: '25px', borderRadius: '12px', border: '3px solid #ff9800', marginBottom: '20px', boxShadow: '4px 4px 0px black' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px', color: '#e65100' }}>🛒 PABILI Service</h1>
+          <p style={{ fontSize: '16px', color: '#e65100', lineHeight: '1.6' }}>
+            Need something bought? Our reliable riders will buy anything for you — <strong>PABILI ANYTHING FROM ANYWHERE, ANYTIME!</strong>
           </p>
-          <p style={{ fontSize: '14px', color: '#d9534f', marginTop: '10px', fontWeight: 'bold' }}>
+          <p style={{ fontSize: '14px', color: '#d32f2f', marginTop: '10px', fontWeight: 'bold' }}>
             ⚠️ Maximum amount per transaction: ₱2,000.00
           </p>
         </div>
 
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', marginBottom: '20px', boxShadow: '3px 3px 0px black' }}>
-          <h2 style={{ fontSize: '20px', marginBottom: '15px', color: 'black' }}>📝 What do you need?</h2>
-          
+        {/* What do you need */}
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>📝 What do you need?</h2>
+
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>
-              What to buy? *
-            </label>
+            <label style={labelStyle}>What to buy? *</label>
             <textarea
               value={itemDescription}
               onChange={(e) => setItemDescription(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
+              style={{ ...inputStyle, minHeight: '80px', fontWeight: 'bold' }}
               placeholder="Example: 2 packs of Lucky Me noodles, 1 bottle of cooking oil, 1 loaf of bread"
             />
           </div>
 
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>
-              Where to buy? (Store/Location)
-            </label>
+            <label style={labelStyle}>Where to buy? (Store/Location)</label>
             <input
               type="text"
               value={storeLocation}
               onChange={(e) => setStoreLocation(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
+              style={{ ...inputStyle, fontWeight: 'bold' }}
               placeholder="Example: JTC Mall, Savers Appliance, or any store"
             />
           </div>
 
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>
-              Maximum Budget (₱) *
-            </label>
+            <label style={labelStyle}>Maximum Budget (₱) *</label>
             <input
               type="number"
               value={maxAmount}
               onChange={(e) => setMaxAmount(e.target.value)}
               max="2000"
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
+              style={{ ...inputStyle, fontWeight: 'bold' }}
               placeholder="Enter max amount (up to 2000)"
             />
-            <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>
-              ℹ️ Maximum: ₱2,000.00 per transaction
-            </p>
+            <p style={{ fontSize: '12px', color: 'gray', marginTop: '5px' }}>ℹ️ Maximum: ₱2,000.00 per transaction</p>
           </div>
 
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>
-              Special Instructions
-            </label>
+          <div>
+            <label style={labelStyle}>Special Instructions</label>
             <textarea
               value={specialInstructions}
               onChange={(e) => setSpecialInstructions(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', minHeight: '60px', boxSizing: 'border-box', fontSize: '16px', color: 'black', backgroundColor: 'white' }}
+              style={{ ...inputStyle, minHeight: '60px' }}
               placeholder="Any specific brand, size, or instructions?"
             />
           </div>
         </div>
 
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '3px 3px 0px black' }}>
-          <h2 style={{ fontSize: '20px', marginBottom: '15px', color: 'black' }}>📍 Delivery Details</h2>
-          
+        {/* Delivery Details */}
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>📍 Delivery Details</h2>
+
           {useRegisteredAddress === true && (
-            <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid green' }}>
-              <p style={{ fontWeight: 'bold', color: 'black', marginBottom: '5px' }}>📍 Delivery Address:</p>
-              <p style={{ color: 'black', fontWeight: 'bold' }}>{registeredAddress}</p>
+            <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', border: '2px solid #4caf50' }}>
+              <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>📍 Delivery Address:</p>
+              <p style={{ fontWeight: 'bold' }}>{registeredAddress}</p>
               {deliveryZone && (
-                <p style={{ fontSize: '12px', color: 'blue', marginTop: '5px' }}>
-                  Zone: {deliveryZone.zoneName} (Base fee: ₱{deliveryZone.baseFee})
+                <p style={{ fontSize: '12px', color: '#2196f3', marginTop: '5px', fontWeight: 'bold' }}>
+                  🚚 Zone: {deliveryZone.zoneName} (Base fee: ₱{deliveryZone.baseFee})
                 </p>
               )}
             </div>
@@ -254,38 +283,38 @@ export default function PabiliPage() {
 
           {useRegisteredAddress === false && (
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Delivery Address</label>
+              <label style={labelStyle}>Delivery Address *</label>
               <textarea
                 value={customAddress}
                 onChange={(e) => setCustomAddress(e.target.value)}
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', minHeight: '80px', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
+                style={{ ...inputStyle, minHeight: '80px', fontWeight: 'bold' }}
                 placeholder="Enter delivery address"
               />
               {deliveryZone && customAddress && (
-                <p style={{ fontSize: '12px', color: 'blue', marginTop: '5px' }}>
-                  📍 Detected: {deliveryZone.zoneName} (Base fee: ₱{deliveryZone.baseFee})
+                <p style={{ fontSize: '12px', color: '#2196f3', marginTop: '5px', fontWeight: 'bold' }}>
+                  🚚 Detected: {deliveryZone.zoneName} (Base fee: ₱{deliveryZone.baseFee})
                 </p>
               )}
             </div>
           )}
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: 'black', fontSize: '16px' }}>Contact Number</label>
+            <label style={labelStyle}>Contact Number *</label>
             <input
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black', boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', color: 'black', backgroundColor: 'white' }}
+              style={{ ...inputStyle, fontWeight: 'bold' }}
               placeholder="09xxxxxxxxx"
             />
           </div>
 
-          <div style={{ backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
-            <p style={{ fontSize: '16px', color: 'black', marginBottom: '5px' }}>
-              <strong>Delivery Fee:</strong> ₱{deliveryFee.toFixed(2)}
+          <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '2px solid black' }}>
+            <p style={{ fontSize: '16px', marginBottom: '5px' }}>
+              <strong>🚚 Delivery Fee:</strong> ₱{deliveryFee.toFixed(2)}
             </p>
             <p style={{ fontSize: '12px', color: 'gray' }}>
-              (Base {baseFee} + {totalWeight}kg × ₱5) - {deliveryZone?.zoneName || 'Select address'}
+              (Base ₱{baseFee} + {totalWeight}kg × ₱5) — {deliveryZone?.zoneName || 'Enter address first'}
             </p>
           </div>
 
@@ -293,12 +322,16 @@ export default function PabiliPage() {
             onClick={handleSubmit}
             disabled={loading}
             style={{
-              width: '100%', padding: '15px',
-              backgroundColor: loading ? 'gray' : 'green',
-              color: 'white', border: '2px solid black', borderRadius: '8px',
-              fontSize: '18px', fontWeight: 'bold',
+              width: '100%',
+              padding: '15px',
+              backgroundColor: loading ? 'gray' : '#ff9800',
+              color: 'white',
+              border: '2px solid black',
+              borderRadius: '8px',
+              fontSize: '18px',
+              fontWeight: 'bold',
               cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '3px 3px 0px black'
+              boxShadow: '4px 4px 0px black'
             }}
           >
             {loading ? 'Processing...' : '🛒 Submit PABILI Request'}
