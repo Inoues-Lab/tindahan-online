@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 
@@ -102,7 +102,7 @@ export default function RiderApplyPage() {
     }
   }
 
-  const inputStyle = {
+    const inputStyle: CSSProperties = {
     width: '100%',
     padding: '12px',
     borderRadius: '8px',
