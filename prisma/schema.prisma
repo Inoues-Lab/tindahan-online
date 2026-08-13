@@ -117,6 +117,7 @@ model Order {
   contactNumber   String
   totalAmount     Float
   deliveryFee     Float         @default(50.0)
+  deliveryProofUrl String?
   
   itemDescription String?
   storeLocation   String?

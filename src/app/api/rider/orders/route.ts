@@ -9,38 +9,28 @@ export async function GET() {
 
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const rider = await prisma.riderProfile.findUnique({ 
+    const rider = await prisma.riderProfile.findUnique({
       where: { userId },
       select: { id: true }
     })
 
     if (!rider) return NextResponse.json({ error: 'Rider profile not found' }, { status: 404 })
 
-       const availableOrders = await prisma.order.findMany({
-      where: { 
+    const availableOrders = await prisma.order.findMany({
+      where: {
         status: { in: ['ACCEPTED', 'READY_FOR_PICKUP'] },
         riderId: null
       },
-      include: { 
-        items: { 
-          include: { product: true } 
-        } 
-      },
+      include: { items: { include: { product: true } } },
       orderBy: { createdAt: 'desc' }
     })
 
     const myOrders = await prisma.order.findMany({
-      where: { 
+      where: {
         riderId: rider.id,
-        status: { 
-          in: ['OUT_FOR_DELIVERY', 'ACCEPTED', 'READY_FOR_PICKUP'] 
-        }
+        status: { in: ['OUT_FOR_DELIVERY', 'ACCEPTED', 'READY_FOR_PICKUP'] }
       },
-      include: { 
-        items: { 
-          include: { product: true } 
-        } 
-      },
+      include: { items: { include: { product: true } } },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -58,7 +48,7 @@ export async function POST(request: Request) {
 
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const rider = await prisma.riderProfile.findUnique({ 
+    const rider = await prisma.riderProfile.findUnique({
       where: { userId },
       select: { id: true }
     })
@@ -71,14 +61,15 @@ export async function POST(request: Request) {
     let updateData: any = {}
 
     if (action === 'ACCEPT') {
-      updateData = { 
-        status: 'OUT_FOR_DELIVERY', 
-        riderId: rider.id 
-      }
+      updateData = { status: 'OUT_FOR_DELIVERY', riderId: rider.id }
     } else if (action === 'DELIVER') {
-      updateData = { 
-        status: 'DELIVERED' 
+      const proofUrl = body.proofUrl || body.proofOfDelivery || body.deliveryProofUrl
+
+      if (!proofUrl) {
+        return NextResponse.json({ error: 'Delivery proof photo is REQUIRED!' }, { status: 400 })
       }
+
+      updateData = { status: 'DELIVERED', deliveryProofUrl: proofUrl }
     }
 
     const updatedOrder = await prisma.order.update({
