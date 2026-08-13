@@ -66,7 +66,33 @@ export default function SubAdminsPage() {
     }
   }
 
-  if (loading) return <div>Loading...</div>
+  // THIS IS THE DELETE FUNCTION
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this Sub-Admin?')) return
+
+    try {
+      const res = await fetch(`/api/admin/sub-admins?id=${id}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        fetchSubAdmins() // Refresh the list
+      } else {
+        alert('Failed to delete sub-admin')
+      }
+    } catch (error) {
+      alert('Error deleting sub-admin')
+    }
+  }
+
+  if (loading) {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <AdminHeader />
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
+      </main>
+    )
+  }
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
@@ -86,6 +112,7 @@ export default function SubAdminsPage() {
 
         {error && <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', color: 'red' }}>{error}</div>}
 
+        {/* THIS IS THE UPDATED LIST DISPLAY WITH THE DELETE BUTTON */}
         {subAdmins.length === 0 ? (
           <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
             <p style={{ fontSize: '18px', color: 'gray' }}>No sub-admins yet.</p>
@@ -98,7 +125,23 @@ export default function SubAdminsPage() {
                   <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{admin.name}</h3>
                   <p style={{ color: 'gray', margin: '5px 0 0 0' }}>{admin.email}</p>
                 </div>
-                <span style={{ padding: '5px 15px', backgroundColor: '#607d8b', color: 'white', borderRadius: '20px', fontWeight: 'bold' }}>Sub-Admin</span>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <span style={{ padding: '5px 15px', backgroundColor: '#607d8b', color: 'white', borderRadius: '20px', fontWeight: 'bold' }}>Sub-Admin</span>
+                  <button
+                    onClick={() => handleDelete(admin.id)}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      border: '2px solid black',
+                      borderRadius: '8px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                     Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>

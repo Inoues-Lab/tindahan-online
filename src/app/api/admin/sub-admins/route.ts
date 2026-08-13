@@ -53,4 +53,32 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ error: 'Failed to create' }, { status: 500 })
   }
+  // ... (keep your existing GET and POST functions above this) ...
+
+export async function DELETE(request: Request) {
+  try {
+    const cookieStore = await cookies()
+    const userId = cookieStore.get('userId')?.value
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (user?.role !== 'ADMIN') return NextResponse.json({ error: 'Admin access only' }, { status: 403 })
+
+    const { searchParams } = new URL(request.url)
+    const subAdminId = searchParams.get('id')
+
+    if (!subAdminId) {
+      return NextResponse.json({ error: 'User ID required' }, { status: 400 })
+    }
+
+    // Delete the user
+    await prisma.user.delete({
+      where: { id: subAdminId }
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting sub-admin:', error)
+    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 })
+  }
 }
