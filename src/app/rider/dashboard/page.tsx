@@ -17,17 +17,17 @@ export default function RiderDashboard() {
     try {
       const res = await fetch('/api/auth/me')
       const data = await res.json()
-      
+
       if (!data.user) {
         router.push('/login')
         return
       }
-      
+
       if (data.user.role !== 'RIDER') {
-        router.push('/') // Redirect non-riders to home
+        router.push('/')
         return
       }
-      
+
       setUser(data.user)
       setProfileStatus(data.user.riderProfile?.status || 'NONE')
     } catch (error) {
@@ -44,7 +44,6 @@ export default function RiderDashboard() {
 
   if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading...</div>
 
-  // 🚫 BLOCK REJECTED USERS
   if (profileStatus === 'REJECTED') {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', flexDirection: 'column' }}>
@@ -62,7 +61,6 @@ export default function RiderDashboard() {
     )
   }
 
-  // ⏳ PENDING USERS
   if (profileStatus === 'PENDING' || profileStatus === 'NONE') {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', display: 'flex', flexDirection: 'column' }}>
@@ -81,7 +79,6 @@ export default function RiderDashboard() {
     )
   }
 
-  // ✅ APPROVED USERS (Normal Dashboard)
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <header style={{ backgroundColor: 'white', borderBottom: '3px solid black', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -91,17 +88,17 @@ export default function RiderDashboard() {
           <button onClick={handleLogout} style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Logout</button>
         </div>
       </header>
-      
+
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '30px 20px' }}>
         <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>Welcome, Rider {user?.name}! 🏍️</h1>
         <p style={{ fontSize: '16px', color: 'gray', marginBottom: '30px' }}>Manage your deliveries and earnings</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
           <button onClick={() => router.push('/rider/orders')} style={{ padding: '40px', backgroundColor: '#28a745', color: 'white', border: '3px solid black', borderRadius: '12px', fontSize: '24px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
-             View Orders & Deliveries
+            📦 View Orders & Deliveries
           </button>
-          <button onClick={() => router.push('/')} style={{ padding: '40px', backgroundColor: 'white', color: 'black', border: '3px solid black', borderRadius: '12px', fontSize: '24px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
-            🏠 Go to Home
+          <button onClick={() => router.push('/rider/income')} style={{ padding: '40px', backgroundColor: '#2196f3', color: 'white', border: '3px solid black', borderRadius: '12px', fontSize: '24px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
+            💰 My Income
           </button>
         </div>
       </div>
