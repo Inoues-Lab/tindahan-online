@@ -10,13 +10,11 @@ export async function GET() {
 
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Check if admin
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (user?.role !== 'ADMIN' && user?.role !== 'SUB_ADMIN') {
       return NextResponse.json({ error: 'Admin access only' }, { status: 403 })
     }
 
-    // Fetch ALL rider profiles (applications)
     const applications = await prisma.riderProfile.findMany({
       include: {
         user: {
@@ -38,7 +36,7 @@ export async function GET() {
   }
 }
 
-// POST: Approve or Reject a rider application
+// POST: Approve or Reject a rider application (flexible field names!)
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
@@ -47,29 +45,50 @@ export async function POST(request: Request) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN' && user?.role !== 'SUB_ADMIN') {
       return NextResponse.json({ error: 'Admin access only' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { riderProfileId, status } = body 
-    // status should be 'APPROVED' or 'REJECTED'
 
-    if (!riderProfileId || !status) {
+    // 🔑 Accept ANY field name the frontend might send
+    const profileId =
+      body.riderProfileId ||
+      body.profileId ||
+      body.applicationId ||
+      body.riderId ||
+      body.id
+
+    let status = body.status || body.action || body.newStatus
+
+    // 🔑 Normalize status values (APPROVE → APPROVED, REJECT → REJECTED)
+    if (status === 'APPROVE') status = 'APPROVED'
+    if (status === 'REJECT') status = 'REJECTED'
+
+    if (!profileId || !status) {
       return NextResponse.json({ error: 'Missing riderProfileId or status' }, { status: 400 })
     }
 
-    // 1. Update the Rider Profile status
+    // 🔑 Find the profile by id OR by userId (covers both cases)
+    let profile = await prisma.riderProfile.findUnique({ where: { id: profileId } }).catch(() => null)
+    if (!profile) {
+      profile = await prisma.riderProfile.findUnique({ where: { userId: profileId } }).catch(() => null)
+    }
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Rider application not found' }, { status: 404 })
+    }
+
+    // Update the application status
     const updatedProfile = await prisma.riderProfile.update({
-      where: { id: riderProfileId },
-      data: { status: status }
+      where: { id: profile.id },
+      data: { status }
     })
 
-    // 2. If Approved, update the User's role to RIDER (though they might already be)
-    // and ensure they can access the rider dashboard
+    // If approved, make sure the user has the RIDER role
     if (status === 'APPROVED') {
       await prisma.user.update({
-        where: { id: updatedProfile.userId },
+        where: { id: profile.userId },
         data: { role: 'RIDER' }
       })
     }
