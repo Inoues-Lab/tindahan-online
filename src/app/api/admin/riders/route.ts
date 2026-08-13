@@ -93,7 +93,15 @@ export async function POST(request: Request) {
       })
     }
 
-    return NextResponse.json({ success: true, profile: updatedProfile })
+        return NextResponse.json({
+      success: true,
+      message: status === 'APPROVED'
+        ? '✅ Rider approved successfully!'
+        : status === 'REJECTED'
+        ? '❌ Rider rejected.'
+        : '✅ Rider updated successfully!',
+      profile: updatedProfile
+    })
   } catch (error) {
     console.error('Error updating rider:', error)
     return NextResponse.json({ error: 'Failed to update rider' }, { status: 500 })
