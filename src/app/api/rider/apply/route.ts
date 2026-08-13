@@ -26,14 +26,13 @@ export async function POST(request: Request) {
 
     const body = await request.json()
 
-    // 🔑 Accept any field name the page might send
+    // 🔑 Accept the EXACT field names the page sends (case-sensitive!)
     const vehicleType = body.vehicleType || body.vehicle || null
     const plateNumber = body.plateNumber || body.plate || null
     const licenseUrl = body.licenseUrl || body.drivingLicenseUrl || body.drivingLicense || body.license || null
-    const orcrUrl = body.orcrUrl || body.orcr || body.motorcycleOrcr || body.motorcycleORCR || null
-    const authorizationUrl = body.authorizationUrl || body.authorizationLetterUrl || body.authorizationLetter || body.authorization || null
+    const orcrUrl = body.orCrUrl || body.orcrUrl || body.orcr || body.motorcycleOrcr || null
+    const authorizationUrl = body.authLetterUrl || body.authorizationUrl || body.authorizationLetterUrl || body.authorizationLetter || body.authorization || null
 
-    // Create or update the rider profile
     const profile = await prisma.riderProfile.upsert({
       where: { userId },
       update: {
@@ -55,8 +54,8 @@ export async function POST(request: Request) {
       }
     })
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       profile,
       message: 'Application submitted for review! 🏍️'
     })
