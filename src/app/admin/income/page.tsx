@@ -6,62 +6,165 @@ import AdminHeader from '@/components/AdminHeader'
 
 export default function AdminIncomePage() {
   const router = useRouter()
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
-    platformFees: 0,
-    deliveryFees: 0
-  })
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState('')
 
   useEffect(() => {
-    fetchIncome()
-  }, [])
+    checkAuth()
+  }, [router])
 
-  const fetchIncome = async () => {
+  const checkAuth = async () => {
     try {
-      const res = await fetch('/api/admin/income')
+      const res = await fetch('/api/auth/me')
       const data = await res.json()
-      if (res.ok) {
-        setStats({
-          totalRevenue: data.totalRevenue || 0,
-          platformFees: data.platformFees || 0,
-          deliveryFees: data.deliveryFees || 0
-        })
+      if (!data.user || (data.user.role !== 'ADMIN' && data.user.role !== 'SUB_ADMIN')) {
+        router.push('/')
+        return
       }
+      fetchOrders()
     } catch (error) {
-      console.error('Error fetching income:', error)
+      router.push('/')
     }
+  }
+
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch('/api/admin/orders')
+      const data = await res.json()
+      if (res.ok) setOrders(data.orders || [])
+    } catch (error) {
+      console.error('Error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const dateKey = (value: any) => {
+    const d = new Date(value)
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+  }
+
+  const valid = orders.filter((o) => o.status !== 'CANCELLED')
+  const todayKey = dateKey(new Date())
+  const yest = new Date()
+  yest.setDate(yest.getDate() - 1)
+  const yesterdayKey = dateKey(yest)
+
+  const sum = (list: any[]) => list.reduce((s, o) => s + (o.totalAmount || 0), 0)
+  const totalRevenue = sum(valid)
+  const todayRevenue = sum(valid.filter((o) => dateKey(o.createdAt) === todayKey))
+  const yesterdayRevenue = sum(valid.filter((o) => dateKey(o.createdAt) === yesterdayKey))
+  const deliveryFees = valid.reduce((s, o) => s + (o.deliveryFee || 0), 0)
+  const selectedRevenue = selectedDate ? sum(valid.filter((o) => dateKey(o.createdAt) === selectedDate)) : 0
+  const displayList = selectedDate ? orders.filter((o) => dateKey(o.createdAt) === selectedDate) : orders
+  const groceryCount = orders.filter((o) => o.serviceType === 'GROCERY').length
+  const pabiliCount = orders.filter((o) => o.serviceType === 'PABILI').length
+  const padalaCount = orders.filter((o) => o.serviceType === 'PADALA').length
+
+  if (loading) {
+    return (
+      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+        <AdminHeader />
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
+      </main>
+    )
   }
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <AdminHeader />
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '30px 20px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold' }}>💰 Income & Analytics</h1>
-          <button
-            onClick={() => router.push('/admin/dashboard')}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: 'black', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-          >
-            ← Back to Dashboard
+          <div>
+            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>💰 Income & Analytics</h1>
+            <p style={{ fontSize: '16px', color: 'gray' }}>Your business at a glance</p>
+          </div>
+          <button onClick={() => router.push('/admin')} style={{ padding: '12px 24px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+            ← Back
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-          <div style={{ backgroundColor: '#e8f5e9', padding: '30px', borderRadius: '12px', border: '3px solid #4caf50', textAlign: 'center' }}>
-            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Total Revenue</p>
-            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>₱{stats.totalRevenue.toFixed(2)}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+          <div style={{ backgroundColor: '#e8f5e9', padding: '25px', borderRadius: '12px', border: '3px solid #4caf50', textAlign: 'center', boxShadow: '4px 4px 0px black' }}>
+            <p style={{ fontSize: '14px', color: 'gray', fontWeight: 'bold', marginBottom: '10px' }}>📅 Today's Revenue</p>
+            <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>₱{todayRevenue.toFixed(2)}</p>
           </div>
-
-          <div style={{ backgroundColor: '#e3f2fd', padding: '30px', borderRadius: '12px', border: '3px solid #2196f3', textAlign: 'center' }}>
-            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Platform Fees</p>
-            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#2196f3', margin: 0 }}>₱{stats.platformFees.toFixed(2)}</p>
+          <div style={{ backgroundColor: '#e3f2fd', padding: '25px', borderRadius: '12px', border: '3px solid #2196f3', textAlign: 'center', boxShadow: '4px 4px 0px black' }}>
+            <p style={{ fontSize: '14px', color: 'gray', fontWeight: 'bold', marginBottom: '10px' }}>⏮️ Yesterday</p>
+            <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#2196f3', margin: 0 }}>₱{yesterdayRevenue.toFixed(2)}</p>
           </div>
-
-          <div style={{ backgroundColor: '#fff3e0', padding: '30px', borderRadius: '12px', border: '3px solid #ff9800', textAlign: 'center' }}>
-            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Delivery Fees</p>
-            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#ff9800', margin: 0 }}>₱{stats.deliveryFees.toFixed(2)}</p>
+          <div style={{ backgroundColor: '#f3e5f5', padding: '25px', borderRadius: '12px', border: '3px solid #9c27b0', textAlign: 'center', boxShadow: '4px 4px 0px black' }}>
+            <p style={{ fontSize: '14px', color: 'gray', fontWeight: 'bold', marginBottom: '10px' }}>🏆 Total Revenue</p>
+            <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#9c27b0', margin: 0 }}>₱{totalRevenue.toFixed(2)}</p>
+          </div>
+          <div style={{ backgroundColor: '#fff3e0', padding: '25px', borderRadius: '12px', border: '3px solid #ff9800', textAlign: 'center', boxShadow: '4px 4px 0px black' }}>
+            <p style={{ fontSize: '14px', color: 'gray', fontWeight: 'bold', marginBottom: '10px' }}>🚚 Delivery Fees</p>
+            <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#ff9800', margin: 0 }}>₱{deliveryFees.toFixed(2)}</p>
           </div>
         </div>
+
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', marginBottom: '30px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>🔍 Check a Specific Date</h2>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{ flex: 1, minWidth: '200px', padding: '12px', borderRadius: '8px', border: '2px solid black', fontSize: '16px', fontWeight: 'bold', boxSizing: 'border-box' }}
+            />
+            {selectedDate && (
+              <button onClick={() => setSelectedDate('')} style={{ padding: '12px 20px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                ✕ Clear
+              </button>
+            )}
+          </div>
+          {selectedDate && (
+            <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '2px solid #ff9800', textAlign: 'center' }}>
+              <p style={{ fontWeight: 'bold', margin: 0, fontSize: '18px' }}>💵 Revenue for {selectedDate}: ₱{selectedRevenue.toFixed(2)}</p>
+            </div>
+          )}
+        </div>
+
+        <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>📊 Orders by Service</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+          <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
+            <p style={{ fontSize: '40px', margin: '0 0 10px 0' }}>🛒</p>
+            <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>Grocery</p>
+            <p style={{ fontSize: '32px', fontWeight: 'bold', color: '#2196f3', margin: 0 }}>{groceryCount}</p>
+          </div>
+          <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
+            <p style={{ fontSize: '40px', margin: '0 0 10px 0' }}>🏃</p>
+            <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>Pabili</p>
+            <p style={{ fontSize: '32px', fontWeight: 'bold', color: '#ff9800', margin: 0 }}>{pabiliCount}</p>
+          </div>
+          <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
+            <p style={{ fontSize: '40px', margin: '0 0 10px 0' }}>📦</p>
+            <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>Padala</p>
+            <p style={{ fontSize: '32px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>{padalaCount}</p>
+          </div>
+        </div>
+
+        <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>
+          🧾 {selectedDate ? 'Orders on ' + selectedDate : 'Recent Orders'}
+        </h2>
+        {displayList.length === 0 ? (
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
+            <p style={{ color: 'gray' }}>No orders.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '15px' }}>
+            {displayList.map((o) => (
+              <div key={o.id} style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <p style={{ fontWeight: 'bold', margin: '0 0 5px 0' }}>Order #{o.id.slice(-6).toUpperCase()} — {o.serviceType} | {o.status}</p>
+                  <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>{new Date(o.createdAt).toLocaleString()} | {o.user?.name || 'N/A'}</p>
+                </div>
+                <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>₱{(o.totalAmount || 0).toFixed(2)}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   )

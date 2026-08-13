@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import MerchantHeader from '@/components/MerchantHeader'
@@ -164,7 +162,23 @@ export default function MerchantDashboard() {
             )}
           </button>
 
-    
+          <button
+            onClick={() => router.push('/merchant/income')}
+            style={{
+              padding: '30px',
+              backgroundColor: '#4caf50',
+              color: 'white',
+              border: '3px solid black',
+              borderRadius: '12px',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '4px 4px 0px black',
+              textAlign: 'left'
+            }}
+          >
+            💰 My Income
+          </button>
         </div>
       </div>
     </main>
