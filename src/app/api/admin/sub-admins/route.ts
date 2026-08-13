@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
-import bcrypt from 'bcryptjs' // Make sure you have bcryptjs installed
+import bcrypt from 'bcryptjs'
 
+// GET: Fetch all sub-admins
 export async function GET() {
   try {
     const cookieStore = await cookies()
@@ -23,6 +24,7 @@ export async function GET() {
   }
 }
 
+// POST: Create a new sub-admin
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
@@ -53,8 +55,9 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ error: 'Failed to create' }, { status: 500 })
   }
-  // ... (keep your existing GET and POST functions above this) ...
+}
 
+// DELETE: Remove a sub-admin
 export async function DELETE(request: Request) {
   try {
     const cookieStore = await cookies()
