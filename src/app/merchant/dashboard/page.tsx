@@ -164,23 +164,7 @@ export default function MerchantDashboard() {
             )}
           </button>
 
-          <button
-            onClick={() => router.push('/')}
-            style={{
-              padding: '30px',
-              backgroundColor: 'white',
-              color: 'black',
-              border: '3px solid black',
-              borderRadius: '12px',
-              fontSize: '20px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              boxShadow: '4px 4px 0px black',
-              textAlign: 'left'
-            }}
-          >
-             Go to Home
-          </button>
+    
         </div>
       </div>
     </main>
