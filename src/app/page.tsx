@@ -2,104 +2,183 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import AdminHeader from '@/components/AdminHeader'
 
-export default function HomePage() {
+export default function AdminDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    merchants: 0,
+    riders: 0,
+    customers: 0,
+    orders: 0,
+    products: 0
+  })
 
-    useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => {
-        if (data.user) {
-          setUser(data.user)
-          
-          // SMART REDIRECT based on role
-          if (data.user.role === 'ADMIN') {
-            router.push('/admin/dashboard')
-          } else if (data.user.role === 'MERCHANT') {
-            router.push('/merchant/dashboard')
-          } else if (data.user.role === 'RIDER') {
-            router.push('/rider/dashboard')
-          }
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+  useEffect(() => {
+    checkAuth()
   }, [router])
 
-  const handleShopClick = () => {
-    if (user) router.push('/products')
-    else router.push('/register?role=CUSTOMER')
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/me')
+      const data = await res.json()
+      
+      if (!data.user) {
+        router.push('/login')
+        return
+      }
+      
+      if (data.user.role !== 'ADMIN') {
+        router.push('/')
+        return
+      }
+      
+      setUser(data.user)
+      fetchStats()
+    } catch (error) {
+      console.error('Auth check error:', error)
+      router.push('/login')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleRiderClick = () => {
-    if (user) router.push('/rider/apply')
-    else router.push('/register?role=RIDER')
-  }
+  const fetchStats = async () => {
+    try {
+      const [usersRes, merchantsRes, ridersRes, ordersRes, productsRes] = await Promise.all([
+        fetch('/api/admin/users').catch(() => null),
+        fetch('/api/admin/merchants').catch(() => null),
+        fetch('/api/admin/riders').catch(() => null),
+        fetch('/api/admin/orders').catch(() => null),
+        fetch('/api/admin/products').catch(() => null)
+      ])
 
-  const handleMerchantClick = () => {
-    if (user) router.push('/merchant/apply')
-    else router.push('/register?role=MERCHANT')
+      const usersData = usersRes ? await usersRes.json().catch(() => ({ users: [] })) : { users: [] }
+      const merchantsData = merchantsRes ? await merchantsRes.json().catch(() => ({ applications: [] })) : { applications: [] }
+      const ridersData = ridersRes ? await ridersRes.json().catch(() => ({ applications: [] })) : { applications: [] }
+      const ordersData = ordersRes ? await ordersRes.json().catch(() => ({ orders: [] })) : { orders: [] }
+      const productsData = productsRes ? await productsRes.json().catch(() => ({ products: [] })) : { products: [] }
+
+      // Count customers (Users with role CUSTOMER)
+      const customersCount = (usersData.users || []).filter((u: any) => u.role === 'CUSTOMER').length
+
+      setStats({
+        totalUsers: (usersData.users || []).length,
+        merchants: (merchantsData.applications || []).length,
+        riders: (ridersData.applications || []).length,
+        customers: customersCount,
+        orders: (ordersData.orders || []).length,
+        products: (productsData.products || []).length
+      })
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+    }
   }
 
   if (loading) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <div style={{ textAlign: 'center', padding: '100px' }}>Loading...</div>
+        <AdminHeader />
+        <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
       </main>
     )
   }
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-      <Header />
-      
-      <div style={{ 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '80px 20px',
-        textAlign: 'center',
-        color: 'white'
-      }}>
-        <h1 style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '20px' }}>
-          🛒 Tindahan Online
-        </h1>
-        <p style={{ fontSize: '24px', marginBottom: '40px' }}>
-          Fresh groceries delivered to your door within the day!
-        </p>
-        
-        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button onClick={handleShopClick} style={{ padding: '20px 40px', backgroundColor: 'white', color: '#667eea', border: '3px solid black', borderRadius: '12px', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer', boxShadow: '4px 4px 0px black' }}>
-            🛒 Shop Now
-          </button>
-          
-          <button onClick={handleRiderClick} style={{ padding: '20px 40px', backgroundColor: '#28a745', color: 'white', border: '3px solid black', borderRadius: '12px', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer', boxShadow: '4px 4px 0px black' }}>
-            🏍️ Become a Rider
-          </button>
-          
-          <button onClick={handleMerchantClick} style={{ padding: '20px 40px', backgroundColor: '#ffc107', color: 'black', border: '3px solid black', borderRadius: '12px', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer', boxShadow: '4px 4px 0px black' }}>
-             Partner Merchant
-          </button>
+      <AdminHeader />
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px' }}>
+        <div style={{ marginBottom: '30px' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
+            Admin Dashboard
+          </h1>
+          <p style={{ fontSize: '16px', color: 'gray' }}>
+            Welcome back, {user?.name || 'Admin'}!
+          </p>
         </div>
-      </div>
 
-      <div style={{ padding: '60px 20px', maxWidth: '1200px', margin: '0 auto' }}>
-        <h2 style={{ fontSize: '36px', fontWeight: 'bold', textAlign: 'center', marginBottom: '50px' }}>Why Choose Tindahan Online?</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
-          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
-            <div style={{ fontSize: '60px', marginBottom: '20px' }}></div>
-            <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Same-Day Delivery</h3>
+        {/* Stats Grid - 6 BOXES */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+          <div style={{ backgroundColor: '#e3f2fd', padding: '25px', borderRadius: '12px', border: '3px solid #2196f3', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Total Users</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#2196f3', margin: 0 }}>{stats.totalUsers}</p>
           </div>
-          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
-            <div style={{ fontSize: '60px', marginBottom: '20px' }}></div>
-            <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Best Prices</h3>
+
+          <div style={{ backgroundColor: '#fff3e0', padding: '25px', borderRadius: '12px', border: '3px solid #ff9800', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Merchants</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#ff9800', margin: 0 }}>{stats.merchants}</p>
           </div>
-          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black', textAlign: 'center' }}>
-            <div style={{ fontSize: '60px', marginBottom: '20px' }}>🛡️</div>
-            <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>Secure & Safe</h3>
+
+          <div style={{ backgroundColor: '#e8f5e9', padding: '25px', borderRadius: '12px', border: '3px solid #4caf50', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Riders</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>{stats.riders}</p>
           </div>
+
+          {/* NEW CUSTOMERS BOX */}
+          <div style={{ backgroundColor: '#e0f7fa', padding: '25px', borderRadius: '12px', border: '3px solid #00bcd4', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Customers</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#00bcd4', margin: 0 }}>{stats.customers}</p>
+          </div>
+
+          <div style={{ backgroundColor: '#f3e5f5', padding: '25px', borderRadius: '12px', border: '3px solid #9c27b0', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Orders</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#9c27b0', margin: 0 }}>{stats.orders}</p>
+          </div>
+
+          <div style={{ backgroundColor: '#fce4ec', padding: '25px', borderRadius: '12px', border: '3px solid #e91e63', textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: 'gray', marginBottom: '10px', fontWeight: 'bold' }}>Products</p>
+            <p style={{ fontSize: '48px', fontWeight: 'bold', color: '#e91e63', margin: 0 }}>{stats.products}</p>
+          </div>
+        </div>
+
+        {/* Quick Actions - NO "GO TO HOME" */}
+        <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>Quick Actions</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+          <button
+            onClick={() => router.push('/admin/merchants')}
+            style={{ padding: '30px', backgroundColor: '#ff9800', color: 'white', border: '3px solid black', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '4px 4px 0px black', textAlign: 'left' }}
+          >
+             Manage Merchants
+          </button>
+
+          <button
+            onClick={() => router.push('/admin/riders')}
+            style={{ padding: '30px', backgroundColor: '#4caf50', color: 'white', border: '3px solid black', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '4px 4px 0px black', textAlign: 'left' }}
+          >
+             Manage Riders
+          </button>
+
+          <button
+            onClick={() => router.push('/admin/orders')}
+            style={{ padding: '30px', backgroundColor: '#9c27b0', color: 'white', border: '3px solid black', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '4px 4px 0px black', textAlign: 'left' }}
+          >
+             View All Orders
+          </button>
+
+          <button
+            onClick={() => router.push('/admin/products')}
+            style={{ padding: '30px', backgroundColor: '#e91e63', color: 'white', border: '3px solid black', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '4px 4px 0px black', textAlign: 'left' }}
+          >
+             Manage Products
+          </button>
+
+          <button
+            onClick={() => router.push('/admin/income')}
+            style={{ padding: '30px', backgroundColor: '#2196f3', color: 'white', border: '3px solid black', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '4px 4px 0px black', textAlign: 'left' }}
+          >
+             💰 Income & Analytics
+          </button>
+
+          {/* NEW SUB-ADMIN BUTTON */}
+          <button
+            onClick={() => router.push('/admin/sub-admins')}
+            style={{ padding: '30px', backgroundColor: '#607d8b', color: 'white', border: '3px solid black', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '4px 4px 0px black', textAlign: 'left' }}
+          >
+             👮 Manage Sub-Admins
+          </button>
         </div>
       </div>
     </main>

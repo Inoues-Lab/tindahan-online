@@ -12,6 +12,7 @@ enum UserRole {
   MERCHANT
   RIDER
   ADMIN
+  SUB_ADMIN  // <-- ADD THIS LINE
 }
 
 enum OrderStatus {

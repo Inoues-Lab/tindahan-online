@@ -19,7 +19,7 @@ export default function AdminMerchantsPage() {
     try {
       const res = await fetch('/api/auth/me')
       const data = await res.json()
-      if (!data.user || data.user.role !== 'ADMIN') {
+      if (!data.user || (data.user.role !== 'ADMIN' && data.user.role !== 'SUB_ADMIN')) {
         router.push('/')
       }
     } catch (error) {
