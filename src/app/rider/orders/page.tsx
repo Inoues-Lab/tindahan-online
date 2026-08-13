@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import RiderHeader from '@/components/RiderHeader'
 
 export default function RiderOrdersPage() {
   const router = useRouter()
@@ -53,7 +53,7 @@ export default function RiderOrdersPage() {
   if (loading) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <Header />
+        <RiderHeader />
         <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
       </main>
     )
@@ -61,7 +61,7 @@ export default function RiderOrdersPage() {
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-      <Header />
+      <RiderHeader />
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>🏍️ Rider Dashboard</h1>

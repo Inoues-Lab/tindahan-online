@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import RiderHeader from '@/components/RiderHeader'
 
 export default function RiderApplyPage() {
   const router = useRouter()
@@ -116,7 +116,7 @@ export default function RiderApplyPage() {
   if (loading) {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <Header />
+        <RiderHeader />
         <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
       </main>
     )
@@ -124,7 +124,7 @@ export default function RiderApplyPage() {
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-      <Header />
+      <RiderHeader />
       <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
         <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px' }}>🏍️ Rider Requirements</h1>
