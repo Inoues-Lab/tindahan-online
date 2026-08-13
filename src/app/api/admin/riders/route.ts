@@ -2,70 +2,81 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
+// GET: Fetch all rider applications
 export async function GET() {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    // Check if admin
     const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    if (user?.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access only' }, { status: 403 })
     }
 
-    const riders = await prisma.user.findMany({
-      where: { role: 'RIDER' },
-      include: { riderProfile: true },
+    // Fetch ALL rider profiles (applications)
+    const applications = await prisma.riderProfile.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        }
+      },
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json({ riders })
+    return NextResponse.json({ applications })
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error fetching riders:', error)
     return NextResponse.json({ error: 'Failed to fetch riders' }, { status: 500 })
   }
 }
 
+// POST: Approve or Reject a rider application
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    if (user?.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access only' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { userId: riderId, action } = body
+    const { riderProfileId, status } = body 
+    // status should be 'APPROVED' or 'REJECTED'
 
-    if (!riderId || !action) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (!riderProfileId || !status) {
+      return NextResponse.json({ error: 'Missing riderProfileId or status' }, { status: 400 })
     }
 
-    // FIX: Map 'APPROVE' to 'APPROVED' and 'REJECT' to 'REJECTED'
-    const newStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED'
-
-    // Update rider profile status
-    await prisma.riderProfile.upsert({
-      where: { userId: riderId },
-      update: { status: newStatus },
-      create: { userId: riderId, status: newStatus }
+    // 1. Update the Rider Profile status
+    const updatedProfile = await prisma.riderProfile.update({
+      where: { id: riderProfileId },
+      data: { status: status }
     })
 
-    return NextResponse.json({ 
-      success: true, 
-      message: `Rider ${newStatus.toLowerCase()} successfully!` 
-    })
+    // 2. If Approved, update the User's role to RIDER (though they might already be)
+    // and ensure they can access the rider dashboard
+    if (status === 'APPROVED') {
+      await prisma.user.update({
+        where: { id: updatedProfile.userId },
+        data: { role: 'RIDER' }
+      })
+    }
+
+    return NextResponse.json({ success: true, profile: updatedProfile })
   } catch (error) {
-    console.error('Error:', error)
-    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 })
+    console.error('Error updating rider:', error)
+    return NextResponse.json({ error: 'Failed to update rider' }, { status: 500 })
   }
 }
