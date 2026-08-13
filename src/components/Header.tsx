@@ -28,12 +28,11 @@ export default function Header() {
     } catch (error) {
       // Ignore errors
     }
-    // 🔑 Full page reload to clear everything
     window.location.href = '/'
   }
 
   const buttonStyle = {
-    padding: '10px 20px',
+    padding: '10px 16px',
     backgroundColor: 'white',
     color: 'black',
     border: '2px solid black',
@@ -74,17 +73,23 @@ export default function Header() {
         </div>
         
         {/* Desktop Navigation */}
-        <div className="desktop-nav" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="desktop-nav" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {user ? (
             <>
+              <button onClick={() => router.push('/shop')} style={buttonStyle}>
+                🛍️ Shop
+              </button>
+              <button onClick={() => router.push('/pabili')} style={buttonStyle}>
+                🏃 Pabili
+              </button>
+              <button onClick={() => router.push('/padala')} style={buttonStyle}>
+                📦 Padala
+              </button>
               <button onClick={() => router.push('/cart')} style={buttonStyle}>
                 🛒 Cart
               </button>
               <button onClick={() => router.push('/orders')} style={buttonStyle}>
-                📦 Orders
-              </button>
-              <button onClick={() => router.push('/shop')} style={buttonStyle}>
-                🛍️ Shop
+                📋 Orders
               </button>
               <button
                 onClick={handleLogout}
@@ -147,23 +152,20 @@ export default function Header() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {user ? (
               <>
-                <button
-                  onClick={() => { router.push('/cart'); setMenuOpen(false) }}
-                  style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}
-                >
+                <button onClick={() => { router.push('/shop'); setMenuOpen(false) }} style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}>
+                  🛍️ Shop
+                </button>
+                <button onClick={() => { router.push('/pabili'); setMenuOpen(false) }} style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}>
+                  🏃 Pabili
+                </button>
+                <button onClick={() => { router.push('/padala'); setMenuOpen(false) }} style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}>
+                  📦 Padala
+                </button>
+                <button onClick={() => { router.push('/cart'); setMenuOpen(false) }} style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}>
                   🛒 Cart
                 </button>
-                <button
-                  onClick={() => { router.push('/orders'); setMenuOpen(false) }}
-                  style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}
-                >
-                  📦 Orders
-                </button>
-                <button
-                  onClick={() => { router.push('/shop'); setMenuOpen(false) }}
-                  style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}
-                >
-                  🛍️ Shop
+                <button onClick={() => { router.push('/orders'); setMenuOpen(false) }} style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}>
+                  📋 Orders
                 </button>
                 <button
                   onClick={() => { setMenuOpen(false); handleLogout() }}
@@ -181,10 +183,7 @@ export default function Header() {
               </>
             ) : (
               <>
-                <button
-                  onClick={() => { router.push('/login'); setMenuOpen(false) }}
-                  style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}
-                >
+                <button onClick={() => { router.push('/login'); setMenuOpen(false) }} style={{ ...buttonStyle, textAlign: 'left', padding: '12px' }}>
                   🔑 Login
                 </button>
                 <button
