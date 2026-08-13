@@ -12,7 +12,7 @@ export async function GET() {
 
     // Check if admin
     const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN' && user?.role !== 'SUB_ADMIN') {
       return NextResponse.json({ error: 'Admin access only' }, { status: 403 })
     }
 
