@@ -8,212 +8,145 @@ export default function MerchantOrdersPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [proofUrl, setProofUrl] = useState('')
 
   useEffect(() => {
-    checkAuth()
     fetchOrders()
-  }, [router])
-
-  const checkAuth = async () => {
-    try {
-      const res = await fetch('/api/auth/me')
-      const data = await res.json()
-      if (!data.user || data.user.role !== 'MERCHANT') {
-        router.push('/')
-      }
-    } catch (error) {
-      router.push('/')
-    }
-  }
+  }, [])
 
   const fetchOrders = async () => {
     try {
       const res = await fetch('/api/merchant/orders')
       const data = await res.json()
-      if (res.ok) {
-        setOrders(data.orders || [])
-      } else {
-        setError(data.error)
-      }
+      if (res.ok) setOrders(data.orders || [])
     } catch (error) {
-      setError('Failed to load orders')
+      console.error('Error:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const updateOrderStatus = async (orderId: string, status: string) => {
+  const handleAction = async (orderId: string, status: string) => {
+    if (status === 'CANCELLED' && !confirm('Cancel this order?')) return
     try {
-      const res = await fetch(`/api/merchant/orders`, {
-        method: 'PUT',
+      const res = await fetch('/api/merchant/orders', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, status })
       })
-
+      const data = await res.json()
       if (res.ok) {
-        alert(`Order ${status}`)
+        alert(data.message || 'Order updated!')
         fetchOrders()
       } else {
-        const data = await res.json()
         alert(data.error || 'Failed to update order')
       }
     } catch (error) {
-      alert('Error updating order')
+      alert('Error')
     }
   }
 
-  if (loading) {
-    return (
-      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <MerchantHeader />
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading orders...</div>
-      </main>
-    )
+  const statusColors: any = {
+    PENDING: '#ff9800',
+    ACCEPTED: '#2196f3',
+    IN_PROGRESS: '#2196f3',
+    READY_FOR_PICKUP: '#9c27b0',
+    OUT_FOR_DELIVERY: '#9c27b0',
+    DELIVERED: '#4caf50',
+    COMPLETED: '#4caf50',
+    CANCELLED: '#dc3545'
   }
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <MerchantHeader />
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>
-            Customer Orders
-          </h1>
-          <button
-            onClick={() => router.push('/merchant/dashboard')}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: 'gray',
-              color: 'white',
-              border: '2px solid black',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            ← Back to Dashboard
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '30px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+          <div>
+            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>🛍️ Customer Orders</h1>
+            <p style={{ fontSize: '16px', color: 'gray' }}>Confirm or cancel incoming orders</p>
+          </div>
+          <button onClick={() => router.push('/merchant/dashboard')} style={{ padding: '12px 24px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+            ← Back
           </button>
         </div>
 
-        {error && (
-          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', color: 'red' }}>
-            {error}
-          </div>
-        )}
-
-        {orders.length === 0 ? (
-          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
-            <p style={{ fontSize: '18px', color: 'gray' }}>No orders yet.</p>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '50px' }}>Loading orders...</div>
+        ) : orders.length === 0 ? (
+          <div style={{ backgroundColor: 'white', padding: '60px 40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
+            <p style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px' }}>No orders yet</p>
+            <p style={{ color: 'gray' }}>New customer orders will appear here!</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '20px' }}>
             {orders.map((order) => (
-              <div key={order.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+              <div key={order.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>Order #{order.id.slice(-6)}</h3>
-                    <p style={{ color: 'gray', fontSize: '14px' }}>
-                      {new Date(order.createdAt).toLocaleString()}
-                    </p>
+                    <p style={{ fontWeight: 'bold', fontSize: '18px', margin: 0 }}>Order #{order.id.slice(-6).toUpperCase()}</p>
+                    <p style={{ color: 'gray', fontSize: '12px', margin: '5px 0 0 0' }}>{new Date(order.createdAt).toLocaleString()}</p>
                   </div>
-                  <span style={{
-                    padding: '5px 15px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    backgroundColor: order.status === 'COMPLETED' ? '#d4edda' : order.status === 'CANCELLED' ? '#f8d7da' : '#fff3cd',
-                    color: order.status === 'COMPLETED' ? '#155724' : order.status === 'CANCELLED' ? '#721c24' : '#856404',
-                    border: `1px solid ${order.status === 'COMPLETED' ? '#28a745' : order.status === 'CANCELLED' ? '#dc3545' : '#ffc107'}`
-                  }}>
-                    {order.status}
+                  <span style={{ padding: '5px 15px', backgroundColor: statusColors[order.status] || '#757575', color: 'white', borderRadius: '20px', fontWeight: 'bold', fontSize: '12px' }}>
+                    {order.status.replace(/_/g, ' ')}
                   </span>
                 </div>
 
-                <div style={{ marginBottom: '15px' }}>
-                  <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>Customer:</p>
-                  <p style={{ fontSize: '14px' }}>{order.user?.name || 'N/A'}</p>
-                  <p style={{ fontSize: '14px', color: 'gray' }}>{order.user?.email || 'N/A'}</p>
+                <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
+                  <p style={{ margin: '0 0 5px 0', fontSize: '14px' }}><strong>👤 Customer:</strong> {order.user?.name || 'N/A'}</p>
+                  <p style={{ margin: '0 0 5px 0', fontSize: '14px' }}><strong>📞 Contact:</strong> {order.contactNumber}</p>
+                  <p style={{ margin: 0, fontSize: '14px' }}><strong>📍 Address:</strong> {order.deliveryAddress}</p>
                 </div>
 
-                <div style={{ marginBottom: '15px' }}>
-                  <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>Items:</p>
-                  <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                    {order.items?.map((item: any, idx: number) => (
-                      <li key={idx} style={{ fontSize: '14px', marginBottom: '3px' }}>
-                        {item.quantity}x {item.product?.name} - {item.product?.price}
-                      </li>
+                {(order.items || []).length > 0 && (
+                  <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
+                    <p style={{ fontWeight: 'bold', margin: '0 0 10px 0', fontSize: '14px' }}>🛒 Items:</p>
+                    {order.items.map((item: any) => (
+                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '14px' }}>
+                        <span>{item.product?.name || 'Item'} x {item.quantity}</span>
+                        <span style={{ fontWeight: 'bold' }}>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                      </div>
                     ))}
-                  </ul>
-                </div>
+                  </div>
+                )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid #f0f0f0', paddingTop: '15px' }}>
-                  <div>
-                    <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>
-                      Total: ₱{order.totalAmount}
-                    </p>
-                    {order.deliveryAddress && (
-                      <p style={{ fontSize: '14px', color: 'gray', margin: '5px 0 0 0' }}>
-                        📍 {order.deliveryAddress}
-                      </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <p style={{ fontSize: '22px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>₱{(order.totalAmount || 0).toFixed(2)}</p>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {order.deliveryProofUrl && (
+                      <button onClick={() => setProofUrl(order.deliveryProofUrl)} style={{ padding: '10px 20px', backgroundColor: '#17a2b8', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>
+                        📸 View Proof
+                      </button>
+                    )}
+                    {order.status === 'PENDING' && (
+                      <>
+                        <button onClick={() => handleAction(order.id, 'ACCEPTED')} style={{ padding: '10px 20px', backgroundColor: '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>
+                          ✓ Confirm
+                        </button>
+                        <button onClick={() => handleAction(order.id, 'CANCELLED')} style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>
+                          ✗ Cancel
+                        </button>
+                      </>
                     )}
                   </div>
-                  
-                  {order.status === 'PENDING' && (
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        onClick={() => updateOrderStatus(order.id, 'CONFIRMED')}
-                        style={{
-                          padding: '10px 20px',
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: '2px solid black',
-                          borderRadius: '8px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✓ Confirm
-                      </button>
-                      <button
-                        onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                        style={{
-                          padding: '10px 20px',
-                          backgroundColor: '#dc3545',
-                          color: 'white',
-                          border: '2px solid black',
-                          borderRadius: '8px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✗ Cancel
-                      </button>
-                    </div>
-                  )}
-                  
-                  {order.status === 'CONFIRMED' && (
-                    <button
-                      onClick={() => updateOrderStatus(order.id, 'READY_FOR_PICKUP')}
-                      style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#17a2b8',
-                        color: 'white',
-                        border: '2px solid black',
-                        borderRadius: '8px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                    >
-                       Mark as Ready
-                    </button>
-                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {proofUrl && (
+        <div onClick={() => setProofUrl('')} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', cursor: 'pointer' }}>
+          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', maxWidth: '600px', width: '100%', boxShadow: '8px 8px 0px black' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>📸 Delivery Proof</h2>
+              <button onClick={() => setProofUrl('')} style={{ padding: '8px 16px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>✕ Close</button>
+            </div>
+            <img src={proofUrl} alt="Delivery Proof" style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', border: '2px solid black' }} />
+          </div>
+        </div>
+      )}
     </main>
   )
 }
