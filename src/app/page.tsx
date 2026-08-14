@@ -13,12 +13,24 @@ export default function HomePage() {
     fetchProducts()
   }, [])
 
+  const shuffle = (arr: any[]) => {
+    const a = [...arr]
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      const temp = a[i]
+      a[i] = a[j]
+      a[j] = temp
+    }
+    return a
+  }
+
   const fetchProducts = async () => {
     try {
       const res = await fetch('/api/products')
       const data = await res.json()
       if (res.ok) {
-        setProducts(data.products || [])
+        const all = data.products || []
+        setProducts(shuffle(all).slice(0, 10))
       }
     } catch (error) {
       console.error('Error fetching products:', error)
@@ -31,7 +43,6 @@ export default function HomePage() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <Header />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px' }}>
-        {/* Hero */}
         <div style={{ marginBottom: '30px', textAlign: 'center' }}>
           <h1 style={{ fontSize: '36px', fontWeight: 'bold', marginBottom: '10px' }}>
             🛍️ Welcome to Tindahan Online
@@ -41,7 +52,6 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Services Section */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '40px' }}>
           <div
             onClick={() => router.push('/shop')}
@@ -71,8 +81,17 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Products */}
-        <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>🔥 Featured Products</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>🔥 Featured Products</h2>
+          <button
+            onClick={() => router.push('/shop')}
+            style={{ padding: '10px 20px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
+          >
+            View All →
+          </button>
+        </div>
+        <p style={{ fontSize: '12px', color: 'gray', marginBottom: '20px' }}>🎲 Fresh picks every visit — reload to see more!</p>
+
         {loading ? (
           <div style={{ textAlign: 'center', padding: '50px' }}>Loading products...</div>
         ) : products.length === 0 ? (
@@ -86,7 +105,7 @@ export default function HomePage() {
             {products.map((product) => (
               <div
                 key={product.id}
-                onClick={() => router.push(`/products/${product.id}`)}
+                onClick={() => router.push('/products/' + product.id)}
                 style={{
                   backgroundColor: 'white',
                   padding: '20px',
