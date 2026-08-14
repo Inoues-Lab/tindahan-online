@@ -8,6 +8,7 @@ export default function AdminProductsPage() {
   const router = useRouter()
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', price: '', stock: '', description: '', imageUrl: '' })
@@ -41,6 +42,10 @@ export default function AdminProductsPage() {
       setLoading(false)
     }
   }
+
+  const filtered = products.filter((p) =>
+    (p.name || '').toLowerCase().includes(search.toLowerCase())
+  )
 
   const openEdit = (p: any) => {
     setEditing(p)
@@ -114,13 +119,27 @@ export default function AdminProductsPage() {
           </button>
         </div>
 
+        <div style={{ marginBottom: '20px' }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 Search products by name..."
+            style={{ ...inputStyle, padding: '15px', fontSize: '16px', boxShadow: '4px 4px 0px black' }}
+          />
+        </div>
+
         {products.length === 0 ? (
           <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
             <p style={{ fontSize: '18px', color: 'gray' }}>No products yet.</p>
           </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
+            <p style={{ fontSize: '18px', color: 'gray' }}>No products match "{search}"</p>
+          </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
-            {products.map((p) => (
+            {filtered.map((p) => (
               <div key={p.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
                 {p.imageUrl ? (
                   <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', border: '2px solid black', marginBottom: '15px' }} />
