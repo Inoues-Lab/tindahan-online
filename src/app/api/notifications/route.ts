@@ -22,7 +22,7 @@ export async function GET() {
       notifications = orders.map((o) => {
         let icon = '✅'
         let message = 'Order #' + o.id.slice(-6).toUpperCase() + ' confirmed by merchant!'
-        if (o.status === 'OUT_FOR_DELIVERY') { icon = '🏍️'; message = 'Order #' + o.id.slice(-6).toUpperCase() + ' is out for delivery!' }
+        if (o.status === 'OUT_FOR_DELIVERY') { icon = '🚚'; message = 'Order #' + o.id.slice(-6).toUpperCase() + ' is out for delivery!' }
         if (o.status === 'DELIVERED') { icon = '🎉'; message = 'Order #' + o.id.slice(-6).toUpperCase() + ' delivered! Thank you!' }
         return { id: o.id, icon, message, time: o.updatedAt }
       })
@@ -36,7 +36,7 @@ export async function GET() {
         })
         notifications = orders.map((o) => ({
           id: o.id,
-          icon: '🛎️',
+          icon: '🔔',
           message: 'New order #' + o.id.slice(-6).toUpperCase() + ' waiting for confirmation!',
           time: o.createdAt
         }))
