@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminHeader from '@/components/AdminHeader'
 
@@ -80,7 +80,7 @@ export default function AdminProductsPage() {
     }
   }
 
-  const inputStyle = {
+  const inputStyle: CSSProperties = {
     width: '100%',
     padding: '12px',
     borderRadius: '8px',
