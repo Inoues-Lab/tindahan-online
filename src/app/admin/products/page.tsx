@@ -9,6 +9,7 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [tab, setTab] = useState<'PENDING' | 'ALL'>('PENDING')
   const [editing, setEditing] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', price: '', stock: '', description: '', imageUrl: '' })
@@ -43,26 +44,25 @@ export default function AdminProductsPage() {
     }
   }
 
-  const filtered = products.filter((p) =>
-    (p.name || '').toLowerCase().includes(search.toLowerCase())
-  )
+  const setStatus = async (id: string, status: string) => {
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: id, status })
+      })
+      const data = await res.json()
+      if (res.ok) { alert(status === 'APPROVED' ? 'Product approved! ✅' : 'Product rejected. ❌'); fetchProducts() } else { alert(data.error) }
+    } catch (error) { alert('Error') }
+  }
 
   const openEdit = (p: any) => {
     setEditing(p)
-    setForm({
-      name: p.name || '',
-      price: String(p.price ?? ''),
-      stock: String(p.stock ?? ''),
-      description: p.description || '',
-      imageUrl: p.imageUrl || ''
-    })
+    setForm({ name: p.name || '', price: String(p.price ?? ''), stock: String(p.stock ?? ''), description: p.description || '', imageUrl: p.imageUrl || '' })
   }
 
   const handleSave = async () => {
-    if (!form.name || !form.price) {
-      alert('Name and price are required!')
-      return
-    }
+    if (!form.name || !form.price) { alert('Name and price are required!'); return }
     setSaving(true)
     try {
       const res = await fetch('/api/admin/products', {
@@ -71,29 +71,20 @@ export default function AdminProductsPage() {
         body: JSON.stringify({ productId: editing.id, ...form })
       })
       const data = await res.json()
-      if (res.ok) {
-        alert(data.message || 'Product updated!')
-        setEditing(null)
-        fetchProducts()
-      } else {
-        alert(data.error || 'Failed to update product')
-      }
-    } catch (error) {
-      alert('Error')
-    } finally {
-      setSaving(false)
-    }
+      if (res.ok) { alert(data.message); setEditing(null); fetchProducts() } else { alert(data.error) }
+    } catch (error) { alert('Error') }
+    finally { setSaving(false) }
   }
 
+  const filtered = products
+    .filter((p) => (tab === 'ALL' ? true : p.status === 'PENDING'))
+    .filter((p) => (p.name || '').toLowerCase().includes(search.toLowerCase()))
+
+  const statusColors: any = { PENDING: '#ff9800', APPROVED: '#4caf50', REJECTED: '#dc3545' }
+
   const inputStyle: CSSProperties = {
-    width: '100%',
-    padding: '12px',
-    borderRadius: '8px',
-    border: '2px solid black',
-    boxSizing: 'border-box',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    backgroundColor: 'white'
+    width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black',
+    boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', backgroundColor: 'white'
   }
 
   if (loading) {
@@ -109,33 +100,30 @@ export default function AdminProductsPage() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <AdminHeader />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>📦 Product Management</h1>
-            <p style={{ fontSize: '16px', color: 'gray' }}>Edit any product in the platform</p>
+            <p style={{ fontSize: '16px', color: 'gray' }}>Approve, reject, or edit any product</p>
           </div>
-          <button onClick={() => router.push('/admin')} style={{ padding: '12px 24px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-            ← Back
+          <button onClick={() => router.push('/admin')} style={{ padding: '12px 24px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>← Back</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          <button onClick={() => setTab('PENDING')} style={{ padding: '10px 20px', backgroundColor: tab === 'PENDING' ? '#ff9800' : 'white', color: tab === 'PENDING' ? 'white' : 'black', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+            ⏳ Waiting Approval ({products.filter((p) => p.status === 'PENDING').length})
+          </button>
+          <button onClick={() => setTab('ALL')} style={{ padding: '10px 20px', backgroundColor: tab === 'ALL' ? '#2196f3' : 'white', color: tab === 'ALL' ? 'white' : 'black', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+            📦 All Products
           </button>
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="🔍 Search products by name..."
-            style={{ ...inputStyle, padding: '15px', fontSize: '16px', boxShadow: '4px 4px 0px black' }}
-          />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Search products..." style={{ ...inputStyle, padding: '15px', boxShadow: '4px 4px 0px black' }} />
         </div>
 
-        {products.length === 0 ? (
+        {filtered.length === 0 ? (
           <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
-            <p style={{ fontSize: '18px', color: 'gray' }}>No products yet.</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
-            <p style={{ fontSize: '18px', color: 'gray' }}>No products match "{search}"</p>
+            <p style={{ fontSize: '18px', color: 'gray' }}>{tab === 'PENDING' ? 'No products waiting for approval! 🎉' : 'No products found.'}</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
@@ -144,19 +132,23 @@ export default function AdminProductsPage() {
                 {p.imageUrl ? (
                   <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', border: '2px solid black', marginBottom: '15px' }} />
                 ) : (
-                  <div style={{ width: '100%', height: '160px', backgroundColor: '#f0f0f0', borderRadius: '8px', border: '2px dashed black', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px' }}>
-                    🛒
-                  </div>
+                  <div style={{ width: '100%', height: '160px', backgroundColor: '#f0f0f0', borderRadius: '8px', border: '2px dashed black', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px' }}>🛒</div>
                 )}
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '5px' }}>{p.name}</h3>
-                <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#4caf50', margin: '0 0 5px 0' }}>₱{(p.price || 0).toFixed(2)}</p>
-                <p style={{ fontSize: '12px', color: p.stock > 0 ? 'gray' : 'red', margin: '0 0 15px 0' }}>Stock: {p.stock}</p>
-                <button
-                  onClick={() => openEdit(p)}
-                  style={{ width: '100%', padding: '12px', backgroundColor: '#2196f3', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}
-                >
-                  ✏️ Edit Product
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: 0 }}>{p.name}</h3>
+                  <span style={{ padding: '3px 10px', backgroundColor: statusColors[p.status] || '#757575', color: 'white', borderRadius: '20px', fontWeight: 'bold', fontSize: '10px' }}>{p.status}</span>
+                </div>
+                <p style={{ fontSize: '12px', color: 'gray', margin: '0 0 5px 0' }}>🏪 {p.merchant?.storeName || 'Merchant'}</p>
+                <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#4caf50', margin: '0 0 15px 0' }}>₱{(p.price || 0).toFixed(2)}</p>
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {p.status !== 'APPROVED' && (
+                    <button onClick={() => setStatus(p.id, 'APPROVED')} style={{ padding: '10px', backgroundColor: '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '2px 2px 0px black' }}>✅ Approve</button>
+                  )}
+                  {p.status !== 'REJECTED' && (
+                    <button onClick={() => setStatus(p.id, 'REJECTED')} style={{ padding: '10px', backgroundColor: '#dc3545', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '2px 2px 0px black' }}>❌ Reject</button>
+                  )}
+                  <button onClick={() => openEdit(p)} style={{ padding: '10px', backgroundColor: '#2196f3', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '2px 2px 0px black' }}>✏️ Edit</button>
+                </div>
               </div>
             ))}
           </div>
@@ -166,19 +158,14 @@ export default function AdminProductsPage() {
       {editing && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', maxWidth: '500px', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '8px 8px 0px black' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>✏️ Edit Product</h2>
-              <button onClick={() => setEditing(null)} style={{ padding: '8px 16px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>✕</button>
-            </div>
-
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>✏️ Edit Product</h2>
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Name *</label>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Name *</label>
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={inputStyle} />
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
               <div>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Price (₱) *</label>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Price *</label>
                 <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} style={inputStyle} />
               </div>
               <div>
@@ -186,24 +173,20 @@ export default function AdminProductsPage() {
                 <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} style={inputStyle} />
               </div>
             </div>
-
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Description</label>
               <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...inputStyle, minHeight: '70px' }} />
             </div>
-
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Image URL</label>
               <input type="text" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} style={inputStyle} />
             </div>
-
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{ width: '100%', padding: '15px', backgroundColor: saving ? 'gray' : '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', fontSize: '18px', cursor: saving ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0px black' }}
-            >
-              {saving ? 'Saving...' : '💾 Save Changes'}
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: '15px', backgroundColor: saving ? 'gray' : '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>
+                {saving ? 'Saving...' : '💾 Save'}
+              </button>
+              <button onClick={() => setEditing(null)} style={{ padding: '15px 20px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>✕</button>
+            </div>
           </div>
         </div>
       )}

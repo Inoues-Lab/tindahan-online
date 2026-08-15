@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import MerchantHeader from '@/components/MerchantHeader'
 
@@ -8,368 +8,176 @@ export default function MerchantProductsPage() {
   const router = useRouter()
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploading, setUploading] = useState(false)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    stock: '',
-    imageUrl: ''
-  })
-  const [error, setError] = useState('')
+  const [modal, setModal] = useState<'add' | 'edit' | null>(null)
+  const [editingId, setEditingId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ name: '', price: '', stock: '', description: '', imageUrl: '' })
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    checkAuth()
     fetchProducts()
-  }, [router])
-
-  const checkAuth = async () => {
-    try {
-      const res = await fetch('/api/auth/me')
-      const data = await res.json()
-      if (!data.user || data.user.role !== 'MERCHANT') {
-        router.push('/')
-      }
-    } catch (error) {
-      router.push('/')
-    }
-  }
+  }, [])
 
   const fetchProducts = async () => {
     try {
       const res = await fetch('/api/merchant/products')
       const data = await res.json()
-      if (res.ok) {
-        setProducts(data.products || [])
-      }
+      if (res.ok) setProducts(data.products || [])
     } catch (error) {
-      console.error('Error fetching products:', error)
+      console.error('Error:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setUploading(true)
+  const openAdd = () => {
+    setModal('add')
+    setEditingId('')
+    setForm({ name: '', price: '', stock: '', description: '', imageUrl: '' })
+  }
 
+  const openEdit = (p: any) => {
+    setModal('edit')
+    setEditingId(p.id)
+    setForm({ name: p.name || '', price: String(p.price ?? ''), stock: String(p.stock ?? ''), description: p.description || '', imageUrl: p.imageUrl || '' })
+  }
+
+  const upload = async (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: fd })
+    const data = await res.json()
+    return res.ok ? data.url : null
+  }
+
+  const handleFile = async (e: any) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const url = await upload(file)
+    if (url) setForm((f) => ({ ...f, imageUrl: url }))
+    else alert('Upload failed')
+  }
+
+  const handleSave = async () => {
+    if (!form.name || !form.price) { alert('Name and price are required!'); return }
+    setSaving(true)
     try {
-      let imageUrl = formData.imageUrl
-
-      // Upload file if selected
-      if (selectedFile) {
-        const uploadFormData = new FormData()
-        uploadFormData.append('file', selectedFile)
-
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadFormData
-        })
-
-        const uploadData = await uploadRes.json()
-        if (uploadRes.ok) {
-          imageUrl = uploadData.url
-        } else {
-          setError(uploadData.error || 'Failed to upload image')
-          setUploading(false)
-          return
-        }
-      }
-
       const res = await fetch('/api/merchant/products', {
-        method: 'POST',
+        method: modal === 'edit' ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          price: parseFloat(formData.price),
-          stock: parseInt(formData.stock),
-          imageUrl: imageUrl
-        })
+        body: JSON.stringify(modal === 'edit' ? { productId: editingId, ...form } : form)
       })
-
       const data = await res.json()
-
-      if (res.ok) {
-        alert('Product added!')
-        setShowModal(false)
-        setFormData({ name: '', description: '', price: '', stock: '', imageUrl: '' })
-        setSelectedFile(null)
-        fetchProducts()
-      } else {
-        setError(data.error || 'Failed to add product')
-      }
-    } catch (error) {
-      setError('An error occurred')
-    } finally {
-      setUploading(false)
-    }
+      if (res.ok) { alert(data.message); setModal(null); fetchProducts() } else { alert(data.error) }
+    } catch (error) { alert('Error') }
+    finally { setSaving(false) }
   }
 
-  const handleDeleteProduct = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
-
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this product?')) return
     try {
-      const res = await fetch(`/api/merchant/products?id=${productId}`, {
-        method: 'DELETE'
-      })
-
-      if (res.ok) {
-        fetchProducts()
-      } else {
-        alert('Failed to delete product')
-      }
-    } catch (error) {
-      alert('Error deleting product')
-    }
+      const res = await fetch('/api/merchant/products?productId=' + id, { method: 'DELETE' })
+      const data = await res.json()
+      if (res.ok) { alert(data.message); fetchProducts() } else { alert(data.error) }
+    } catch (error) { alert('Error') }
   }
 
-  if (loading) {
-    return (
-      <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-        <MerchantHeader />
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}>Loading...</div>
-      </main>
-    )
+  const statusColors: any = { PENDING: '#ff9800', APPROVED: '#4caf50', REJECTED: '#dc3545' }
+
+  const inputStyle: CSSProperties = {
+    width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid black',
+    boxSizing: 'border-box', fontSize: '16px', fontWeight: 'bold', backgroundColor: 'white'
   }
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
       <MerchantHeader />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
-               My Products
-            </h1>
-            <p style={{ fontSize: '16px', color: 'gray' }}>
-              Manage your store inventory ({products.length} products)
-            </p>
+            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>📦 My Products</h1>
+            <p style={{ fontSize: '16px', color: 'gray' }}>New & edited products need admin approval</p>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={() => setShowModal(true)}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#4caf50',
-                color: 'white',
-                border: '2px solid black',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                boxShadow: '3px 3px 0px black'
-              }}
-            >
-              + Add Product
-            </button>
-            <button
-              onClick={() => router.push('/merchant/dashboard')}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: 'white',
-                color: 'black',
-                border: '2px solid black',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              ← Back
-            </button>
-          </div>
+          <button onClick={openAdd} style={{ padding: '12px 24px', backgroundColor: '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>
+            + Add Product
+          </button>
         </div>
 
-        {error && (
-          <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid red', marginBottom: '20px', color: 'red' }}>
-            {error}
-          </div>
-        )}
-
-        {products.length === 0 ? (
-          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
-            <p style={{ fontSize: '18px', color: 'gray' }}>No products yet. Add your first product!</p>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '50px' }}>Loading...</div>
+        ) : products.length === 0 ? (
+          <div style={{ backgroundColor: 'white', padding: '60px 40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
+            <p style={{ fontSize: '20px', fontWeight: 'bold' }}>No products yet — add your first one!</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-            {products.map((product) => (
-              <div key={product.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
-                {product.imageUrl && (
-                  <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', marginBottom: '15px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+            {products.map((p) => (
+              <div key={p.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '3px solid black', boxShadow: '4px 4px 0px black' }}>
+                {p.imageUrl ? (
+                  <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', border: '2px solid black', marginBottom: '15px' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '160px', backgroundColor: '#f0f0f0', borderRadius: '8px', border: '2px dashed black', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px' }}>🛒</div>
                 )}
-                <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{product.name}</h3>
-                <p style={{ color: 'gray', fontSize: '14px', marginBottom: '10px' }}>{product.description}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#4caf50' }}>₱{product.price}</span>
-                  <span style={{ fontSize: '14px', color: 'gray' }}>Stock: {product.stock}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: 0 }}>{p.name}</h3>
+                  <span style={{ padding: '3px 10px', backgroundColor: statusColors[p.status] || '#757575', color: 'white', borderRadius: '20px', fontWeight: 'bold', fontSize: '10px' }}>{p.status}</span>
                 </div>
-                <button
-                  onClick={() => handleDeleteProduct(product.id)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: '2px solid black',
-                    borderRadius: '8px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                   Delete
-                </button>
+                <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#4caf50', margin: '0 0 5px 0' }}>₱{(p.price || 0).toFixed(2)}</p>
+                <p style={{ fontSize: '12px', color: p.stock > 0 ? 'gray' : 'red', margin: '0 0 15px 0' }}>Stock: {p.stock}</p>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => openEdit(p)} style={{ flex: 1, padding: '10px', backgroundColor: '#2196f3', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '2px 2px 0px black' }}>✏️ Edit</button>
+                  <button onClick={() => handleDelete(p.id)} style={{ padding: '10px 14px', backgroundColor: '#dc3545', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '2px 2px 0px black' }}>🗑️</button>
+                </div>
               </div>
             ))}
           </div>
         )}
+      </div>
 
-        {/* Add Product Modal */}
-        {showModal && (
-          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-            <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', border: '3px solid black', maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>Add New Product</h2>
-              
-              <form onSubmit={handleAddProduct}>
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Name *</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-                  />
-                </div>
+      {modal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', border: '3px solid black', maxWidth: '500px', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '8px 8px 0px black' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>{modal === 'edit' ? '✏️ Edit Product' : '+ Add Product'}</h2>
 
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-                  />
-                </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Name *</label>
+              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={inputStyle} />
+            </div>
 
-                {/* Image Upload Section */}
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
-                    Product Image
-                  </label>
-                  
-                  {/* File Upload Input */}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    disabled={uploading}
-                    style={{ 
-                      width: '100%', 
-                      padding: '12px', 
-                      border: '2px dashed black', 
-                      borderRadius: '8px',
-                      backgroundColor: selectedFile ? '#e8f5e9' : '#f9f9f9',
-                      cursor: 'pointer',
-                      marginBottom: '10px'
-                    }}
-                  />
-                  
-                  {selectedFile && (
-                    <p style={{ fontSize: '12px', color: 'green', marginBottom: '10px' }}>
-                      ✓ Selected: {selectedFile.name}
-                    </p>
-                  )}
-                  
-                  <p style={{ fontSize: '12px', color: 'gray', marginBottom: '10px' }}>
-                    Or paste image URL below:
-                  </p>
-                  
-                  {/* Product Image URL (Alternative) */}
-                  <input
-                    type="url"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
-                    disabled={uploading || !!selectedFile}
-                    style={{ 
-                      width: '100%', 
-                      padding: '12px', 
-                      border: '2px solid black', 
-                      borderRadius: '8px', 
-                      fontSize: '14px',
-                      boxSizing: 'border-box',
-                      opacity: selectedFile ? 0.6 : 1
-                    }}
-                  />
-                </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Price (₱) *</label>
+                <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Stock</label>
+                <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} style={inputStyle} />
+              </div>
+            </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Price (₱) *</label>
-                    <input
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      required
-                      step="0.01"
-                      style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Stock Quantity *</label>
-                    <input
-                      type="number"
-                      value={formData.stock}
-                      onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                      required
-                      style={{ width: '100%', padding: '12px', border: '2px solid black', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Description</label>
+              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...inputStyle, minHeight: '70px' }} />
+            </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    type="submit"
-                    disabled={uploading}
-                    style={{
-                      flex: 1,
-                      padding: '15px',
-                      backgroundColor: uploading ? '#999' : '#4caf50',
-                      color: 'white',
-                      border: '2px solid black',
-                      borderRadius: '8px',
-                      fontWeight: 'bold',
-                      fontSize: '16px',
-                      cursor: uploading ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {uploading ? 'Uploading...' : 'Add Product'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    disabled={uploading}
-                    style={{
-                      padding: '15px 24px',
-                      backgroundColor: 'white',
-                      color: 'black',
-                      border: '2px solid black',
-                      borderRadius: '8px',
-                      fontWeight: 'bold',
-                      fontSize: '16px',
-                      cursor: uploading ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Image</label>
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+              <button type="button" onClick={() => fileRef.current?.click()} style={{ width: '100%', padding: '12px', border: '2px dashed black', borderRadius: '8px', cursor: 'pointer', backgroundColor: form.imageUrl ? '#e8f5e9' : '#f0f0f0', fontWeight: 'bold' }}>
+                {form.imageUrl ? '✅ Image ready — change' : '📤 Upload Image'}
+              </button>
+              {form.imageUrl && <img src={form.imageUrl} alt="preview" style={{ width: '100%', maxHeight: '150px', objectFit: 'cover', borderRadius: '8px', border: '2px solid black', marginTop: '10px' }} />}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: '15px', backgroundColor: saving ? 'gray' : '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>
+                {saving ? 'Saving...' : '💾 Save'}
+              </button>
+              <button onClick={() => setModal(null)} style={{ padding: '15px 20px', backgroundColor: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>✕</button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </main>
   )
 }

@@ -14,6 +14,7 @@ export async function GET() {
     }
 
     const products = await prisma.product.findMany({
+      include: { merchant: true },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -36,11 +37,9 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { productId, name, price, stock, description, imageUrl } = body
+    const { productId, name, price, stock, description, imageUrl, status } = body
 
-    if (!productId) {
-      return NextResponse.json({ error: 'Missing productId' }, { status: 400 })
-    }
+    if (!productId) return NextResponse.json({ error: 'Missing productId' }, { status: 400 })
 
     const updated = await prisma.product.update({
       where: { id: productId },
@@ -49,7 +48,8 @@ export async function PUT(request: Request) {
         price: price !== undefined ? parseFloat(price) : undefined,
         stock: stock !== undefined ? parseInt(stock) : undefined,
         description: description !== undefined ? description : undefined,
-        imageUrl: imageUrl !== undefined ? imageUrl : undefined
+        imageUrl: imageUrl !== undefined ? imageUrl : undefined,
+        status: status !== undefined ? status : undefined
       }
     })
 

@@ -12,6 +12,8 @@ export default function CustomerOrdersPage() {
 
   useEffect(() => {
     fetchOrders()
+    const interval = setInterval(fetchOrders, 5000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchOrders = async () => {
@@ -26,6 +28,26 @@ export default function CustomerOrdersPage() {
     }
   }
 
+  const handleAction = async (orderId: string, action: string) => {
+    if (action === 'REJECT_REVISION' && !confirm('Reject the revision and cancel this order?')) return
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, action })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert(data.message || 'Done!')
+        fetchOrders()
+      } else {
+        alert(data.error || 'Failed')
+      }
+    } catch (error) {
+      alert('Error')
+    }
+  }
+
   const statusColors: any = {
     PENDING: '#ff9800',
     ACCEPTED: '#2196f3',
@@ -34,7 +56,8 @@ export default function CustomerOrdersPage() {
     OUT_FOR_DELIVERY: '#9c27b0',
     DELIVERED: '#4caf50',
     COMPLETED: '#4caf50',
-    CANCELLED: '#dc3545'
+    CANCELLED: '#dc3545',
+    REVISED: '#ff9800'
   }
 
   return (
@@ -43,7 +66,7 @@ export default function CustomerOrdersPage() {
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '30px 20px' }}>
         <div style={{ marginBottom: '30px' }}>
           <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>📦 My Orders</h1>
-          <p style={{ fontSize: '16px', color: 'gray' }}>Track all your orders</p>
+          <p style={{ fontSize: '16px', color: 'gray' }}>Track all your orders — updates automatically!</p>
         </div>
 
         {loading ? (
@@ -52,7 +75,6 @@ export default function CustomerOrdersPage() {
           <div style={{ backgroundColor: 'white', padding: '60px 40px', borderRadius: '12px', border: '3px solid black', textAlign: 'center' }}>
             <p style={{ fontSize: '48px', marginBottom: '10px' }}>🛒</p>
             <p style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px' }}>No orders yet</p>
-            <p style={{ color: 'gray', marginBottom: '20px' }}>Start shopping to place your first order!</p>
             <button onClick={() => router.push('/shop')} style={{ padding: '12px 30px', backgroundColor: '#2196f3', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>
               Start Shopping
             </button>
@@ -71,9 +93,9 @@ export default function CustomerOrdersPage() {
                   </span>
                 </div>
 
-                {(order.items || order.orderItems || []).length > 0 && (
+                {(order.items || []).length > 0 && (
                   <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
-                    {(order.items || order.orderItems || []).map((item: any) => (
+                    {order.items.map((item: any) => (
                       <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '14px' }}>
                         <span>{item.product?.name || 'Item'} x {item.quantity}</span>
                         <span style={{ fontWeight: 'bold' }}>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
@@ -82,11 +104,25 @@ export default function CustomerOrdersPage() {
                   </div>
                 )}
 
-                {order.itemDescription && (
-                  <p style={{ fontSize: '14px', color: 'gray', marginBottom: '15px' }}>📝 {order.itemDescription}</p>
+                {order.status === 'REVISED' && (
+                  <div style={{ backgroundColor: '#fff3cd', padding: '15px', borderRadius: '8px', border: '2px solid #ff9800', marginBottom: '15px' }}>
+                    <p style={{ fontWeight: 'bold', margin: '0 0 8px 0' }}>📝 Merchant revised your order:</p>
+                    <p style={{ margin: '0 0 12px 0', fontSize: '14px' }}>"{order.revisionNote}"</p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button onClick={() => handleAction(order.id, 'ACCEPT_REVISION')} style={{ padding: '10px 20px', backgroundColor: '#4caf50', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>
+                        ✅ Accept Revised Order
+                      </button>
+                      <button onClick={() => handleAction(order.id, 'REJECT_REVISION')} style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: '2px solid black', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '3px 3px 0px black' }}>
+                        ❌ Reject & Cancel
+                      </button>
+                    </div>
+                  </div>
                 )}
-                {order.packageDescription && (
-                  <p style={{ fontSize: '14px', color: 'gray', marginBottom: '15px' }}>📦 {order.packageDescription}</p>
+
+                {order.status === 'CANCELLED' && order.cancelReason && (
+                  <div style={{ backgroundColor: '#fee', padding: '15px', borderRadius: '8px', border: '2px solid #dc3545', marginBottom: '15px' }}>
+                    <p style={{ fontWeight: 'bold', margin: 0, fontSize: '14px', color: '#dc3545' }}>❌ Cancelled — Reason: {order.cancelReason}</p>
+                  </div>
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
