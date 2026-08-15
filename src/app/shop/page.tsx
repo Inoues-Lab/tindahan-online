@@ -28,6 +28,25 @@ export default function ShopPage() {
     }
   }
 
+  const quickAdd = async (e: any, productId: string) => {
+    e.stopPropagation()
+    try {
+      const res = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, quantity: 1 })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert('✅ Added to cart! Keep shopping!')
+      } else {
+        alert(data.error || 'Failed to add to cart')
+      }
+    } catch (error) {
+      alert('Error')
+    }
+  }
+
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   )
@@ -73,7 +92,7 @@ export default function ShopPage() {
             {filteredProducts.map((product) => (
               <div
                 key={product.id}
-                onClick={() => router.push(`/products/${product.id}`)}
+                onClick={() => router.push('/products/' + product.id)}
                 style={{
                   backgroundColor: 'white',
                   padding: '20px',
@@ -96,6 +115,24 @@ export default function ShopPage() {
                   <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#4caf50' }}>₱{product.price}</span>
                   <span style={{ fontSize: '14px', color: 'gray' }}>Stock: {product.stock}</span>
                 </div>
+                <button
+                  onClick={(e) => quickAdd(e, product.id)}
+                  style={{
+                    width: '100%',
+                    marginTop: '15px',
+                    padding: '12px',
+                    backgroundColor: '#4caf50',
+                    color: 'white',
+                    border: '2px solid black',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    boxShadow: '3px 3px 0px black',
+                    fontSize: '15px'
+                  }}
+                >
+                  🛒 Add to Cart
+                </button>
               </div>
             ))}
           </div>
