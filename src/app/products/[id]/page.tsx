@@ -45,7 +45,7 @@ export default function ProductDetailPage() {
 
       if (res.ok) {
         alert('Added to cart! 🛒')
-        router.push('/cart')
+        alert('✅ Added to cart! Keep shopping — checkout from your Cart when ready!')
       } else {
         alert(data.error || 'Failed to add to cart')
       }
