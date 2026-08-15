@@ -4,25 +4,14 @@ import { prisma } from '@/lib/prisma'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const merchantId = searchParams.get('merchantId')
+    const search = searchParams.get('search') || ''
 
-    const where = merchantId ? { merchantId } : {}
-
-    // Fix: Use 'merchant' relation, then include 'user' inside it
     const products = await prisma.product.findMany({
-      where: { status: "APPROVED" },
-      where,
-      include: {
-        merchant: {
-          include: {
-            user: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
+      where: {
+        status: 'APPROVED',
+        name: { contains: search, mode: 'insensitive' }
       },
+      include: { merchant: true },
       orderBy: { createdAt: 'desc' }
     })
 
