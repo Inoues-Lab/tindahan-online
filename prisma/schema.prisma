@@ -16,6 +16,7 @@ enum UserRole {
 }
 
 enum OrderStatus {
+  REVISED
   PENDING
   ACCEPTED
   IN_PROGRESS
@@ -86,6 +87,7 @@ model RiderProfile {
 }
 
 model Product {
+  status String @default("PENDING")
   id          String   @id @default(cuid())
   name        String
   description String?
@@ -102,6 +104,8 @@ model Product {
 }
 
 model Order {
+  cancelReason String?
+  revisionNote String?
   id              String        @id @default(cuid())
   userId          String
   user            User          @relation(fields: [userId], references: [id])

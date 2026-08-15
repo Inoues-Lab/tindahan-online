@@ -10,6 +10,7 @@ export async function GET(request: Request) {
 
     // Fix: Use 'merchant' relation, then include 'user' inside it
     const products = await prisma.product.findMany({
+      where: { status: "APPROVED" },
       where,
       include: {
         merchant: {

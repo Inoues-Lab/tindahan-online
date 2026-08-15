@@ -2,29 +2,17 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
-// GET: Fetch the logged-in customer's orders
 export async function GET() {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const orders = await prisma.order.findMany({
       where: { userId },
       include: {
-        items: {
-          include: { product: true }
-        },
-        rider: {
-          include: {
-            user: {
-              select: { name: true, phone: true }
-            }
-          }
-        }
+        items: { include: { product: true } },
+        rider: { include: { user: { select: { name: true } } } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -36,105 +24,46 @@ export async function GET() {
   }
 }
 
-// POST: Create a new order (GROCERY, PABILI, or PADALA)
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const {
-      serviceType = 'GROCERY',
-      deliveryAddress,
-      contactNumber,
-      paymentMethod = 'COD',
-      deliveryFee = 50,
-      totalAmount,
-      itemDescription,
-      storeLocation,
-      maxAmount,
-      specialInstructions,
-      packageDescription,
-      senderName,
-      senderContact,
-      receiverName,
-      receiverContact,
-      items
-    } = body
+    const orderId = body.orderId || body.id
+    const action = body.action
 
-    if (!deliveryAddress || !contactNumber) {
-      return NextResponse.json({ error: 'Delivery address and contact number are required' }, { status: 400 })
+    if (!orderId || !action) {
+      return NextResponse.json({ error: 'Missing orderId or action' }, { status: 400 })
     }
 
-    let orderTotal = totalAmount || 0
-    let orderItems: any[] = []
+    const existing = await prisma.order.findUnique({ where: { id: orderId } })
+    if (!existing || existing.userId !== userId) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
 
-    // GROCERY: calculate total from cart items
-    if (serviceType === 'GROCERY' && items && items.length > 0) {
-      const productIds = items.map((i: any) => i.productId)
-      const products = await prisma.product.findMany({
-        where: { id: { in: productIds } }
+    // CUSTOMER ACCEPTS THE REVISED ORDER
+    if (action === 'ACCEPT_REVISION') {
+      const order = await prisma.order.update({
+        where: { id: orderId },
+        data: { status: 'ACCEPTED' }
       })
-      const priceMap = new Map(products.map((p) => [p.id, p]))
+      return NextResponse.json({ success: true, order, message: 'Revised order accepted! ✅' })
+    }
 
-      orderTotal = 0
-      orderItems = items.map((i: any) => {
-        const product = priceMap.get(i.productId)
-        const price = product?.price || i.price || 0
-        orderTotal += price * i.quantity
-        return {
-          productId: i.productId,
-          quantity: i.quantity,
-          price
-        }
+    // CUSTOMER REJECTS REVISION (cancels)
+    if (action === 'REJECT_REVISION') {
+      const order = await prisma.order.update({
+        where: { id: orderId },
+        data: { status: 'CANCELLED', cancelReason: body.reason || 'Customer rejected the revision' }
       })
-      orderTotal += deliveryFee
-    } else {
-      // PABILI / PADALA: total is the delivery fee (items paid via COD)
-      orderTotal = totalAmount || deliveryFee
+      return NextResponse.json({ success: true, order, message: 'Order cancelled.' })
     }
 
-    // Create the order
-    const order = await prisma.order.create({
-      data: {
-        userId,
-        serviceType,
-        paymentMethod,
-        deliveryAddress,
-        contactNumber,
-        deliveryFee,
-        totalAmount: orderTotal,
-        itemDescription: itemDescription || null,
-        storeLocation: storeLocation || null,
-        maxAmount: maxAmount || null,
-        specialInstructions: specialInstructions || null,
-        packageDescription: packageDescription || null,
-        senderName: senderName || null,
-        senderContact: senderContact || null,
-        receiverName: receiverName || null,
-        receiverContact: receiverContact || null,
-        items: orderItems.length > 0
-          ? { create: orderItems }
-          : undefined
-      },
-      include: { items: true }
-    })
-
-    // Clear the cart after a successful grocery order
-    if (serviceType === 'GROCERY') {
-      const cart = await prisma.cart.findUnique({ where: { userId } })
-      if (cart) {
-        await prisma.cartItem.deleteMany({ where: { cartId: cart.id } })
-      }
-    }
-
-    return NextResponse.json({ success: true, order })
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (error) {
-    console.error('Error creating order:', error)
-    return NextResponse.json({ error: 'Error placing order' }, { status: 500 })
+    console.error('Error updating order:', error)
+    return NextResponse.json({ error: 'Error updating order' }, { status: 500 })
   }
 }

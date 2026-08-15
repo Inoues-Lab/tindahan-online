@@ -12,18 +12,21 @@ export async function GET() {
     if (!user) return NextResponse.json({ notifications: [] })
 
     let notifications: any[] = []
+    const code = (id: string) => '#' + id.slice(-6).toUpperCase()
 
     if (user.role === 'CUSTOMER') {
       const orders = await prisma.order.findMany({
-        where: { userId, status: { in: ['ACCEPTED', 'OUT_FOR_DELIVERY', 'DELIVERED'] } },
+        where: { userId, status: { in: ['ACCEPTED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'REVISED', 'CANCELLED'] } },
         orderBy: { updatedAt: 'desc' },
         take: 10
       })
       notifications = orders.map((o) => {
         let icon = '✅'
-        let message = 'Order #' + o.id.slice(-6).toUpperCase() + ' confirmed by merchant!'
-        if (o.status === 'OUT_FOR_DELIVERY') { icon = '🚚'; message = 'Order #' + o.id.slice(-6).toUpperCase() + ' is out for delivery!' }
-        if (o.status === 'DELIVERED') { icon = '🎉'; message = 'Order #' + o.id.slice(-6).toUpperCase() + ' delivered! Thank you!' }
+        let message = 'Order ' + code(o.id) + ' confirmed by merchant!'
+        if (o.status === 'OUT_FOR_DELIVERY') { icon = '🚚'; message = 'Order ' + code(o.id) + ' is out for delivery!' }
+        if (o.status === 'DELIVERED') { icon = '🎉'; message = 'Order ' + code(o.id) + ' delivered! Thank you!' }
+        if (o.status === 'REVISED') { icon = '📝'; message = 'Order ' + code(o.id) + ' revised by merchant — please review!' }
+        if (o.status === 'CANCELLED') { icon = '❌'; message = 'Order ' + code(o.id) + ' cancelled: ' + (o.cancelReason || 'no reason given') }
         return { id: o.id, icon, message, time: o.updatedAt }
       })
     } else if (user.role === 'MERCHANT') {
@@ -39,9 +42,9 @@ export async function GET() {
         })
         notifications = orders.map((o) => {
           let icon = '🔔'
-          let message = 'New order #' + o.id.slice(-6).toUpperCase() + ' waiting for confirmation!'
-          if (o.status === 'OUT_FOR_DELIVERY') { icon = '🚚'; message = 'Order #' + o.id.slice(-6).toUpperCase() + ' is out for delivery!' }
-          if (o.status === 'DELIVERED') { icon = '🎉'; message = 'Order #' + o.id.slice(-6).toUpperCase() + ' delivered!' }
+          let message = 'New order ' + code(o.id) + ' waiting for confirmation!'
+          if (o.status === 'OUT_FOR_DELIVERY') { icon = '🚚'; message = 'Order ' + code(o.id) + ' is out for delivery!' }
+          if (o.status === 'DELIVERED') { icon = '🎉'; message = 'Order ' + code(o.id) + ' delivered!' }
           return { id: o.id, icon, message, time: o.updatedAt }
         })
       }
@@ -54,7 +57,7 @@ export async function GET() {
       notifications = orders.map((o) => ({
         id: o.id,
         icon: '📦',
-        message: 'Order #' + o.id.slice(-6).toUpperCase() + ' available for pickup!',
+        message: 'Order ' + code(o.id) + ' available for pickup!',
         time: o.createdAt
       }))
     }
